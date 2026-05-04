@@ -5,6 +5,9 @@ use App\Http\Controllers\Dashboard\ResearcherDashboardController;
 use App\Http\Controllers\Dashboard\SecretaryDashboardController;
 use App\Http\Controllers\Dashboard\ReviewerDashboardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Reviewer\ProposalMasukController;
+use App\Http\Controllers\Reviewer\ReviewProposalController;
+use App\Http\Controllers\Reviewer\RiwayatReviewController;
 use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/auth.php';
@@ -93,8 +96,28 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/sekretaris', [SecretaryDashboardController::class, 'index'])
         ->name('sekretaris.dashboard');
 
-    Route::get('/dashboard/reviewer', [ReviewerDashboardController::class, 'index'])
-        ->name('reviewer.dashboard');
+    // Route untuk Reviewer
+    Route::prefix('reviewer')->name('reviewer.')->group(function () {
+        // Dashboard reviewer
+        Route::get('/dashboard', [ReviewerDashboardController::class, 'index'])
+            ->name('dashboard');
+
+        // Proposal Masuk
+        Route::get('/proposal-masuk', [ProposalMasukController::class, 'index'])
+            ->name('proposal-masuk');
+
+        // Review Proposal
+        Route::get('/review-proposal', [ReviewProposalController::class, 'index'])
+            ->name('review-proposal');
+        Route::post('/review-proposal', [ReviewProposalController::class, 'store'])
+            ->name('review-proposal.store');
+
+        // Riwayat Review
+        Route::get('/riwayat-review', [RiwayatReviewController::class, 'index'])
+            ->name('riwayat-review');
+        Route::get('/riwayat-review/{id}', [RiwayatReviewController::class, 'show'])
+            ->name('riwayat-review.show');
+    });
 
     Route::get('/dashboard/admin', [AdminDashboardController::class, 'index'])
         ->name('admin.dashboard');
