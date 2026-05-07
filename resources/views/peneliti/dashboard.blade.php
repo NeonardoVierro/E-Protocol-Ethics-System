@@ -2,14 +2,8 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto px-4">
-    <!-- Redirect jika yang login tapi bukan peneliti -->
-    @auth
-        @if(!Auth::user()->hasRole('peneliti'))
-            <script>
-                window.location.href = '{{ route("dashboard") }}';
-            </script>
-        @endif
-    @endauth
+    <!-- DASHBOARD PENELITI - BISA DIAKSES SEMUA ORANG -->
+    <!-- Tidak ada redirect otomatis ke dashboard lain -->
 
     <!-- Dashboard Peneliti - Sama untuk semua orang (login atau tidak) -->
     <div class="py-12">

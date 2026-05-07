@@ -10,7 +10,6 @@ use App\Http\Controllers\Reviewer\ReviewProposalController;
 use App\Http\Controllers\Reviewer\RiwayatReviewController;
 use Illuminate\Support\Facades\Route;
 
-
 require __DIR__.'/auth.php';
 
 Route::get('/', function () {
