@@ -8,6 +8,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Reviewer\ProposalMasukController;
 use App\Http\Controllers\Reviewer\ReviewProposalController;
 use App\Http\Controllers\Reviewer\RiwayatReviewController;
+use App\Http\Controllers\Sekretaris\SekretarisController;
 use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/auth.php';

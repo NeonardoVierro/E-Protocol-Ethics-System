@@ -1,42 +1,55 @@
-@extends('layouts.dashboard')
+@extends('layouts.sekretaris')
+
+@section('title', 'Dashboard Sekretaris')
+@section('page-title', 'Dashboard')
+@section('breadcrumb', 'Statistik Proposal')
 
 @section('content')
-<div class="max-w-7xl mx-auto px-4">
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-2xl font-bold mb-4">Dashboard Sekretaris</h2>
-        <p class="text-gray-600">Selamat datang, {{ Auth::user()->name }}!</p>
-        
-        {{-- Tampilkan menu berdasarkan role --}}
-        @hasrole('sekretaris')
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <div class="bg-blue-50 p-4 rounded">
-                    <h3 class="font-semibold">Proposal Masuk</h3>
-                    <p class="text-2xl">0</p>
-                </div>
-                <div class="bg-green-50 p-4 rounded">
-                    <h3 class="font-semibold">Verifikasi Pending</h3>
-                    <p class="text-2xl">0</p>
-                </div>
-                <div class="bg-purple-50 p-4 rounded">
-                    <h3 class="font-semibold">Reviewer Terassign</h3>
-                    <p class="text-2xl">0</p>
-                </div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-5 rounded-xl shadow-sm border">
+        <div class="flex justify-between items-center">
+            <div>
+                <p class="text-gray-500 text-sm">Total Proposal</p>
+                <p class="text-2xl font-bold">{{ $total_proposal ?? 0 }}</p>
             </div>
-        @endhasrole
-        
-        {{-- Tampilkan untuk Ketua --}}
-        @hasrole('ketua')
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                <div class="bg-blue-50 p-4 rounded">
-                    <h3 class="font-semibold">Menunggu Tanda Tangan</h3>
-                    <p class="text-2xl">0</p>
-                </div>
-                <div class="bg-green-50 p-4 rounded">
-                    <h3 class="font-semibold">Dokumen Selesai</h3>
-                    <p class="text-2xl">0</p>
-                </div>
-            </div>
-        @endhasrole
+            <i class="fas fa-file-alt text-3xl text-indigo-400"></i>
+        </div>
     </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border">
+        <div class="flex justify-between items-center">
+            <div>
+                <p class="text-gray-500 text-sm">Pending</p>
+                <p class="text-2xl font-bold text-yellow-600">{{ $pending ?? 0 }}</p>
+            </div>
+            <i class="fas fa-clock text-3xl text-yellow-400"></i>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border">
+        <div class="flex justify-between items-center">
+            <div>
+                <p class="text-gray-500 text-sm">Approved</p>
+                <p class="text-2xl font-bold text-green-600">{{ $approved ?? 0 }}</p>
+            </div>
+            <i class="fas fa-check-circle text-3xl text-green-400"></i>
+        </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl shadow-sm border">
+        <div class="flex justify-between items-center">
+            <div>
+                <p class="text-gray-500 text-sm">Rejected</p>
+                <p class="text-2xl font-bold text-red-600">{{ $rejected ?? 0 }}</p>
+            </div>
+            <i class="fas fa-times-circle text-3xl text-red-400"></i>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm p-5">
+    <h3 class="font-semibold text-gray-800 mb-3">Aktivitas Terbaru</h3>
+    <ul class="divide-y">
+        <li class="py-2 text-sm">Proposal P001 - Status dokumen lengkap</li>
+        <li class="py-2 text-sm">Reviewer ditugaskan untuk proposal P002</li>
+        <li class="py-2 text-sm">Draft Ethical Clearance EC001 dibuat</li>
+    </ul>
 </div>
 @endsection
