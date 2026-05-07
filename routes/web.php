@@ -142,3 +142,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::get('/user-management', [App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('usermanagement.index');
 });
+
+// Route untuk Sekretaris
+Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name('sekretaris.')->group(function () {
+    Route::get('/dashboard  ', [SekretarisController::class, 'dashboard'])->name('dashboard');
+    Route::get('/manajemen-proposal', [SekretarisController::class, 'manajemenProposal'])->name('manajemen-proposal');
+    Route::get('/assign-reviewer', [SekretarisController::class, 'assignReviewer'])->name('assign-reviewer');
+    Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
+    Route::get('/keputusan', [SekretarisController::class, 'keputusan'])->name('keputusan');
+    Route::get('/draf-ethical-clearance', [SekretarisController::class, 'draftEthicalClearance'])->name('draf-ethical-clearance');
+    Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
+});

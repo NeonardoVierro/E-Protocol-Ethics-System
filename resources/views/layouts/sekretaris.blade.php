@@ -33,8 +33,7 @@
         <a href="{{ route('sekretaris.assign-reviewer') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.assign-reviewer') ? 'active' : '' }}"><i class="fas fa-user-check w-5"></i> Assign Reviewer</a>
         <a href="{{ route('sekretaris.hasil-review') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.hasil-review') ? 'active' : '' }}"><i class="fas fa-clipboard-list w-5"></i> Hasil Review</a>
         <a href="{{ route('sekretaris.keputusan') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.keputusan') ? 'active' : '' }}"><i class="fas fa-gavel w-5"></i> Keputusan</a>
-        <a href="{{ route('sekretaris.draft-ethical') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.draft-ethical') ? 'active' : '' }}"><i class="fas fa-file-signature w-5"></i> Draft Ethical Clearance</a>
-        <a href="{{ route('sekretaris.arsip') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.arsip') ? 'active' : '' }}"><i class="fas fa-archive w-5"></i> Arsip Dokumen</a>
+        <a href="{{ route('sekretaris.draf-ethical-clearance') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.draf-ethical-clearance') ? 'active' : '' }}"><i class="fas fa-file-signature w-5"></i> Draft Ethical Clearance</a>
     </nav>
 </div>
 

@@ -73,4 +73,14 @@ class SekretarisController extends Controller
         ];
         return view('sekretaris.arsip-dokumen.index', compact('arsip'));
     }
+
+    public function arsip()
+    {
+        $arsip = [
+            ['nama' => 'Proposal P001 - Studi Etika AI', 'tipe' => 'PDF', 'tanggal' => '2025-04-01', 'ukuran' => '2.3 MB'],
+            ['nama' => 'Ethical Clearance EC001', 'tipe' => 'PDF', 'tanggal' => '2025-05-12', 'ukuran' => '1.1 MB'],
+            ['nama' => 'Surat Tugas Reviewer P002', 'tipe' => 'DOCX', 'tanggal' => '2025-05-02', 'ukuran' => '0.5 MB'],
+        ];
+        return view('sekretaris.arsip-dokumen.index', compact('arsip'));
+    }
 }
