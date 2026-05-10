@@ -100,25 +100,7 @@
         </a>
 
         <div class="flex-1"></div>
-
-        <!-- New Application -->
-        <a href="#" class="flex items-center justify-center gap-[7px] mx-3 mb-2 px-4 py-2.5 bg-[#1e4d8c] text-white text-[13.5px] font-semibold rounded-xl no-underline cursor-pointer transition-all duration-180 hover:bg-[#1a3f78] hover:-translate-y-px w-[calc(100%-1.5rem)]">
-            <i class="fas fa-plus text-[11px]"></i>
-            New Application
-        </a>
     </nav>
-
-    <!-- Bottom: Settings & Support -->
-    <div class="p-2 px-3 pb-4 border-t border-[#f0f2f5] flex flex-col gap-0.5">
-        <a href="#" class="flex items-center gap-[11px] px-3 py-2 rounded-lg text-[13.5px] font-medium text-[#6b7280] no-underline transition-all duration-150 hover:bg-[#f5f7fa] hover:text-[#374151]">
-            <i class="fas fa-gear text-[14px] w-[18px] text-center text-[#9ca3af] shrink-0"></i>
-            Settings
-        </a>
-        <a href="#" class="flex items-center gap-[11px] px-3 py-2 rounded-lg text-[13.5px] font-medium text-[#6b7280] no-underline transition-all duration-150 hover:bg-[#f5f7fa] hover:text-[#374151]">
-            <i class="fas fa-circle-question text-[14px] w-[18px] text-center text-[#9ca3af] shrink-0"></i>
-            Support
-        </a>
-    </div>
 
 </div>
 
