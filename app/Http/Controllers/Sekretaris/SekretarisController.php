@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sekretaris;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 
 class SekretarisController extends Controller
 {
@@ -82,5 +83,18 @@ class SekretarisController extends Controller
             ['nama' => 'Surat Tugas Reviewer P002', 'tipe' => 'DOCX', 'tanggal' => '2025-05-02', 'ukuran' => '0.5 MB'],
         ];
         return view('sekretaris.arsip-dokumen.index', compact('arsip'));
+    }
+
+    public function userManagement()
+    {
+        $pendingUsers = User::where('status', 'pending')->get();
+        return view('sekretaris.user-management.index', compact('pendingUsers'));
+    }
+
+    public function activateUser($id)
+    {
+        $user = User::findOrFail($id);
+        $user->update(['status' => 'active']);
+        return redirect()->route('sekretaris.user-management')->with('success', 'Akun berhasil diaktifkan');
     }
 }

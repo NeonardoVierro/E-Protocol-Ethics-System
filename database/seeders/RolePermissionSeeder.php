@@ -66,6 +66,7 @@ class RolePermissionSeeder extends Seeder
             'access secretary dashboard',
             'view proposals', 'verify proposals', 'assign reviewer',
             'view reviews', 'download documents', 'view monitoring',
+            'activate users',
         ];
         $secretaryRole->givePermissionTo($secretaryPermissions);
         

@@ -34,6 +34,7 @@
         <a href="{{ route('sekretaris.hasil-review') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.hasil-review') ? 'active' : '' }}"><i class="fas fa-clipboard-list w-5"></i> Hasil Review</a>
         <a href="{{ route('sekretaris.keputusan') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.keputusan') ? 'active' : '' }}"><i class="fas fa-gavel w-5"></i> Keputusan</a>
         <a href="{{ route('sekretaris.draf-ethical-clearance') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.draf-ethical-clearance') ? 'active' : '' }}"><i class="fas fa-file-signature w-5"></i> Draft Ethical Clearance</a>
+        <a href="{{ route('sekretaris.user-management') }}" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium {{ request()->routeIs('sekretaris.user-management') ? 'active' : '' }}"><i class="fas fa-users w-5"></i> Manajemen User</a>
     </nav>
 </div>
 

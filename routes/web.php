@@ -32,6 +32,11 @@ Route::post('/login', function () {
     // Simple login logic - in real app, use proper controller
     $credentials = request()->only('email', 'password');
     if (auth()->attempt($credentials)) {
+        $user = auth()->user();
+        if ($user->status !== 'active') {
+            auth()->logout();
+            return back()->withErrors(['email' => 'Akun Anda belum diaktifkan oleh sekretaris.']);
+        }
         request()->session()->regenerate();
         return redirect()->intended(route('dashboard'));
     }
@@ -55,9 +60,8 @@ Route::post('/register', function () {
     // Assign default role - peneliti
     $user->assignRole('peneliti');
 
-    auth()->login($user);
-
-    return redirect()->route('dashboard');
+    // Don't login immediately - wait for activation
+    return redirect()->route('login')->with('success', 'Registrasi berhasil. Tunggu aktivasi dari sekretaris.');
 })->name('register.post')->middleware('guest');
 
 Route::post('/logout', function () {
@@ -152,4 +156,6 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::get('/keputusan', [SekretarisController::class, 'keputusan'])->name('keputusan');
     Route::get('/draf-ethical-clearance', [SekretarisController::class, 'draftEthicalClearance'])->name('draf-ethical-clearance');
     Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
+    Route::get('/user-management', [SekretarisController::class, 'userManagement'])->name('user-management');
+    Route::post('/user-management/activate/{id}', [SekretarisController::class, 'activateUser'])->name('user-management.activate');
 });
