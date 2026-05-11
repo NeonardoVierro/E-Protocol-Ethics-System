@@ -150,16 +150,18 @@ Route::middleware('auth')->group(function () {
 // Route untuk Admin
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/ethical-clearance', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'index'])->name('ethicalclearance.index');
-
     Route::get('/publishing', [App\Http\Controllers\Admin\PublishingController::class, 'index'])->name('publishing.index');
-
     Route::get('/role-permission', [App\Http\Controllers\Admin\RoleAndPermissionController::class, 'index'])->name('role&permission.index');
-
     Route::get('/system-monitoring', [App\Http\Controllers\Admin\SystemMonitoringController::class, 'index'])->name('systemmonitoring.index');
-
-    Route::get('/template-poposal', [App\Http\Controllers\Admin\TemplateProposalController::class, 'index'])->name('templateproposal.index');
-
+    Route::get('/template-proposal', [App\Http\Controllers\Admin\TemplateProposalController::class, 'index'])->name('templateproposal.index');
     Route::get('/user-management', [App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('usermanagement.index');
+
+        // ── Template Proposal ────────────────────────
+    Route::post  ('templates', [App\Http\Controllers\Admin\TemplateProposalController::class, 'store'])->name('templates.store');
+    Route::put   ('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'update'])->name('templates.update');
+    Route::delete('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'destroy'])->name('templates.destroy');
+    Route::patch ('templates/{template}/toggle', [App\Http\Controllers\Admin\TemplateProposalController::class, 'toggleActive'])->name('templates.toggle');
+    Route::get   ('templates/{template}/download', [App\Http\Controllers\Admin\TemplateProposalController::class, 'download'])->name('templates.download');
 });
 
 // Route untuk Sekretaris
