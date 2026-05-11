@@ -9,6 +9,8 @@ use App\Http\Controllers\Reviewer\ProposalMasukController;
 use App\Http\Controllers\Reviewer\ReviewProposalController;
 use App\Http\Controllers\Reviewer\RiwayatReviewController;
 use App\Http\Controllers\Sekretaris\SekretarisController;
+use App\Http\Controllers\Peneliti\PanduanController;
+use App\Http\Controllers\Peneliti\PengajuanController;
 use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/auth.php';
@@ -75,6 +77,19 @@ Route::post('/logout', function () {
 Route::get('/dashboard/peneliti', [ResearcherDashboardController::class, 'index'])
     ->name('peneliti.dashboard');
 
+// ============ ROUTE PANDUAN (Dapat diakses sebelum login) ============
+Route::prefix('panduan')->name('panduan.')->group(function () {
+    Route::get('/syarat-pendaftaran', [PanduanController::class, 'syaratPendaftaran'])->name('syarat-pendaftaran');
+    Route::get('/alur-pengajuan', [PanduanController::class, 'alurPengajuan'])->name('alur-pengajuan');
+    Route::get('/panduan-reviewer', [PanduanController::class, 'panduanReviewer'])->name('panduan-reviewer');
+});
+
+// ============ ROUTE PENGAJUAN (Hanya bisa diakses setelah login) ============
+Route::middleware(['auth'])->prefix('pengajuan')->name('pengajuan.')->group(function () {
+    Route::get('/upload-proposal', [PengajuanController::class, 'uploadProposal'])->name('upload-proposal');
+    Route::get('/download-template', [PengajuanController::class, 'downloadTemplate'])->name('download-template');
+    Route::get('/riwayat-pengajuan', [PengajuanController::class, 'riwayatPengajuan'])->name('riwayat-pengajuan');
+});
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         $user = auth()->user();
