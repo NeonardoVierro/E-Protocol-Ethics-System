@@ -15,12 +15,13 @@ use Illuminate\Support\Facades\Route;
 
 require __DIR__.'/auth.php';
 
-Route::get('/', function () {
-    return redirect()->route('peneliti.dashboard');
-})->name('home');
 
 // Auth routes
 Route::middleware('guest')->group(function () {
+    Route::get('/', function () {
+        return view('dashboard');
+    })->name('home');
+
     Route::get('/login', function () {
         return view('auth.login');
     })->name('login');
@@ -110,7 +111,7 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('admin.dashboard');
         }
 
-        abort(403);
+
     })->name('dashboard');
 
     Route::get('/dashboard/sekretaris', [SecretaryDashboardController::class, 'index'])
@@ -166,7 +167,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
 // Route untuk Sekretaris
 Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name('sekretaris.')->group(function () {
-    Route::get('/dashboard  ', [SekretarisController::class, 'dashboard'])->name('dashboard');
+    Route::get('/  ', [SekretarisController::class, 'dashboard'])->name('dashboard');
     Route::get('/manajemen-proposal', [SekretarisController::class, 'manajemenProposal'])->name('manajemen-proposal');
     Route::get('/assign-reviewer', [SekretarisController::class, 'assignReviewer'])->name('assign-reviewer');
     Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
