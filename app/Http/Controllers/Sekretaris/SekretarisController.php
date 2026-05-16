@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Sekretaris;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Notification;
 
 class SekretarisController extends Controller
 {
@@ -95,6 +96,17 @@ class SekretarisController extends Controller
     {
         $user = User::findOrFail($id);
         $user->update(['status' => 'active']);
-        return redirect()->route('sekretaris.user-management')->with('success', 'Akun berhasil diaktifkan');
+        
+        // Buat notifikasi untuk user
+        Notification::create([
+            'user_id' => $user->id,
+            'title' => 'Akun Anda Telah Diaktivasi',
+            'message' => 'Selamat! Akun Anda telah diaktivasi oleh sekretariat. Anda sekarang dapat login dan mengajukan ethical clearance.',
+            'status' => 'unread',
+            'type' => Notification::TYPE_ACCOUNT_ACTIVATION,
+            'data' => json_encode(['activated_at' => now()->toDateTimeString()]),
+        ]);
+        
+        return redirect()->route('sekretaris.user-management')->with('success', 'Akun berhasil diaktifkan dan notifikasi telah dikirim ke peneliti.');
     }
 }
