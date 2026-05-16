@@ -171,10 +171,97 @@
         .sidebar-panel.active {
             transform: translateX(0);
         }
+            /* ========== NOTIFICATION STYLES ========== */
+        .notification-btn {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .notification-btn:hover {
+            background-color: #eff4ff;
+            transform: scale(1.05);
+        }
+        
+        .notification-btn:hover .notification-icon {
+            animation: bellShake 0.5s ease-in-out;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            min-width: 18px;
+            height: 18px;
+            background: linear-gradient(135deg, #ba1a1a, #e53935);
+            color: white;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            border: 2px solid white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            animation: badgePop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        @keyframes bellShake {
+            0% { transform: rotate(0deg); }
+            20% { transform: rotate(15deg); }
+            40% { transform: rotate(-12deg); }
+            60% { transform: rotate(8deg); }
+            80% { transform: rotate(-4deg); }
+            100% { transform: rotate(0deg); }
+        }
+        
+        @keyframes badgePop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes bellRing {
+            0% { transform: rotate(0deg); }
+            10% { transform: rotate(20deg); }
+            20% { transform: rotate(-15deg); }
+            30% { transform: rotate(12deg); }
+            40% { transform: rotate(-8deg); }
+            50% { transform: rotate(6deg); }
+            60% { transform: rotate(-3deg); }
+            70% { transform: rotate(2deg); }
+            100% { transform: rotate(0deg); }
+        }
+        
+        .notification-badge.has-new {
+            animation: badgePop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), pulseGlow 1.5s infinite;
+        }
+        
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(186, 26, 26, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(186, 26, 26, 0); }
+        }
+        
+        /* Animasi untuk dropdown muncul */
+        @keyframes dropdownFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        #notificationDropdown[style*="display: block"] {
+            animation: dropdownFadeIn 0.2s ease-out;
+        }
     </style>
     @stack('styles')
 </head>
-<body class="bg-background text-on-surface font-body-md antialiased relative" style="background-image: url('{{ asset('images/bg-research.jpg') }}')">
+<body class="bg-background text-on-surface font-body-md antialiased relative min-h-screen flex flex-col" style="background-image: url('{{ asset('https://sso.uns.ac.id/module.php/uns/img/symphony.png') }}')">
 
 <!-- Sidebar Overlay -->
 <div id="sidebarOverlay" class="fixed inset-0 bg-black/40 z-40 sidebar-overlay lg:hidden" onclick="closeSidebar()"></div>
@@ -409,69 +496,82 @@
             </div>
         </div>
 
-        <!-- Right Side Navigation -->
-        <div class="flex items-center gap-2 sm:gap-4">
-            @auth
-                <!-- Notifications (only when logged in) -->
-                <button class="p-2 rounded-full hover:bg-surface-container-low transition-colors relative" id="notificationBtn">
-                    <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
-                    @if(($unreadNotifications ?? 0) > 0)
-                        <span class="active-dot"></span>
-                    @endif
-                </button>
-
-                <!-- User Menu -->
-                <div class="relative group">
-                    <div class="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-outline-variant cursor-pointer group">
-                        <div class="text-right hidden sm:block">
-                            <p class="font-semibold text-primary text-sm">{{ Auth::user()->name }}</p>
-                            <p class="text-xs text-on-surface-variant uppercase tracking-wider">{{ $roleName ?? '' }}</p>
-                        </div>
-                        <div class="w-9 h-9 rounded-full overflow-hidden bg-surface-container border border-outline-variant flex items-center justify-center">
-                            <span class="material-symbols-outlined text-on-surface-variant">account_circle</span>
-                        </div>
-                        <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors hidden sm:block">expand_more</span>
-                    </div>
-
-                    <!-- Dropdown Menu -->
-                    <div class="dropdown-menu absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-outline-variant z-50">
-                        <div class="p-3 border-b border-outline-variant sm:hidden">
-                            <p class="font-semibold text-primary">{{ Auth::user()->name }}</p>
-                            <p class="text-xs text-on-surface-variant">{{ Auth::user()->email }}</p>
-                        </div>
-                        <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors rounded-t-xl">
-                            <span class="material-symbols-outlined text-primary text-lg">person</span>
-                            <span>Data Diri</span>
-                        </a>
-                        <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
-                            <span class="material-symbols-outlined text-primary text-lg">edit</span>
-                            <span>Edit Profil</span>
-                        </a>
-                        <div class="border-t border-outline-variant my-1"></div>
-                        <form method="POST" action="{{ route('logout') }}" class="block">
-                            @csrf
-                            <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container transition-colors rounded-b-xl">
-                                <span class="material-symbols-outlined text-lg">logout</span>
-                                <span>Logout</span>
-                            </button>
-                        </form>
-                    </div>
+<!-- Right Side Navigation -->
+<div class="flex items-center gap-2 sm:gap-4">
+    @auth
+        <!-- Notifications (only when logged in) -->
+        <div class="relative">
+            <button onclick="toggleNotificationDropdown()" 
+                    class="p-2 rounded-full hover:bg-surface-container-low transition-all duration-300 relative notification-btn"
+                    id="notificationBtn">
+                <span class="material-symbols-outlined text-on-surface-variant text-2xl notification-icon">notifications</span>
+                <span id="notificationBadge" class="notification-badge hidden"></span>
+            </button>
+            
+            <!-- Notification Dropdown -->
+            <div id="notificationDropdown" style="display: none;" class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-outline-variant z-50 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant bg-surface-container-low">
+                    <h3 class="font-semibold text-primary">Notifikasi</h3>
+                    <a href="{{ route('peneliti.notifikasi.index') }}" class="text-xs text-primary hover:underline">Lihat Semua</a>
                 </div>
-            @else
-                <!-- Login/Register for Guest -->
-                <a href="{{ route('login') }}" class="px-4 py-2 text-primary hover:bg-primary-container/10 rounded-lg transition-colors font-button">
-                    Login
-                </a>
-                <a href="{{ route('register') }}" class="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary-container transition-colors font-button shadow-sm">
-                    Register
-                </a>
-            @endauth
+                <div id="notificationList" class="max-h-96 overflow-y-auto">
+                    <div class="p-4 text-center text-on-surface-variant">Memuat...</div>
+                </div>
+            </div>
         </div>
+
+        <!-- User Menu -->
+        <div class="relative group">
+            <div class="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-outline-variant cursor-pointer group">
+                <div class="text-right hidden sm:block">
+                    <p class="font-semibold text-primary text-sm">{{ Auth::user()->name }}</p>
+                    <p class="text-xs text-on-surface-variant uppercase tracking-wider">{{ $roleName ?? '' }}</p>
+                </div>
+                <div class="w-9 h-9 rounded-full overflow-hidden bg-surface-container border border-outline-variant flex items-center justify-center">
+                    <span class="material-symbols-outlined text-on-surface-variant">account_circle</span>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors hidden sm:block">expand_more</span>
+            </div>
+
+            <!-- Dropdown Menu -->
+            <div class="dropdown-menu absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-outline-variant z-50">
+                <div class="p-3 border-b border-outline-variant sm:hidden">
+                    <p class="font-semibold text-primary">{{ Auth::user()->name }}</p>
+                    <p class="text-xs text-on-surface-variant">{{ Auth::user()->email }}</p>
+                </div>
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors rounded-t-xl">
+                    <span class="material-symbols-outlined text-primary text-lg">person</span>
+                    <span>Data Diri</span>
+                </a>
+                <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-primary text-lg">edit</span>
+                    <span>Edit Profil</span>
+                </a>
+                <div class="border-t border-outline-variant my-1"></div>
+                <form method="POST" action="{{ route('logout') }}" class="block">
+                    @csrf
+                    <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container transition-colors rounded-b-xl">
+                        <span class="material-symbols-outlined text-lg">logout</span>
+                        <span>Logout</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    @else
+        <!-- Login/Register for Guest -->
+        <a href="{{ route('login') }}" class="px-4 py-2 text-primary hover:bg-primary-container/10 rounded-lg transition-colors font-button">
+            Login
+        </a>
+        <a href="{{ route('register') }}" class="px-4 py-2 bg-primary text-on-primary rounded-lg hover:bg-primary-container transition-colors font-button shadow-sm">
+            Register
+        </a>
+    @endauth
+</div>
     </div>
 </nav>
 
 <!-- Main Content -->
-<main class="py-6 lg:py-8">
+<main class="py-6 lg:py-8 flex-1">
     @if(session('success'))
         <div class="max-w-container-max mx-auto px-4 sm:px-6 lg:px-8 mb-4">
             <div class="bg-secondary-container text-on-secondary-container px-4 py-3 rounded-lg flex items-center gap-3">
@@ -523,12 +623,7 @@
     }
 
     // Close sidebar when clicking overlay
-    document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
-
-    // Simple notification placeholder (will be replaced with real JS later)
-    document.getElementById('notificationBtn')?.addEventListener('click', function() {
-        alert('Fitur notifikasi akan segera hadir. Saat ini belum ada notifikasi baru.');
-    });
+    document.getElementById('sidebarOverlay')?.addEventListener('click', closeSidebar);
 
     // Close sidebar on escape key
     document.addEventListener('keydown', function(e) {
@@ -536,6 +631,93 @@
             closeSidebar();
         }
     });
+
+    // ========== NOTIFICATION FUNCTIONS ==========
+    let notificationDropdownOpen = false;
+    
+    function toggleNotificationDropdown() {
+        const dropdown = document.getElementById('notificationDropdown');
+        notificationDropdownOpen = !notificationDropdownOpen;
+        dropdown.style.display = notificationDropdownOpen ? 'block' : 'none';
+        if (notificationDropdownOpen) {
+            loadLatestNotifications();
+        }
+    }
+    
+    function loadLatestNotifications() {
+        fetch('{{ route("peneliti.notifikasi.latest") }}', {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('notificationList');
+            const badge = document.getElementById('notificationBadge');
+            
+            if (data.unread_count > 0) {
+                badge.style.display = 'block';
+                badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+            } else {
+                badge.style.display = 'none';
+            }
+            
+            if (data.notifications.length === 0) {
+                container.innerHTML = '<div class="p-4 text-center text-on-surface-variant">Tidak ada notifikasi</div>';
+                return;
+            }
+            
+            container.innerHTML = data.notifications.map(notif => `
+                <a href="/peneliti/notifikasi/redirect/${notif.id}" class="flex items-start gap-3 p-3 hover:bg-surface-container-low transition-colors border-b border-outline-variant last:border-0 ${notif.status === 'unread' ? 'bg-surface-container-low' : ''}">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span class="material-symbols-outlined text-primary text-sm">${getIconByType(notif.type)}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium ${notif.status === 'unread' ? 'text-primary' : 'text-on-surface'}">${notif.title}</p>
+                        <p class="text-xs text-on-surface-variant truncate">${notif.message}</p>
+                        <p class="text-xs text-on-surface-variant mt-1">${new Date(notif.created_at).toLocaleDateString('id-ID')}</p>
+                    </div>
+                </a>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Error loading notifications:', error);
+            const container = document.getElementById('notificationList');
+            if (container) {
+                container.innerHTML = '<div class="p-4 text-center text-error">Gagal memuat notifikasi</div>';
+            }
+        });
+    }
+    
+    function getIconByType(type) {
+        const icons = {
+            'account_activation': 'check_circle',
+            'review_assignment': 'assignment',
+            'proposal_status': 'article',
+            'document_ready': 'description',
+            'revision_request': 'edit_note'
+        };
+        return icons[type] || 'notifications';
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+        const notifContainer = document.getElementById('notificationBtn');
+        const dropdown = document.getElementById('notificationDropdown');
+        if (notifContainer && dropdown && notifContainer.parentElement && !notifContainer.parentElement.contains(event.target) && !dropdown.contains(event.target)) {
+            dropdown.style.display = 'none';
+            notificationDropdownOpen = false;
+        }
+    });
+    
+    // Load notifications on page load if user is logged in and has role peneliti
+    @auth
+        @if(auth()->user()->hasRole('peneliti'))
+            document.addEventListener('DOMContentLoaded', function() {
+                loadLatestNotifications();
+            });
+        @endif
+    @endauth
 </script>
 @stack('scripts')
 </body>

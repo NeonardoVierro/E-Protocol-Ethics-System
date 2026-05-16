@@ -98,6 +98,18 @@ Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::get('/download-template', [PengajuanController::class, 'downloadTemplate'])->name('download-template');
     Route::get('/riwayat-pengajuan', [PengajuanController::class, 'riwayatPengajuan'])->name('riwayat-pengajuan');
 });
+
+// ============ ROUTE NOTIFIKASI PENELITI ============
+Route::middleware(['auth'])->prefix('peneliti')->name('peneliti.')->group(function () {
+    Route::get('/notifikasi', [App\Http\Controllers\Peneliti\NotificationController::class, 'index'])->name('notifikasi.index');
+    Route::get('/notifikasi/latest', [App\Http\Controllers\Peneliti\NotificationController::class, 'getLatest'])->name('notifikasi.latest');
+    Route::post('/notifikasi/mark-read/{id}', [App\Http\Controllers\Peneliti\NotificationController::class, 'markAsRead'])->name('notifikasi.mark-read');
+    Route::post('/notifikasi/mark-all-read', [App\Http\Controllers\Peneliti\NotificationController::class, 'markAllAsRead'])->name('notifikasi.mark-all-read');
+    Route::delete('/notifikasi/{id}', [App\Http\Controllers\Peneliti\NotificationController::class, 'destroy'])->name('notifikasi.destroy');
+    Route::post('/notifikasi/clear-read', [App\Http\Controllers\Peneliti\NotificationController::class, 'clearRead'])->name('notifikasi.clear-read');
+    Route::get('/notifikasi/redirect/{id}', [App\Http\Controllers\Peneliti\NotificationController::class, 'redirectFromNotification'])->name('notifikasi.redirect');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         $user = auth()->user();
