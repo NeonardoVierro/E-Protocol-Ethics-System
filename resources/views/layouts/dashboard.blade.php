@@ -154,24 +154,214 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #737783;
         }
+        /* Sidebar transition */
+        .sidebar-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .sidebar-panel {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .sidebar-panel.active {
+            transform: translateX(0);
+        }
     </style>
     @stack('styles')
 </head>
-<body class="bg-background text-on-surface font-body-md antialiased"
-style="background-image: url('{{ asset('images/bg-research.jpg') }}')">
+<body class="bg-background text-on-surface font-body-md antialiased relative" style="background-image: url('{{ asset('images/bg-research.jpg') }}')">
+
+<!-- Sidebar Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black/40 z-40 sidebar-overlay lg:hidden" onclick="closeSidebar()"></div>
+
+<!-- Sidebar Panel (Mobile Drawer) -->
+<aside id="sidebarPanel" class="fixed top-0 left-0 h-full w-72 bg-white shadow-2xl z-50 sidebar-panel lg:hidden flex flex-col overflow-y-auto border-r border-outline-variant">
+    <!-- Sidebar Header -->
+    <div class="flex items-center justify-between p-4 border-b border-outline-variant h-16">
+        <span class="text-xl font-bold tracking-tighter text-primary">EthicsClear</span>
+        <button onclick="closeSidebar()" class="p-2 rounded-full hover:bg-surface-container-low transition-colors">
+            <span class="material-symbols-outlined text-on-surface-variant">close</span>
+        </button>
+    </div>
+
+    <!-- Sidebar Navigation (Same content as desktop but vertical) -->
+    <div class="p-4 flex flex-col gap-2">
+        @auth
+            @if(auth()->user()->hasRole('peneliti') && Route::has('peneliti.dashboard'))
+                <a href="{{ route('home') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors {{ request()->routeIs('home') ? 'bg-primary-container/20 text-primary font-semibold' : '' }}">
+                    <span class="material-symbols-outlined">home</span>
+                    <span>Home</span>
+                </a>
+                <div class="mt-1">
+                    <p class="px-4 py-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Panduan</p>
+                    <a href="{{ route('panduan.syarat-pendaftaran') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                        <span class="material-symbols-outlined text-primary text-lg">description</span>
+                        <span>Syarat Pendaftaran</span>
+                    </a>
+                    <a href="{{ route('panduan.alur-pengajuan') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                        <span class="material-symbols-outlined text-primary text-lg">timeline</span>
+                        <span>Alur Pengajuan</span>
+                    </a>
+                    <a href="{{ route('panduan.panduan-reviewer') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                        <span class="material-symbols-outlined text-primary text-lg">rate_review</span>
+                        <span>Panduan Reviewer</span>
+                    </a>
+                </div>
+                <div class="mt-1">
+                    <p class="px-4 py-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Pengajuan</p>
+                    <a href="{{ route('pengajuan.upload-proposal') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                        <span class="material-symbols-outlined text-primary text-lg">upload_file</span>
+                        <span>Upload Proposal</span>
+                    </a>
+                    <a href="{{ route('pengajuan.download-template') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                        <span class="material-symbols-outlined text-primary text-lg">download</span>
+                        <span>Download Template</span>
+                    </a>
+                    <a href="{{ route('pengajuan.riwayat-pengajuan') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                        <span class="material-symbols-outlined text-primary text-lg">history</span>
+                        <span>Riwayat Pengajuan</span>
+                    </a>
+                </div>
+            @elseif(auth()->user()->hasRole('admin'))
+                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Dashboard</a>
+                <a href="{{ route('admin.usermanagement.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">User Management</a>
+                <a href="{{ route('admin.templateproposal.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Template</a>
+                <a href="{{ route('admin.systemmonitoring.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Monitoring</a>
+            @elseif(auth()->user()->hasRole('sekretaris') || auth()->user()->hasRole('ketua'))
+                <a href="{{ route('sekretaris.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Dashboard</a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Manajemen Proposal</a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Assign Reviewer</a>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Draft Ethical Clearance</a>
+            @elseif(auth()->user()->hasRole('reviewer'))
+                <a href="{{ route('reviewer.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Dashboard</a>
+                <a href="{{ route('reviewer.proposal-masuk') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Proposal Masuk</a>
+                <a href="{{ route('reviewer.review-proposal') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Review Proposal</a>
+                <a href="{{ route('reviewer.riwayat-review') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Riwayat Review</a>
+            @endif
+        @else
+            <!-- Guest Navigation in Sidebar -->
+            <a href="{{ route('home') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors {{ request()->routeIs('home') ? 'bg-primary-container/20 text-primary font-semibold' : '' }}">
+                <span class="material-symbols-outlined">home</span>
+                <span>Home</span>
+            </a>
+            <div class="mt-1">
+                <p class="px-4 py-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Panduan</p>
+                <a href="{{ route('panduan.syarat-pendaftaran') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-primary text-lg">description</span>
+                    <span>Syarat Pendaftaran</span>
+                </a>
+                <a href="{{ route('panduan.alur-pengajuan') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-primary text-lg">timeline</span>
+                    <span>Alur Pengajuan</span>
+                </a>
+                <a href="{{ route('panduan.panduan-reviewer') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-primary text-lg">rate_review</span>
+                    <span>Panduan Reviewer</span>
+                </a>
+            </div>
+            <div class="mt-1">
+                <p class="px-4 py-2 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Pengajuan</p>
+                <a href="{{ route('pengajuan.upload-proposal') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-primary text-lg">upload_file</span>
+                    <span>Upload Proposal</span>
+                </a>
+                <a href="{{ route('pengajuan.download-template') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-primary text-lg">download</span>
+                    <span>Download Template</span>
+                </a>
+                <a href="{{ route('pengajuan.riwayat-pengajuan') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                    <span class="material-symbols-outlined text-primary text-lg">history</span>
+                    <span>Riwayat Pengajuan</span>
+                </a>
+            </div>
+        @endauth
+    </div>
+</aside>
+
 <!-- Top Navigation Bar -->
-<nav class="bg-white border-b border-outline-variant shadow-sm sticky top-0 z-50">
+<nav class="bg-white border-b border-outline-variant shadow-sm sticky top-0 z-30">
     <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <!-- Logo -->
-        <div class="flex items-center gap-8 lg:gap-12">
+        <!-- Left side: Hamburger + Logo -->
+        <div class="flex items-center gap-4 lg:gap-8">
+            <!-- Hamburger Button (Visible on small screens) -->
+            <button onclick="openSidebar()" class="p-2 rounded-full hover:bg-surface-container-low transition-colors lg:hidden" aria-label="Buka menu">
+                <span class="material-symbols-outlined text-on-surface-variant">menu</span>
+            </button>
+
             <a href="{{ route('home') }}" class="text-xl font-bold tracking-tighter text-primary hover:opacity-80 transition-opacity">
                 EthicsClear
             </a>
 
             <!-- Desktop Navigation - Conditional berdasarkan role dan auth -->
-            @auth
-                @if(auth()->user()->hasRole('peneliti') && Route::has('peneliti.dashboard'))
-                <div class="hidden md:flex items-center gap-6">
+            <div class="hidden lg:flex items-center gap-6">
+                @auth
+                    @if(auth()->user()->hasRole('peneliti') && Route::has('peneliti.dashboard'))
+                        <a href="{{ route('home') }}" class="text-on-surface-variant hover:text-primary transition-colors duration-200 {{ request()->routeIs('home') ? 'text-primary border-b-2 border-primary pb-1 font-semibold' : '' }}">
+                            Home
+                        </a>
+                        <div class="relative group">
+                            <div class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+                                <span>Panduan</span>
+                                <span class="material-symbols-outlined text-sm">expand_more</span>
+                            </div>
+                            <div class="dropdown-menu absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-outline-variant z-50">
+                                <a href="{{ route('panduan.syarat-pendaftaran') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-t-xl transition-colors">
+                                    <span class="material-symbols-outlined text-primary text-lg">description</span>
+                                    <span>Syarat Pendaftaran Ethical Clearance</span>
+                                </a>
+                                <a href="{{ route('panduan.alur-pengajuan') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                                    <span class="material-symbols-outlined text-primary text-lg">timeline</span>
+                                    <span>Alur Pengajuan Ethical Clearance</span>
+                                </a>
+                                <a href="{{ route('panduan.panduan-reviewer') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-b-xl transition-colors">
+                                    <span class="material-symbols-outlined text-primary text-lg">rate_review</span>
+                                    <span>Panduan Reviewer</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="relative group">
+                            <div class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
+                                <span>Pengajuan</span>
+                                <span class="material-symbols-outlined text-sm">expand_more</span>
+                            </div>
+                            <div class="dropdown-menu absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-outline-variant z-50">
+                                <a href="{{ route('pengajuan.upload-proposal') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-t-xl transition-colors">
+                                    <span class="material-symbols-outlined text-primary text-lg">upload_file</span>
+                                    <span>Upload Proposal</span>
+                                </a>
+                                <a href="{{ route('pengajuan.download-template') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                                    <span class="material-symbols-outlined text-primary text-lg">download</span>
+                                    <span>Download Template</span>
+                                </a>
+                                <a href="{{ route('pengajuan.riwayat-pengajuan') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-b-xl transition-colors">
+                                    <span class="material-symbols-outlined text-primary text-lg">history</span>
+                                    <span>Riwayat Pengajuan</span>
+                                </a>
+                            </div>
+                        </div>
+                    @elseif(auth()->user()->hasRole('admin'))
+                        <a href="{{ route('admin.dashboard') }}" class="text-on-surface-variant hover:text-primary transition-colors">Dashboard</a>
+                        <a href="{{ route('admin.usermanagement.index') }}" class="text-on-surface-variant hover:text-primary transition-colors">User Management</a>
+                        <a href="{{ route('admin.templateproposal.index') }}" class="text-on-surface-variant hover:text-primary transition-colors">Template</a>
+                        <a href="{{ route('admin.systemmonitoring.index') }}" class="text-on-surface-variant hover:text-primary transition-colors">Monitoring</a>
+                    @elseif(auth()->user()->hasRole('sekretaris') || auth()->user()->hasRole('ketua'))
+                        <a href="{{ route('sekretaris.dashboard') }}" class="text-on-surface-variant hover:text-primary transition-colors">Dashboard</a>
+                        <a href="#" class="text-on-surface-variant hover:text-primary transition-colors">Manajemen Proposal</a>
+                        <a href="#" class="text-on-surface-variant hover:text-primary transition-colors">Assign Reviewer</a>
+                        <a href="#" class="text-on-surface-variant hover:text-primary transition-colors">Draft Ethical Clearance</a>
+                    @elseif(auth()->user()->hasRole('reviewer'))
+                        <a href="{{ route('reviewer.dashboard') }}" class="text-on-surface-variant hover:text-primary transition-colors">Dashboard</a>
+                        <a href="{{ route('reviewer.proposal-masuk') }}" class="text-on-surface-variant hover:text-primary transition-colors">Proposal Masuk</a>
+                        <a href="{{ route('reviewer.review-proposal') }}" class="text-on-surface-variant hover:text-primary transition-colors">Review Proposal</a>
+                        <a href="{{ route('reviewer.riwayat-review') }}" class="text-on-surface-variant hover:text-primary transition-colors">Riwayat Review</a>
+                    @endif
+                @else
+                    <!-- Navigation for Guest -->
                     <a href="{{ route('home') }}" class="text-on-surface-variant hover:text-primary transition-colors duration-200 {{ request()->routeIs('home') ? 'text-primary border-b-2 border-primary pb-1 font-semibold' : '' }}">
                         Home
                     </a>
@@ -215,77 +405,8 @@ style="background-image: url('{{ asset('images/bg-research.jpg') }}')">
                             </a>
                         </div>
                     </div>
-                </div>
-                @elseif(auth()->user()->hasRole('admin'))
-                <div class="hidden md:flex items-center gap-6">
-                    <a href="{{ route('admin.dashboard') }}" class="text-on-surface-variant hover:text-primary transition-colors">Dashboard</a>
-                    <a href="{{ route('admin.usermanagement.index') }}" class="text-on-surface-variant hover:text-primary transition-colors">User Management</a>
-                    <a href="{{ route('admin.templateproposal.index') }}" class="text-on-surface-variant hover:text-primary transition-colors">Template</a>
-                    <a href="{{ route('admin.systemmonitoring.index') }}" class="text-on-surface-variant hover:text-primary transition-colors">Monitoring</a>
-                </div>
-                @elseif(auth()->user()->hasRole('sekretaris') || auth()->user()->hasRole('ketua'))
-                <div class="hidden md:flex items-center gap-6">
-                    <a href="{{ route('sekretaris.dashboard') }}" class="text-on-surface-variant hover:text-primary transition-colors">Dashboard</a>
-                    <a href="#" class="text-on-surface-variant hover:text-primary transition-colors">Manajemen Proposal</a>
-                    <a href="#" class="text-on-surface-variant hover:text-primary transition-colors">Assign Reviewer</a>
-                    <a href="#" class="text-on-surface-variant hover:text-primary transition-colors">Draft Ethical Clearance</a>
-                </div>
-                @elseif(auth()->user()->hasRole('reviewer'))
-                <div class="hidden md:flex items-center gap-6">
-                    <a href="{{ route('reviewer.dashboard') }}" class="text-on-surface-variant hover:text-primary transition-colors">Dashboard</a>
-                    <a href="{{ route('reviewer.proposal-masuk') }}" class="text-on-surface-variant hover:text-primary transition-colors">Proposal Masuk</a>
-                    <a href="{{ route('reviewer.review-proposal') }}" class="text-on-surface-variant hover:text-primary transition-colors">Review Proposal</a>
-                    <a href="{{ route('reviewer.riwayat-review') }}" class="text-on-surface-variant hover:text-primary transition-colors">Riwayat Review</a>
-                </div>
-                @endif
-            @else
-                <!-- Navigation for Guest -->
-                <div class="hidden md:flex items-center gap-6">
-                    <a href="{{ route('home') }}" class="text-on-surface-variant hover:text-primary transition-colors {{ request()->routeIs('home') ? 'text-primary border-b-2 border-primary pb-1 font-semibold' : '' }}">
-                        Home
-                    </a>
-                    <div class="relative group">
-                        <div class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
-                            <span>Panduan</span>
-                            <span class="material-symbols-outlined text-sm">expand_more</span>
-                        </div>
-                        <div class="dropdown-menu absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-outline-variant z-50">
-                            <a href="{{ route('panduan.syarat-pendaftaran') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-t-xl transition-colors">
-                                <span class="material-symbols-outlined text-primary text-lg">description</span>
-                                <span>Syarat Pendaftaran Ethical Clearance</span>
-                            </a>
-                            <a href="{{ route('panduan.alur-pengajuan') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
-                                <span class="material-symbols-outlined text-primary text-lg">timeline</span>
-                                <span>Alur Pengajuan Ethical Clearance</span>
-                            </a>
-                            <a href="{{ route('panduan.panduan-reviewer') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-b-xl transition-colors">
-                                <span class="material-symbols-outlined text-primary text-lg">rate_review</span>
-                                <span>Panduan Reviewer</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="relative group">
-                        <div class="flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
-                            <span>Pengajuan</span>
-                            <span class="material-symbols-outlined text-sm">expand_more</span>
-                        </div>
-                        <div class="dropdown-menu absolute left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-outline-variant z-50">
-                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-t-xl transition-colors">
-                                <span class="material-symbols-outlined text-primary text-lg">upload_file</span>
-                                <span>Upload Proposal</span>
-                            </a>
-                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
-                                <span class="material-symbols-outlined text-primary text-lg">download</span>
-                                <span>Download Template</span>
-                            </a>
-                            <a href="#" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
-                                <span class="material-symbols-outlined text-primary text-lg">history</span>
-                                <span>Riwayat Pengajuan</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            @endauth
+                @endauth
+            </div>
         </div>
 
         <!-- Right Side Navigation -->
@@ -388,9 +509,32 @@ style="background-image: url('{{ asset('images/bg-research.jpg') }}')">
 </footer>
 
 <script>
+    // Sidebar functions
+    function openSidebar() {
+        document.getElementById('sidebarPanel').classList.add('active');
+        document.getElementById('sidebarOverlay').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeSidebar() {
+        document.getElementById('sidebarPanel').classList.remove('active');
+        document.getElementById('sidebarOverlay').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    // Close sidebar when clicking overlay
+    document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
     // Simple notification placeholder (will be replaced with real JS later)
     document.getElementById('notificationBtn')?.addEventListener('click', function() {
         alert('Fitur notifikasi akan segera hadir. Saat ini belum ada notifikasi baru.');
+    });
+
+    // Close sidebar on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeSidebar();
+        }
     });
 </script>
 @stack('scripts')

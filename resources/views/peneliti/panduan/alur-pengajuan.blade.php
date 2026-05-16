@@ -420,32 +420,5 @@
         });
     });
     </script>
-    <!-- Call to Action -->
-    <div class="text-center pt-4">
-        <div class="inline-flex flex-col sm:flex-row gap-4">
-            @auth
-                @if(auth()->user()->hasRole('peneliti') && auth()->user()->status === 'active')
-                    <button onclick="window.location.href='{{ route('pengajuan.upload-proposal') }}'" class="px-8 py-3 bg-primary text-on-primary rounded-xl font-semibold hover:bg-primary-container transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                        Mulai Pengajuan Sekarang
-                    </button>
-                    <button onclick="window.location.href='{{ route('pengajuan.riwayat-pengajuan') }}'" class="px-8 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary/5 transition-all duration-300">
-                        Lihat Riwayat Pengajuan
-                    </button>
-                @elseif(auth()->user()->status === 'pending')
-                    <div class="px-8 py-3 bg-amber-100 text-amber-700 rounded-xl font-semibold">
-                        Akun Anda sedang menunggu aktivasi oleh sekretariat
-                    </div>
-                @endif
-            @else
-                <button onclick="window.location.href='{{ route('login') }}'" class="px-8 py-3 bg-primary text-on-primary rounded-xl font-semibold hover:bg-primary-container transition-all duration-300 shadow-lg hover:shadow-xl">
-                    Login untuk Mengajukan
-                </button>
-                <button onclick="window.location.href='{{ route('register') }}'" class="px-8 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary/5 transition-all duration-300">
-                    Daftar Akun Baru
-                </button>
-            @endauth
-        </div>
-    </div>
-
 </div>
 @endsection

@@ -9,15 +9,8 @@ use Illuminate\Support\Facades\Auth;
 class PengajuanController extends Controller
 {
     /**
-     * Constructor - pastikan user sudah login untuk semua method
-     */
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
-
-    /**
      * Halaman Upload Proposal
+     * Bisa diakses guest tapi isinya menampilkan pesan login
      */
     public function uploadProposal()
     {
@@ -26,6 +19,7 @@ class PengajuanController extends Controller
 
     /**
      * Halaman Download Template
+     * Bisa diakses guest tapi isinya menampilkan pesan login
      */
     public function downloadTemplate()
     {
@@ -34,6 +28,7 @@ class PengajuanController extends Controller
 
     /**
      * Halaman Riwayat Pengajuan dengan tracking proposal
+     * Bisa diakses guest tapi isinya menampilkan pesan login
      */
     public function riwayatPengajuan()
     {

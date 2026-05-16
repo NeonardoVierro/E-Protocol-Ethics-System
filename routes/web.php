@@ -85,8 +85,15 @@ Route::prefix('panduan')->name('panduan.')->group(function () {
     Route::get('/panduan-reviewer', [PanduanController::class, 'panduanReviewer'])->name('panduan-reviewer');
 });
 
-// ============ ROUTE PENGAJUAN (Hanya bisa diakses setelah login) ============
-Route::middleware(['auth'])->prefix('pengajuan')->name('pengajuan.')->group(function () {
+// ============ ROUTE PANDUAN (Dapat diakses sebelum login) ============
+Route::prefix('panduan')->name('panduan.')->group(function () {
+    Route::get('/syarat-pendaftaran', [PanduanController::class, 'syaratPendaftaran'])->name('syarat-pendaftaran');
+    Route::get('/alur-pengajuan', [PanduanController::class, 'alurPengajuan'])->name('alur-pengajuan');
+    Route::get('/panduan-reviewer', [PanduanController::class, 'panduanReviewer'])->name('panduan-reviewer');
+});
+
+// ============ ROUTE PENGAJUAN (Dapat diakses sebelum login, tapi isinya pesan login) ============
+Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::get('/upload-proposal', [PengajuanController::class, 'uploadProposal'])->name('upload-proposal');
     Route::get('/download-template', [PengajuanController::class, 'downloadTemplate'])->name('download-template');
     Route::get('/riwayat-pengajuan', [PengajuanController::class, 'riwayatPengajuan'])->name('riwayat-pengajuan');

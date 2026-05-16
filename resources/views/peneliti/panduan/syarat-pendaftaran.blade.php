@@ -206,23 +206,6 @@
         </div>
     </div>
 
-    <!-- Download Template Section -->
-    <div class="bg-gradient-to-r from-primary/10 via-surface-container-low to-primary/10 rounded-xl p-6 border border-primary/20">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary text-2xl">download</span>
-                </div>
-                <div>
-                    <h3 class="font-semibold text-primary">Belum memiliki template dokumen?</h3>
-                    <p class="text-sm text-on-surface-variant">Download template formulir pengajuan ethical clearance</p>
-                </div>
-            </div>
-            <button onclick="window.location.href='{{ route('pengajuan.download-template') }}'" class="px-6 py-2.5 bg-primary text-on-primary rounded-lg font-semibold text-sm hover:bg-primary-container transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">download</span>
-                Download Template
-            </button>
-        </div>
     </div>
         <!-- Scroll to Top Button -->
     <button id="scrollToTop" class="fixed bottom-8 right-8 w-12 h-12 rounded-full bg-primary text-on-primary shadow-lg hover:bg-primary-container transition-all duration-300 transform translate-y-16 opacity-0 flex items-center justify-center z-50 hover:scale-110 active:scale-95">
@@ -250,30 +233,5 @@
         });
     });
     </script>
-
-    <!-- Call to Action -->
-    <div class="text-center pt-4">
-        <div class="inline-flex flex-col sm:flex-row gap-4">
-            @auth
-                @if(auth()->user()->hasRole('peneliti') && auth()->user()->status === 'active')
-                    <button onclick="window.location.href='{{ route('pengajuan.upload-proposal') }}'" class="px-8 py-3 bg-primary text-on-primary rounded-xl font-semibold hover:bg-primary-container transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                        Mulai Pengajuan Sekarang
-                    </button>
-                @elseif(auth()->user()->status === 'pending')
-                    <div class="px-8 py-3 bg-amber-100 text-amber-700 rounded-xl font-semibold">
-                        Akun Anda sedang menunggu aktivasi oleh sekretariat
-                    </div>
-                @endif
-            @else
-                <button onclick="window.location.href='{{ route('login') }}'" class="px-8 py-3 bg-primary text-on-primary rounded-xl font-semibold hover:bg-primary-container transition-all duration-300 shadow-lg hover:shadow-xl">
-                    Login untuk Mengajukan
-                </button>
-                <button onclick="window.location.href='{{ route('register') }}'" class="px-8 py-3 border-2 border-primary text-primary rounded-xl font-semibold hover:bg-primary/5 transition-all duration-300">
-                    Daftar Akun Baru
-                </button>
-            @endauth
-        </div>
-    </div>
-
 </div>
 @endsection
