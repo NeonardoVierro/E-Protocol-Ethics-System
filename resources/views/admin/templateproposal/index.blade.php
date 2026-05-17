@@ -20,7 +20,7 @@
     </button>
 </div>
 @endif
- 
+
 @if(session('error'))
 <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
      class="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-5 py-3 rounded-xl mb-5 text-[13.5px] font-medium shadow-sm">
@@ -31,7 +31,7 @@
     </button>
 </div>
 @endif
- 
+
 {{-- ═══════════════════════════════════════════
      Stat Cards
 ═══════════════════════════════════════════ --}}
@@ -66,17 +66,17 @@
         </div>
     </div>
 </div>
- 
+
 {{-- ═══════════════════════════════════════════
      Daftar Dokumen
 ═══════════════════════════════════════════ --}}
 <div class="bg-white border border-slate-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
- 
+
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <span class="text-[15px] font-bold text-slate-900">Daftar Dokumen</span>
         <span class="text-[12.5px] text-slate-400">{{ $templates->total() }} template</span>
     </div>
- 
+
     @if($templates->isEmpty())
     <div class="py-16 text-center">
         <i class="fas fa-folder-open text-slate-300 text-4xl mb-3 block"></i>
@@ -104,6 +104,9 @@
                         <div>
                             <div class="text-[13.5px] font-semibold text-slate-800">{{ $t->nama_dokumen }}</div>
                             <div class="text-[11px] text-slate-400">{{ $t->file_name }}</div>
+                            @if($t->deskripsi)
+                            <div class="text-[11px] text-slate-400 mt-0.5 line-clamp-1 max-w-xs">{{ $t->deskripsi }}</div>
+                            @endif
                         </div>
                     </div>
                 </td>
@@ -133,7 +136,7 @@
                 <td class="px-6 py-4">
                     <div class="flex items-center justify-end gap-1.5">
                         {{-- Edit --}}
-                        <button onclick="openEditModal({{ $t->id }}, '{{ addslashes($t->nama_dokumen) }}', '{{ $t->versi }}', '{{ $t->kategori }}')"
+                        <button onclick="openEditModal({{ $t->id }}, '{{ addslashes($t->nama_dokumen) }}', '{{ $t->versi }}', '{{ $t->kategori }}', '{{ addslashes($t->deskripsi ?? '') }}')"
                                 class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="Edit">
                             <i class="fas fa-pen text-xs"></i>
                         </button>
@@ -151,14 +154,15 @@
                                 <i class="fas {{ $t->is_active ? 'fa-toggle-on' : 'fa-toggle-off' }} text-sm"></i>
                             </button>
                         </form>
-                        {{-- Hapus --}}
-                        <form action="{{ route('admin.templates.destroy', $t->id) }}" method="POST" class="inline"
-                              onsubmit="return confirm('Hapus template {{ addslashes($t->nama_dokumen) }}?')">
+                        {{-- Hapus — pakai modal custom, bukan confirm() --}}
+                        <button type="button"
+                                onclick="openDeleteModal({{ $t->id }}, '{{ addslashes($t->nama_dokumen) }}')"
+                                class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer" title="Hapus">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                        {{-- Form hapus (di-submit via JS) --}}
+                        <form id="form-delete-{{ $t->id }}" action="{{ route('admin.templates.destroy', $t->id) }}" method="POST" class="hidden">
                             @csrf @method('DELETE')
-                            <button type="submit"
-                                    class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer" title="Hapus">
-                                <i class="fas fa-trash text-xs"></i>
-                            </button>
                         </form>
                     </div>
                 </td>
@@ -166,14 +170,13 @@
             @endforeach
         </tbody>
     </table>
- 
+
     {{-- Pagination --}}
     <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100">
         <span class="text-[12.5px] text-slate-400">
             Showing {{ $templates->firstItem() }}–{{ $templates->lastItem() }} of {{ $templates->total() }} templates
         </span>
         <div class="flex items-center gap-1">
-            {{-- Previous --}}
             @if($templates->onFirstPage())
                 <span class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-300 cursor-not-allowed">
                     <i class="fas fa-chevron-left text-xs"></i>
@@ -184,8 +187,7 @@
                     <i class="fas fa-chevron-left text-xs"></i>
                 </a>
             @endif
- 
-            {{-- Page numbers --}}
+
             @foreach($templates->getUrlRange(1, $templates->lastPage()) as $page => $url)
                 @if($page == $templates->currentPage())
                     <span class="w-8 h-8 flex items-center justify-center bg-[#1e3a5f] text-white text-[13px] font-semibold rounded-lg">{{ $page }}</span>
@@ -196,8 +198,7 @@
                     </a>
                 @endif
             @endforeach
- 
-            {{-- Next --}}
+
             @if($templates->hasMorePages())
                 <a href="{{ $templates->nextPageUrl() }}"
                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
@@ -212,12 +213,12 @@
     </div>
     @endif
 </div>
- 
+
 {{-- ═══════════════════════════════════════════
-     ROW BAWAH: Upload + Form (disambung ke backend)
+     ROW BAWAH: Upload + Form
 ═══════════════════════════════════════════ --}}
 <div id="form-upload" class="grid grid-cols-2 gap-5">
- 
+
     {{-- Upload Area --}}
     <div class="bg-white border-2 border-dashed border-slate-200 rounded-2xl shadow-sm p-8 flex flex-col items-center justify-center text-center transition-colors"
          id="drop-zone"
@@ -237,19 +238,17 @@
             Pilih File dari Komputer
         </button>
     </div>
- 
-    {{-- Form Detail (disambung ke route store) --}}
+
+    {{-- Form Detail --}}
     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <h3 class="text-[15px] font-bold text-slate-900 mb-5 pb-4 border-b border-slate-100">Detail Template Baru</h3>
- 
+
         <form action="{{ route('admin.templates.store') }}" method="POST" enctype="multipart/form-data" id="form-tambah-template">
             @csrf
- 
-            {{-- File input hidden (trigger dari drop zone & tombol pilih) --}}
+
             <input type="file" id="file-input-hidden" name="file" accept=".pdf,.docx,.doc"
                    class="hidden" onchange="handleFileInput(this)">
- 
-            {{-- Validation errors --}}
+
             @if($errors->any())
             <div class="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
                 <ul class="space-y-1">
@@ -262,7 +261,7 @@
                 </ul>
             </div>
             @endif
- 
+
             <div class="space-y-4">
                 {{-- Nama Dokumen --}}
                 <div>
@@ -276,7 +275,20 @@
                         <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
                     @enderror
                 </div>
- 
+
+                {{-- Deskripsi Singkat --}}
+                <div>
+                    <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">
+                        Deskripsi Singkat <span class="text-slate-400 font-normal">(opsional)</span>
+                    </label>
+                    <textarea name="deskripsi" rows="2"
+                              placeholder="Contoh: Struktur proposal standar yang mencakup metodologi, etika, dan rincian teknis."
+                              class="w-full px-3.5 py-2.5 text-[13.5px] border {{ $errors->has('deskripsi') ? 'border-red-300' : 'border-slate-200' }} rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 placeholder-slate-400 resize-none">{{ old('deskripsi') }}</textarea>
+                    @error('deskripsi')
+                        <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 {{-- Versi + Kategori --}}
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -308,7 +320,7 @@
                         @enderror
                     </div>
                 </div>
- 
+
                 {{-- File indicator --}}
                 <div id="file-indicator" class="hidden">
                     <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">File Dipilih</label>
@@ -324,7 +336,7 @@
                 @error('file')
                     <p class="text-[11px] text-red-500 -mt-2">{{ $message }}</p>
                 @enderror
- 
+
                 {{-- Buttons --}}
                 <div class="flex items-center gap-3 pt-1">
                     <button type="submit"
@@ -340,14 +352,14 @@
         </form>
     </div>
 </div>
- 
+
 {{-- ═══════════════════════════════════════════
      MODAL: Edit Template
 ═══════════════════════════════════════════ --}}
 <div id="modal-edit" class="fixed inset-0 z-50 hidden items-center justify-center">
     <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeEditModal()"></div>
     <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
- 
+
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
             <h3 class="text-[16px] font-bold text-slate-900">Edit Template</h3>
             <button onclick="closeEditModal()"
@@ -355,7 +367,7 @@
                 <i class="fas fa-xmark text-sm"></i>
             </button>
         </div>
- 
+
         <form id="form-edit" method="POST" enctype="multipart/form-data">
             @csrf @method('PUT')
             <div class="px-6 py-5 space-y-4">
@@ -364,6 +376,17 @@
                     <input type="text" name="nama_dokumen" id="edit-nama"
                            class="w-full px-3.5 py-2.5 text-[13.5px] border border-slate-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700">
                 </div>
+
+                {{-- Deskripsi Singkat (Edit) --}}
+                <div>
+                    <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">
+                        Deskripsi Singkat <span class="text-slate-400 font-normal">(opsional)</span>
+                    </label>
+                    <textarea name="deskripsi" id="edit-deskripsi" rows="2"
+                              placeholder="Deskripsi singkat tentang template ini..."
+                              class="w-full px-3.5 py-2.5 text-[13.5px] border border-slate-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 placeholder-slate-400 resize-none"></textarea>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">Versi <span class="text-red-400">*</span></label>
@@ -403,9 +426,42 @@
         </form>
     </div>
 </div>
- 
+
+{{-- ═══════════════════════════════════════════
+     MODAL: Konfirmasi Hapus
+═══════════════════════════════════════════ --}}
+<div id="modal-delete" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden">
+
+        <div class="px-6 pt-6 pb-5 text-center">
+            {{-- Icon --}}
+            <div class="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trash text-red-500 text-xl"></i>
+            </div>
+            <h3 class="text-[16px] font-bold text-slate-900 mb-1.5">Hapus Template?</h3>
+            <p class="text-[13.5px] text-slate-500 leading-relaxed">
+                Kamu yakin ingin menghapus template
+                <span id="delete-nama" class="font-semibold text-slate-700"></span>?
+                Tindakan ini tidak dapat dibatalkan.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3 px-6 pb-6">
+            <button type="button" onclick="closeDeleteModal()"
+                    class="flex-1 py-2.5 text-[13.5px] font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
+                Batal
+            </button>
+            <button type="button" onclick="confirmDelete()"
+                    class="flex-1 py-2.5 text-[13.5px] font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors cursor-pointer">
+                Ya, Hapus
+            </button>
+        </div>
+    </div>
+</div>
+
 @endsection
- 
+
 @push('scripts')
 <script>
 // ── File drag & drop ──────────────────────────────────────────────
@@ -416,13 +472,12 @@ function handleFileDrop(e) {
     const file = e.dataTransfer.files[0];
     if (file) setFile(file);
 }
- 
+
 function handleFileInput(input) {
     if (input.files[0]) setFile(input.files[0]);
 }
- 
+
 function setFile(file) {
-    // Validasi tipe
     const allowed = ['application/pdf',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/msword'];
@@ -430,50 +485,77 @@ function setFile(file) {
         alert('Format file harus PDF atau DOCX.');
         return;
     }
- 
-    // Transfer ke input form
     const dt = new DataTransfer();
     dt.items.add(file);
     document.getElementById('file-input-hidden').files = dt.files;
- 
-    // Tampilkan nama file
+
     const ind  = document.getElementById('file-indicator');
     const name = document.getElementById('file-indicator-name');
     ind.classList.remove('hidden');
     name.textContent = file.name;
- 
-    // Update drop zone
+
     const dropName = document.getElementById('drop-file-name');
     dropName.textContent = '✓ ' + file.name;
     dropName.classList.remove('hidden');
 }
- 
+
 function clearFile() {
     document.getElementById('file-input-hidden').value = '';
     document.getElementById('file-indicator').classList.add('hidden');
     document.getElementById('drop-file-name').classList.add('hidden');
 }
- 
+
 // ── Modal Edit ────────────────────────────────────────────────────
-function openEditModal(id, nama, versi, kategori) {
-    document.getElementById('edit-nama').value     = nama;
-    document.getElementById('edit-versi').value    = versi;
-    document.getElementById('edit-kategori').value = kategori;
-    document.getElementById('form-edit').action    = `/admin/templates/${id}`;
- 
+function openEditModal(id, nama, versi, kategori, deskripsi) {
+    document.getElementById('edit-nama').value      = nama;
+    document.getElementById('edit-versi').value     = versi;
+    document.getElementById('edit-kategori').value  = kategori;
+    document.getElementById('edit-deskripsi').value = deskripsi;
+    document.getElementById('form-edit').action     = `/admin/templates/${id}`;
+
     const modal = document.getElementById('modal-edit');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
- 
+
 function closeEditModal() {
     const modal = document.getElementById('modal-edit');
     modal.classList.add('hidden');
     modal.classList.remove('flex');
 }
- 
+
+// ── Modal Hapus ───────────────────────────────────────────────────
+let _deleteId = null;
+
+function openDeleteModal(id, nama) {
+    _deleteId = id;
+    document.getElementById('delete-nama').textContent = nama;
+
+    const modal = document.getElementById('modal-delete');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeDeleteModal() {
+    _deleteId = null;
+    const modal = document.getElementById('modal-delete');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function confirmDelete() {
+    if (_deleteId) {
+        document.getElementById('form-delete-' + _deleteId).submit();
+    }
+}
+
+// ── Keyboard close ────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeEditModal();
+    if (e.key === 'Escape') {
+        closeEditModal();
+        closeDeleteModal();
+    }
 });
 </script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 @endpush

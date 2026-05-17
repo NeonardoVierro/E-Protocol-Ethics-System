@@ -103,6 +103,7 @@ Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::get('/success', [PengajuanController::class, 'success'])->name('success');
     Route::get('/download-template', [PengajuanController::class, 'downloadTemplate'])->name('download-template');
     Route::get('/riwayat-pengajuan', [PengajuanController::class, 'riwayatPengajuan'])->name('riwayat-pengajuan');
+    Route::get('/download-template/{template}', [PengajuanController::class, 'downloadFile'])->name('download-template.file');
 });
 
 // ============ ROUTE NOTIFIKASI PENELITI ============
