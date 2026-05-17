@@ -12,6 +12,8 @@ class Proposal extends Model
 
     protected $fillable = [
         'user_id',
+        'nama_peneliti',
+        'asal_instansi',
         'title',
         'description',
         'status',
