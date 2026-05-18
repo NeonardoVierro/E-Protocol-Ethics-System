@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Sekretaris;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Notification;
+use App\Models\Proposal;
 
 class SekretarisController extends Controller
 {
@@ -21,11 +22,20 @@ class SekretarisController extends Controller
 
     public function manajemenProposal()
     {
-        $proposals = [
-            ['id' => 'P001', 'judul' => 'Studi Etika AI', 'status' => 'lengkap', 'tanggal' => '2025-05-01'],
-            ['id' => 'P002', 'judul' => 'Penelitian Klinis', 'status' => 'kurang', 'tanggal' => '2025-05-02'],
-            ['id' => 'P003', 'judul' => 'Etika Data Pasien', 'status' => 'lengkap', 'tanggal' => '2025-05-03'],
-        ];
+        $proposals = Proposal::with(['files' => function($query) {
+            $query->where('is_active', true);
+        }])
+            ->orderByDesc('submission_date')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function($proposal) {
+                $activeFilesCount = $proposal->files->count();
+                $proposal->files_count = $activeFilesCount;
+                $proposal->has_documents = $activeFilesCount > 0;
+                
+                return $proposal;
+            });
+        
         return view('sekretaris.manajemen-proposal.index', compact('proposals'));
     }
 

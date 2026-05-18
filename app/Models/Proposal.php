@@ -25,6 +25,10 @@ class Proposal extends Model
         'rejection_reason',
     ];
 
+    protected $attributes = [
+        'status' => self::STATUS_NEW,
+    ];
+
     protected $casts = [
         'submission_date' => 'date',
         'review_date' => 'date',
@@ -105,6 +109,18 @@ class Proposal extends Model
     public function canBeReviewed()
     {
         return $this->status === self::STATUS_NEW || $this->status === self::STATUS_REVISED;
+    }
+
+    // Cek kelengkapan dokumen
+    public function isDocumentComplete()
+    {
+        return $this->files()->where('is_active', true)->exists();
+    }
+
+    // Mendapatkan status kelengkapan dokumen
+    public function getDocumentStatusAttribute()
+    {
+        return $this->isDocumentComplete() ? 'lengkap' : 'kurang';
     }
 
     // Update status proposal

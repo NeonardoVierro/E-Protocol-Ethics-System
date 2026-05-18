@@ -43,7 +43,16 @@ class PengajuanController extends Controller
      */
     public function riwayatPengajuan()
     {
-        return view('peneliti.pengajuan.riwayat-pengajuan');
+        $proposals = collect();
+
+        if (Auth::check() && Auth::user()->hasRole('peneliti') && Auth::user()->status === 'active') {
+            $proposals = Proposal::where('user_id', Auth::id())
+                ->orderByDesc('submission_date')
+                ->orderByDesc('created_at')
+                ->get();
+        }
+
+        return view('peneliti.pengajuan.riwayat-pengajuan', compact('proposals'));
     }
 
     /**
