@@ -34,7 +34,13 @@ class PengajuanController extends Controller
      */
     public function downloadTemplate()
     {
-        return view('peneliti.pengajuan.download-template');
+        $templates = TemplateProposal::where('is_active', true)
+            ->orderBy('kategori')
+            ->orderBy('nama_dokumen')
+            ->get()
+            ->groupBy('kategori');
+
+        return view('peneliti.pengajuan.download-template', compact('templates'));
     }
 
     /**
@@ -233,5 +239,22 @@ class PengajuanController extends Controller
     public function success()
     {
         return view('peneliti.pengajuan.success');
+    }
+
+    public function downloadFile(TemplateProposal $template)
+    {
+        if (!Auth::check() || !Auth::user()->hasRole('peneliti') || Auth::user()->status !== 'active') {
+            return redirect()->route('login')
+                ->with('error', 'Anda harus login sebagai peneliti aktif untuk mengunduh template.');
+        }
+
+        if (!Storage::disk('public')->exists($template->file_path)) {
+            return back()->with('error', 'File template tidak ditemukan. Hubungi admin.');
+        }
+
+        return Storage::disk('public')->download(
+            $template->file_path,
+            $template->file_name
+        );
     }
 }
