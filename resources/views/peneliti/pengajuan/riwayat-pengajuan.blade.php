@@ -6,38 +6,68 @@
 <div class="max-w-container-max mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
     @auth
         @if(auth()->user()->hasRole('peneliti') && auth()->user()->status === 'active')
-            <!-- Konten untuk user yang sudah login dan aktif -->
             <div class="bg-white rounded-xl border border-outline-variant p-8">
                 <div class="text-center mb-8">
                     <div class="w-20 h-20 mx-auto bg-surface-container-low rounded-full flex items-center justify-center mb-4">
                         <span class="material-symbols-outlined text-primary text-4xl">history</span>
                     </div>
                     <h2 class="text-xl font-semibold text-primary mb-2">Riwayat Pengajuan</h2>
-                    <p class="text-on-surface-variant">Belum ada data pengajuan.</p>
+                    <p class="text-on-surface-variant">Lihat status pengajuan ethical clearance Anda di bawah ini.</p>
                 </div>
 
-                <!-- Contoh Progress Bar (akan diisi dinamis nanti) -->
-                <div class="max-w-2xl mx-auto mt-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-medium text-on-surface">Status: <span class="text-primary">Belum Ada Pengajuan</span></span>
+                @if(isset($proposals) && $proposals->isNotEmpty())
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-surface-variant">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Judul Proposal</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tanggal Pengajuan</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 bg-white">
+                                @foreach($proposals as $proposal)
+                                    <tr>
+                                        <td class="px-4 py-4 text-sm text-slate-700">{{ $loop->iteration }}</td>
+                                        <td class="px-4 py-4 text-sm text-slate-700">{{ $proposal->title }}</td>
+                                        <td class="px-4 py-4 text-sm text-slate-700">{{ optional($proposal->submission_date)->format('d M Y') }}</td>
+                                        <td class="px-4 py-4">
+                                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $proposal->status_badge }}">
+                                                {{ $proposal->status_label }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="w-full bg-surface-container-high rounded-full h-2.5">
-                        <div class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+                @else
+                    <div class="text-center">
+                        <p class="text-on-surface-variant">Belum ada data pengajuan.</p>
                     </div>
-                    <div class="flex justify-between mt-3 text-xs text-on-surface-variant">
-                        <span class="text-center flex-1">New</span>
-                        <span class="text-center flex-1">Review</span>
-                        <span class="text-center flex-1">Approved</span>
+                    <div class="max-w-2xl mx-auto mt-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-on-surface">Status: <span class="text-primary">Belum Ada Pengajuan</span></span>
+                        </div>
+                        <div class="w-full bg-surface-container-high rounded-full h-2.5">
+                            <div class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between mt-3 text-xs text-on-surface-variant">
+                            <span class="text-center flex-1">New</span>
+                            <span class="text-center flex-1">Review</span>
+                            <span class="text-center flex-1">Approved</span>
+                        </div>
                     </div>
-                </div>
 
-                <div class="text-center mt-8 p-6 bg-surface-container-low rounded-lg">
-                    <span class="material-symbols-outlined text-outline text-3xl mb-2">inbox</span>
-                    <p class="text-on-surface-variant text-sm">Anda belum memiliki riwayat pengajuan ethical clearance.</p>
-                    <a href="{{ route('pengajuan.upload-proposal') }}" class="inline-block mt-3 text-primary text-sm font-medium hover:underline">
-                        Mulai Pengajuan Baru →
-                    </a>
-                </div>
+                    <div class="text-center mt-8 p-6 bg-surface-container-low rounded-lg">
+                        <span class="material-symbols-outlined text-outline text-3xl mb-2">inbox</span>
+                        <p class="text-on-surface-variant text-sm">Anda belum memiliki riwayat pengajuan ethical clearance.</p>
+                        <a href="{{ route('pengajuan.upload-proposal') }}" class="inline-block mt-3 text-primary text-sm font-medium hover:underline">
+                            Mulai Pengajuan Baru →
+                        </a>
+                    </div>
+                @endif
             </div>
         @elseif(auth()->user()->status === 'pending')
             <div class="bg-amber-50 rounded-xl border border-amber-200 p-8 text-center">
