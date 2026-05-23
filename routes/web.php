@@ -32,14 +32,8 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/login', function () {
-    // Simple login logic - in real app, use proper controller
     $credentials = request()->only('email', 'password');
     if (auth()->attempt($credentials)) {
-        $user = auth()->user();
-        if ($user->status !== 'active') {
-            auth()->logout();
-            return back()->withErrors(['email' => 'Akun Anda belum diaktifkan oleh sekretaris.']);
-        }
         request()->session()->regenerate();
         return redirect()->intended(route('dashboard'));
     }

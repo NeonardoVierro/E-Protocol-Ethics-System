@@ -16,11 +16,11 @@ class RoleDashboardMiddleware
             return redirect()->route('login');
         }
         
-        // Cek status akun aktif atau tidak
-        if (!$user->isActive()) {
-            Auth::logout();
-            return redirect()->route('login')->with('error', 'Akun Anda belum diaktivasi oleh sekretaris.');
-        }
+        // // Cek status akun aktif atau tidak
+        // if (!$user->isActive()) {
+        //     Auth::logout();
+        //     return redirect()->route('login')->with('error', 'Akun Anda belum diaktivasi oleh sekretaris.');
+        // }
         
         // Redirect ke dashboard sesuai role
         $route = $request->route()->getName();
