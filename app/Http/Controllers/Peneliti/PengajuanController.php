@@ -13,11 +13,46 @@ use Illuminate\Support\Facades\Storage;
 class PengajuanController extends Controller
 {
     /**
+     * Helper untuk cek akses menu pengajuan
+     * @return string|null - 'guest', 'pending', atau null untuk aktif
+     */
+    private function checkAccess()
+    {
+        if (!Auth::check()) {
+            return 'guest';
+        }
+        
+        if (Auth::user()->status !== 'active') {
+            return 'pending';
+        }
+        
+        return null; // aktif, bisa akses
+    }
+
+    /**
      * Halaman Upload Proposal
-     * Bisa diakses guest tapi isinya menampilkan pesan login
      */
     public function uploadProposal()
     {
+        $access = $this->checkAccess();
+        
+        if ($access === 'guest') {
+            return view('peneliti.pengajuan.guest-message', [
+                'title' => 'Upload Proposal',
+                'message' => 'Silakan login terlebih dahulu untuk mengunggah proposal.',
+                'icon' => 'upload_file'
+            ]);
+        }
+        
+        if ($access === 'pending') {
+            return view('peneliti.pengajuan.pending-message', [
+                'title' => 'Upload Proposal',
+                'message' => 'Akun Anda sedang menunggu aktivasi oleh sekretariat. Setelah diaktivasi, Anda dapat mengunggah proposal.',
+                'icon' => 'pending'
+            ]);
+        }
+        
+        // User aktif - tampilkan konten sebenarnya
         $templates = TemplateProposal::where('is_active', true)
             ->orderBy('kategori')
             ->orderBy('nama_dokumen')
@@ -30,10 +65,28 @@ class PengajuanController extends Controller
 
     /**
      * Halaman Download Template
-     * Bisa diakses guest tapi isinya menampilkan pesan login
      */
     public function downloadTemplate()
     {
+        $access = $this->checkAccess();
+        
+        if ($access === 'guest') {
+            return view('peneliti.pengajuan.guest-message', [
+                'title' => 'Download Template',
+                'message' => 'Silakan login terlebih dahulu untuk mendownload template.',
+                'icon' => 'download'
+            ]);
+        }
+        
+        if ($access === 'pending') {
+            return view('peneliti.pengajuan.pending-message', [
+                'title' => 'Download Template',
+                'message' => 'Akun Anda sedang menunggu aktivasi oleh sekretariat. Setelah diaktivasi, Anda dapat mendownload template.',
+                'icon' => 'pending'
+            ]);
+        }
+        
+        // User aktif - tampilkan konten sebenarnya
         $templates = TemplateProposal::where('is_active', true)
             ->orderBy('kategori')
             ->orderBy('nama_dokumen')
@@ -45,18 +98,32 @@ class PengajuanController extends Controller
 
     /**
      * Halaman Riwayat Pengajuan dengan tracking proposal
-     * Bisa diakses guest tapi isinya menampilkan pesan login
      */
     public function riwayatPengajuan()
     {
-        $proposals = collect();
-
-        if (Auth::check() && Auth::user()->hasRole('peneliti') && Auth::user()->status === 'active') {
-            $proposals = Proposal::where('user_id', Auth::id())
-                ->orderByDesc('submission_date')
-                ->orderByDesc('created_at')
-                ->get();
+        $access = $this->checkAccess();
+        
+        if ($access === 'guest') {
+            return view('peneliti.pengajuan.guest-message', [
+                'title' => 'Riwayat Pengajuan',
+                'message' => 'Silakan login terlebih dahulu untuk melihat riwayat pengajuan.',
+                'icon' => 'history'
+            ]);
         }
+        
+        if ($access === 'pending') {
+            return view('peneliti.pengajuan.pending-message', [
+                'title' => 'Riwayat Pengajuan',
+                'message' => 'Akun Anda sedang menunggu aktivasi oleh sekretariat. Setelah diaktivasi, Anda dapat melihat riwayat pengajuan.',
+                'icon' => 'pending'
+            ]);
+        }
+        
+        // User aktif - tampilkan konten sebenarnya
+        $proposals = Proposal::where('user_id', Auth::id())
+            ->orderByDesc('submission_date')
+            ->orderByDesc('created_at')
+            ->get();
 
         return view('peneliti.pengajuan.riwayat-pengajuan', compact('proposals'));
     }
@@ -66,9 +133,15 @@ class PengajuanController extends Controller
      */
     public function store(Request $request)
     {
-        // Only authenticated peneliti with active status can submit
-        if (!Auth::check() || !Auth::user()->hasRole('peneliti') || Auth::user()->status !== 'active') {
-            return redirect()->route('login')->with('error', 'Anda harus login sebagai peneliti aktif untuk mengajukan proposal.');
+        $access = $this->checkAccess();
+        
+        if ($access !== null) {
+            if ($access === 'guest') {
+                return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu untuk mengajukan proposal.');
+            }
+            if ($access === 'pending') {
+                return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi. Silakan tunggu aktivasi dari sekretariat.');
+            }
         }
 
         // Validate basic information
@@ -81,10 +154,8 @@ class PengajuanController extends Controller
             'lokasi_penelitian' => 'required|string|max:255',
         ]);
 
-        // Store in session for multi-step form
         $request->session()->put('proposal_step1', $validated);
 
-        // Redirect to file upload step
         return redirect()->route('pengajuan.upload-berkas');
     }
 
@@ -93,18 +164,26 @@ class PengajuanController extends Controller
      */
     public function uploadBerkas()
     {
-        // Verify step 1 is complete
+        $access = $this->checkAccess();
+        
+        if ($access !== null) {
+            if ($access === 'guest') {
+                return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+            }
+            if ($access === 'pending') {
+                return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+            }
+        }
+
         if (!session()->has('proposal_step1')) {
             return redirect()->route('pengajuan.upload-proposal')->with('info', 'Silakan lengkapi informasi dasar terlebih dahulu.');
         }
 
-        // Get all active templates
         $templates = TemplateProposal::where('is_active', true)
             ->orderBy('kategori')
             ->orderBy('nama_dokumen')
             ->get();
 
-        // Get already uploaded files from session (if returning from review)
         $uploadedFiles = session('proposal_step2', []);
 
         return view('peneliti.pengajuan.upload-berkas', compact('templates', 'uploadedFiles'));
@@ -115,18 +194,22 @@ class PengajuanController extends Controller
      */
     public function submitBerkas(Request $request)
     {
-        // Only authenticated peneliti with active status can submit
-        if (!Auth::check() || !Auth::user()->hasRole('peneliti') || Auth::user()->status !== 'active') {
-            return redirect()->route('login')->with('error', 'Anda harus login sebagai peneliti aktif untuk mengajukan proposal.');
+        $access = $this->checkAccess();
+        
+        if ($access !== null) {
+            if ($access === 'guest') {
+                return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+            }
+            if ($access === 'pending') {
+                return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+            }
         }
 
         // Get all active templates
         $templates = TemplateProposal::where('is_active', true)->get();
 
-        // Existing uploaded file metadata in session
         $sessionFiles = $request->session()->get('proposal_step2', []);
 
-        // Build dynamic validation rules based on templates and session state
         $rules = [];
         $messages = [];
         foreach ($templates as $template) {
@@ -142,7 +225,6 @@ class PengajuanController extends Controller
             $messages[$fieldName . '.max'] = "Dokumen '{$template->nama_dokumen}' tidak boleh melebihi 5MB.";
         }
 
-        // Validate files with custom messages
         $request->validate($rules, $messages);
 
         $userId = Auth::id();
@@ -173,10 +255,8 @@ class PengajuanController extends Controller
             }
         }
 
-        // Store uploaded file metadata in session for review step
         $request->session()->put('proposal_step2', $storedFiles);
 
-        // Redirect to review step
         return redirect()->route('pengajuan.review');
     }
 
@@ -185,7 +265,17 @@ class PengajuanController extends Controller
      */
     public function review()
     {
-        // Verify both steps are complete
+        $access = $this->checkAccess();
+        
+        if ($access !== null) {
+            if ($access === 'guest') {
+                return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+            }
+            if ($access === 'pending') {
+                return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+            }
+        }
+
         if (!session()->has('proposal_step1') || !session()->has('proposal_step2')) {
             return redirect()->route('pengajuan.upload-proposal')->with('info', 'Silakan lengkapi semua tahap pengajuan.');
         }
@@ -201,12 +291,17 @@ class PengajuanController extends Controller
      */
     public function finalSubmit(Request $request)
     {
-        // Only authenticated peneliti with active status can submit
-        if (!Auth::check() || !Auth::user()->hasRole('peneliti') || Auth::user()->status !== 'active') {
-            return redirect()->route('login')->with('error', 'Anda harus login sebagai peneliti aktif untuk mengajukan proposal.');
+        $access = $this->checkAccess();
+        
+        if ($access !== null) {
+            if ($access === 'guest') {
+                return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+            }
+            if ($access === 'pending') {
+                return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+            }
         }
 
-        // Verify both steps are complete
         if (!$request->session()->has('proposal_step1') || !$request->session()->has('proposal_step2')) {
             return redirect()->route('pengajuan.upload-proposal')->with('info', 'Silakan lengkapi semua tahap pengajuan.');
         }
@@ -247,14 +342,26 @@ class PengajuanController extends Controller
      */
     public function success()
     {
+        $access = $this->checkAccess();
+        
+        if ($access !== null) {
+            return redirect()->route('peneliti.dashboard');
+        }
+        
         return view('peneliti.pengajuan.success');
     }
 
     public function downloadFile(TemplateProposal $template)
     {
-        if (!Auth::check() || !Auth::user()->hasRole('peneliti') || Auth::user()->status !== 'active') {
-            return redirect()->route('login')
-                ->with('error', 'Anda harus login sebagai peneliti aktif untuk mengunduh template.');
+        $access = $this->checkAccess();
+        
+        if ($access !== null) {
+            if ($access === 'guest') {
+                return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+            }
+            if ($access === 'pending') {
+                return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+            }
         }
 
         if (!Storage::disk('public')->exists($template->file_path)) {

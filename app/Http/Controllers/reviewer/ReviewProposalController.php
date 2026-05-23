@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Reviewer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Proposal;
+use App\Models\Review;
+use App\Models\ReviewFeedback;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ReviewProposalController extends Controller
 {
@@ -13,24 +17,23 @@ class ReviewProposalController extends Controller
      */
     public function index(Request $request)
     {
-        // Ambil ID proposal dari query string (?id=EC-101)
         $proposalId = $request->query('id');
-        
-        // Data sementara (nanti ambil dari database)
+
         $proposal = null;
         if ($proposalId) {
-            // Simulasi data proposal
-            $proposal = [
-                'id' => $proposalId,
-                'judul' => 'Analisis Dampak Etis AI di Sektor Kesehatan',
-                'pemohon' => 'Dr. Rahmat Wijaya',
-                'tanggal_masuk' => '2025-10-23',
-                'files' => [
-                    ['nama' => 'Proposal_EC101.pdf', 'type' => 'pdf'],
-                    ['nama' => 'surat_pernyataan.pdf', 'type' => 'pdf'],
-                    ['nama' => 'informed_consent.docx', 'type' => 'docx'],
-                ]
-            ];
+            $proposal = Proposal::with(['files' => function ($query) {
+                $query->where('is_active', true);
+            }])->find($proposalId);
+        }
+
+        if (! $proposal) {
+            $proposal = Proposal::with(['files' => function ($query) {
+                $query->where('is_active', true);
+            }])
+                ->whereIn('status', [Proposal::STATUS_NEW, Proposal::STATUS_ON_REVIEW, Proposal::STATUS_REVISED])
+                ->orderByDesc('submission_date')
+                ->orderByDesc('created_at')
+                ->first();
         }
 
         return view('reviewer.review-proposal.index', compact('proposal'));
@@ -41,18 +44,47 @@ class ReviewProposalController extends Controller
      */
     public function store(Request $request)
     {
-        // Validasi input
         $request->validate([
-            'proposal_id' => 'required|string',
-            'feedback' => 'required|string|min:10',
-            'status' => 'nullable|in:diterima,revisi,ditolak',
+            'proposal_id' => 'required|integer|exists:proposals,id',
+            'feedback' => 'nullable|string|min:10',
+            'status' => 'required|in:diterima,revisi,ditolak',
         ]);
 
-        // Simpan ke database (contoh)
-        // Review::create([...]);
+        $proposal = Proposal::findOrFail($request->proposal_id);
 
-        // Redirect ke halaman riwayat review dengan pesan sukses
+        $mapping = [
+            'diterima' => Proposal::STATUS_ON_REVIEW,
+            'revisi' => Proposal::STATUS_REVISED,
+            'ditolak' => Proposal::STATUS_REJECTED,
+        ];
+
+        $recommendationMap = [
+            'diterima' => ReviewFeedback::RECOMMENDATION_APPROVED,
+            'revisi' => ReviewFeedback::RECOMMENDATION_REVISION,
+            'ditolak' => ReviewFeedback::RECOMMENDATION_REJECTED,
+        ];
+
+        $review = Review::create([
+            'proposal_id' => $proposal->id,
+            'reviewer_id' => Auth::id(),
+            'status' => Review::STATUS_COMPLETED,
+            'assigned_date' => now(),
+            'due_date' => now()->addDays(7),
+            'completed_date' => now(),
+        ]);
+
+        ReviewFeedback::create([
+            'review_id' => $review->id,
+            'proposal_id' => $proposal->id,
+            'feedback_text' => $request->feedback,
+            'recommendation' => $recommendationMap[$request->status],
+            'is_submitted' => true,
+            'submitted_at' => now(),
+        ]);
+
+        $proposal->updateStatus($mapping[$request->status]);
+
         return redirect()->route('reviewer.riwayat-review')
-                         ->with('success', 'Review berhasil disubmit.');
+            ->with('success', 'Review berhasil disubmit dan status proposal diupdate.');
     }
 }

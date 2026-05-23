@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Notification;
 use App\Models\Proposal;
+use Illuminate\Http\Request;
 
 class SekretarisController extends Controller
 {
@@ -22,20 +23,20 @@ class SekretarisController extends Controller
 
     public function manajemenProposal()
     {
-        $proposals = Proposal::with(['files' => function($query) {
+        $proposals = Proposal::with(['files' => function ($query) {
             $query->where('is_active', true);
         }])
             ->orderByDesc('submission_date')
             ->orderByDesc('created_at')
             ->get()
-            ->map(function($proposal) {
+            ->map(function ($proposal) {
                 $activeFilesCount = $proposal->files->count();
                 $proposal->files_count = $activeFilesCount;
                 $proposal->has_documents = $activeFilesCount > 0;
-                
+
                 return $proposal;
             });
-        
+
         return view('sekretaris.manajemen-proposal.index', compact('proposals'));
     }
 
@@ -60,12 +61,26 @@ class SekretarisController extends Controller
 
     public function keputusan()
     {
-        $keputusan = [
-            ['proposal_id' => 'P001', 'judul' => 'Studi Etika AI', 'status' => 'revisi', 'tenggat' => '2025-05-20'],
-            ['proposal_id' => 'P002', 'judul' => 'Penelitian Klinis', 'status' => 'approved', 'tenggat' => null],
-            ['proposal_id' => 'P003', 'judul' => 'Etika Data Pasien', 'status' => 'pending', 'tenggat' => null],
-        ];
+        $keputusan = Proposal::with('researcher')
+            ->orderByDesc('submission_date')
+            ->orderByDesc('created_at')
+            ->get();
+
         return view('sekretaris.keputusan.index', compact('keputusan'));
+    }
+
+    public function updateDecision(Request $request)
+    {
+        $request->validate([
+            'proposal_id' => 'required|integer|exists:proposals,id',
+            'status' => 'required|in:approved,revised,rejected',
+        ]);
+
+        $proposal = Proposal::findOrFail($request->proposal_id);
+        $proposal->updateStatus($request->status);
+
+        return redirect()->route('sekretaris.keputusan')
+            ->with('success', 'Status keputusan proposal berhasil diperbarui.');
     }
 
     public function draftEthicalClearance()
@@ -106,7 +121,7 @@ class SekretarisController extends Controller
     {
         $user = User::findOrFail($id);
         $user->update(['status' => 'active']);
-        
+
         // Buat notifikasi untuk user
         Notification::create([
             'user_id' => $user->id,
@@ -116,7 +131,7 @@ class SekretarisController extends Controller
             'type' => Notification::TYPE_ACCOUNT_ACTIVATION,
             'data' => json_encode(['activated_at' => now()->toDateTimeString()]),
         ]);
-        
+
         return redirect()->route('sekretaris.user-management')->with('success', 'Akun berhasil diaktifkan dan notifikasi telah dikirim ke peneliti.');
     }
 }

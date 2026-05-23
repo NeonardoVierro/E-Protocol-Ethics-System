@@ -13,7 +13,7 @@ use App\Http\Controllers\Peneliti\PanduanController;
 use App\Http\Controllers\Peneliti\PengajuanController;
 use Illuminate\Support\Facades\Route;
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 
 // Auth routes
@@ -32,14 +32,8 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/login', function () {
-    // Simple login logic - in real app, use proper controller
     $credentials = request()->only('email', 'password');
     if (auth()->attempt($credentials)) {
-        $user = auth()->user();
-        if ($user->status !== 'active') {
-            auth()->logout();
-            return back()->withErrors(['email' => 'Akun Anda belum diaktifkan oleh sekretaris.']);
-        }
         request()->session()->regenerate();
         return redirect()->intended(route('dashboard'));
     }
@@ -136,8 +130,6 @@ Route::middleware('auth')->group(function () {
         if ($user->hasRole('admin')) {
             return redirect()->route('admin.dashboard');
         }
-
-
     })->name('dashboard');
 
     Route::get('/dashboard/sekretaris', [SecretaryDashboardController::class, 'index'])
@@ -183,12 +175,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/template-proposal', [App\Http\Controllers\Admin\TemplateProposalController::class, 'index'])->name('templateproposal.index');
     Route::get('/user-management', [App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('usermanagement.index');
 
-        // ── Template Proposal ────────────────────────
-    Route::post  ('templates', [App\Http\Controllers\Admin\TemplateProposalController::class, 'store'])->name('templates.store');
-    Route::put   ('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'update'])->name('templates.update');
+    // ── Template Proposal ────────────────────────
+    Route::post('templates', [App\Http\Controllers\Admin\TemplateProposalController::class, 'store'])->name('templates.store');
+    Route::put('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'update'])->name('templates.update');
     Route::delete('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'destroy'])->name('templates.destroy');
-    Route::patch ('templates/{template}/toggle', [App\Http\Controllers\Admin\TemplateProposalController::class, 'toggleActive'])->name('templates.toggle');
-    Route::get   ('templates/{template}/download', [App\Http\Controllers\Admin\TemplateProposalController::class, 'download'])->name('templates.download');
+    Route::patch('templates/{template}/toggle', [App\Http\Controllers\Admin\TemplateProposalController::class, 'toggleActive'])->name('templates.toggle');
+    Route::get('templates/{template}/download', [App\Http\Controllers\Admin\TemplateProposalController::class, 'download'])->name('templates.download');
 });
 
 // Route untuk Sekretaris
@@ -198,6 +190,7 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::get('/assign-reviewer', [SekretarisController::class, 'assignReviewer'])->name('assign-reviewer');
     Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
     Route::get('/keputusan', [SekretarisController::class, 'keputusan'])->name('keputusan');
+    Route::post('/keputusan/update', [SekretarisController::class, 'updateDecision'])->name('keputusan.update');
     Route::get('/draf-ethical-clearance', [SekretarisController::class, 'draftEthicalClearance'])->name('draf-ethical-clearance');
     Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
     Route::get('/user-management', [SekretarisController::class, 'userManagement'])->name('user-management');
