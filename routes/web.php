@@ -181,7 +181,20 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'destroy'])->name('templates.destroy');
     Route::patch('templates/{template}/toggle', [App\Http\Controllers\Admin\TemplateProposalController::class, 'toggleActive'])->name('templates.toggle');
     Route::get('templates/{template}/download', [App\Http\Controllers\Admin\TemplateProposalController::class, 'download'])->name('templates.download');
+    
+    // ── Proposal Assignment ──────────────────────
+    Route::prefix('proposal-assignment')->name('proposal-assignment.')->group(function () {
+        Route::get   ('/',                            [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'index'])           ->name('index');
+        Route::get   ('/sekretaris-list',             [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'getSekretarisList'])->name('sekretaris-list');
+        Route::get   ('/ketua-list',                  [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'getKetuaList'])     ->name('ketua-list');
+        Route::post  ('/{proposal}/pilih-sekretaris', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'pilihSekretaris'])  ->name('pilih-sekretaris');
+        Route::post  ('/{proposal}/kirim-sekretaris', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'kirimSekretaris'])  ->name('kirim-sekretaris');
+        Route::post  ('/{proposal}/pilih-ketua',      [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'pilihKetua'])       ->name('pilih-ketua');
+        Route::post  ('/{proposal}/kirim-ketua',      [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'kirimKetua'])       ->name('kirim-ketua');
+        Route::post  ('/{proposal}/publish',          [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'publish'])          ->name('publish');
+    });
 });
+
 
 // Route untuk Sekretaris
 Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name('sekretaris.')->group(function () {

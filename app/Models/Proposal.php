@@ -19,6 +19,8 @@ class Proposal extends Model
         'status',
         'review_type',
         'sekretaris_id',
+        'nomor_ec',
+        'ketua_id',
         'submission_date',
         'review_date',
         'decision_date',
@@ -31,137 +33,145 @@ class Proposal extends Model
 
     protected $casts = [
         'submission_date' => 'date',
-        'review_date' => 'date',
-        'decision_date' => 'date',
+        'review_date'     => 'date',
+        'decision_date'   => 'date',
     ];
 
-    // Konstanta status proposal
-    const STATUS_NEW = 'new_proposal';
-    const STATUS_ON_REVIEW = 'on_review';
-    const STATUS_REVISED = 'revised';
-    const STATUS_APPROVED = 'approved';
-    const STATUS_REJECTED = 'rejected';
+    // ── Status constants ──────────────────────────
+    const STATUS_NEW                = 'new_proposal';
+    const STATUS_ON_REVIEW          = 'on_review';
+    const STATUS_REVISED            = 'revised';
+    const STATUS_APPROVED           = 'approved';
+    const STATUS_REJECTED           = 'rejected';
+    const STATUS_WAITING_FOR_PUBLISH= 'waiting_for_publish';
+    const STATUS_PUBLISHED          = 'published';
 
-    // Konstanta tipe review
-    const REVIEW_EXEMPTED = 'exempted';
-    const REVIEW_EXPEDITED = 'expedited';
+    // ── Review type constants ─────────────────────
+    const REVIEW_EXEMPTED   = 'exempted';
+    const REVIEW_EXPEDITED  = 'expedited';
     const REVIEW_FULL_BOARD = 'full_board';
 
-    // ========== RELATIONSHIPS ==========
-    
-    // Peneliti yang mengajukan proposal
+    // ── Relationships ─────────────────────────────
+
     public function researcher()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Sekretaris yang menangani proposal
     public function sekretaris()
     {
         return $this->belongsTo(User::class, 'sekretaris_id');
     }
 
-    // File-file proposal
+    public function ketua()
+    {
+        return $this->belongsTo(User::class, 'ketua_id');
+    }
+
     public function files()
     {
         return $this->hasMany(ProposalFile::class);
     }
 
-    // Review untuk proposal ini
     public function reviews()
     {
         return $this->hasMany(Review::class);
     }
 
-    // Feedback review untuk proposal
     public function reviewFeedbacks()
     {
         return $this->hasMany(ReviewFeedback::class);
     }
 
-    // Dokumen ethical clearance
     public function ethicsDocument()
     {
         return $this->hasOne(EthicsDocument::class);
     }
 
-    // Riwayat revisi proposal
     public function revisions()
     {
         return $this->hasMany(ProposalRevision::class);
     }
 
-    // Assignment proposal
     public function assignments()
     {
         return $this->hasMany(ProposalAssignment::class);
     }
 
-    // Log dokumen terkait proposal
     public function documentLogs()
     {
         return $this->hasMany(DocumentLog::class);
     }
 
-    // ========== HELPER METHODS ==========
-    
-    // Cek apakah proposal bisa direview
-    public function canBeReviewed()
+    // Assignment sekretaris yang sudah dikirim
+    public function sekretarisAssignment()
     {
-        return $this->status === self::STATUS_NEW || $this->status === self::STATUS_REVISED;
+        return $this->hasOne(ProposalAssignment::class)
+            ->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+            ->whereNotNull('sent_at')
+            ->latest();
     }
 
-    // Cek kelengkapan dokumen
+    // Assignment ketua yang sudah dikirim
+    public function ketuaAssignment()
+    {
+        return $this->hasOne(ProposalAssignment::class)
+            ->where('role', ProposalAssignment::ROLE_KETUA)
+            ->whereNotNull('sent_at')
+            ->latest();
+    }
+
+    // ── Helpers ───────────────────────────────────
+
+    public function canBeReviewed()
+    {
+        return in_array($this->status, [self::STATUS_NEW, self::STATUS_REVISED]);
+    }
+
     public function isDocumentComplete()
     {
         return $this->files()->where('is_active', true)->exists();
     }
 
-    // Mendapatkan status kelengkapan dokumen
     public function getDocumentStatusAttribute()
     {
         return $this->isDocumentComplete() ? 'lengkap' : 'kurang';
     }
 
-    // Update status proposal
     public function updateStatus($newStatus)
     {
         $this->status = $newStatus;
-        
-        if ($newStatus === self::STATUS_APPROVED) {
-            $this->decision_date = now();
-        } elseif ($newStatus === self::STATUS_REJECTED) {
+        if (in_array($newStatus, [self::STATUS_APPROVED, self::STATUS_REJECTED])) {
             $this->decision_date = now();
         } elseif ($newStatus === self::STATUS_ON_REVIEW) {
             $this->review_date = now();
         }
-        
         $this->save();
     }
 
-    // Mendapatkan label status
     public function getStatusLabelAttribute()
     {
         return [
-            self::STATUS_NEW => 'Proposal Baru',
-            self::STATUS_ON_REVIEW => 'Sedang Direview',
-            self::STATUS_REVISED => 'Revisi',
-            self::STATUS_APPROVED => 'Disetujui',
-            self::STATUS_REJECTED => 'Ditolak',
+            self::STATUS_NEW                 => 'New Proposal',
+            self::STATUS_ON_REVIEW           => 'On Review',
+            self::STATUS_REVISED             => 'Revisi',
+            self::STATUS_APPROVED            => 'Approved',
+            self::STATUS_REJECTED            => 'Rejected',
+            self::STATUS_WAITING_FOR_PUBLISH => 'Waiting For Publish',
+            self::STATUS_PUBLISHED           => 'Published',
         ][$this->status] ?? $this->status;
     }
 
-    // Mendapatkan badge status untuk UI
     public function getStatusBadgeAttribute()
     {
-        $badges = [
-            self::STATUS_NEW => 'bg-blue-100 text-blue-800',
-            self::STATUS_ON_REVIEW => 'bg-yellow-100 text-yellow-800',
-            self::STATUS_REVISED => 'bg-orange-100 text-orange-800',
-            self::STATUS_APPROVED => 'bg-green-100 text-green-800',
-            self::STATUS_REJECTED => 'bg-red-100 text-red-800',
-        ];
-        
-        return $badges[$this->status] ?? 'bg-gray-100 text-gray-800';
+        return [
+            self::STATUS_NEW                 => 'bg-blue-100 text-blue-800',
+            self::STATUS_ON_REVIEW           => 'bg-yellow-100 text-yellow-800',
+            self::STATUS_REVISED             => 'bg-orange-100 text-orange-800',
+            self::STATUS_APPROVED            => 'bg-green-100 text-green-800',
+            self::STATUS_REJECTED            => 'bg-red-100 text-red-800',
+            self::STATUS_WAITING_FOR_PUBLISH => 'bg-purple-100 text-purple-800',
+            self::STATUS_PUBLISHED           => 'bg-teal-100 text-teal-800',
+        ][$this->status] ?? 'bg-gray-100 text-gray-800';
     }
 }

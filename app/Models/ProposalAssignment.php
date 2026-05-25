@@ -15,42 +15,47 @@ class ProposalAssignment extends Model
         'assigned_to',
         'role',
         'notes',
+        'sent_at',
     ];
 
-    // Konstanta role assignment
-    const ROLE_SEKRETARIS = 'sekretaris';
-    const ROLE_REVIEWER = 'reviewer';
-    const ROLE_KETUA = 'ketua';
+    protected $casts = [
+        'sent_at' => 'datetime',
+    ];
 
-    // ========== RELATIONSHIPS ==========
-    
-    // Proposal yang di-assign
+    const ROLE_SEKRETARIS = 'sekretaris';
+    const ROLE_REVIEWER   = 'reviewer';
+    const ROLE_KETUA      = 'ketua';
+
+    // ── Relationships ─────────────────────────────
+
     public function proposal()
     {
         return $this->belongsTo(Proposal::class);
     }
 
-    // User yang melakukan assign
     public function assignedBy()
     {
         return $this->belongsTo(User::class, 'assigned_by');
     }
 
-    // User yang di-assign
     public function assignedTo()
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
-    // ========== HELPER METHODS ==========
-    
-    // Mendapatkan label role
+    // ── Helpers ───────────────────────────────────
+
+    public function isSent(): bool
+    {
+        return !is_null($this->sent_at);
+    }
+
     public function getRoleLabelAttribute()
     {
         return [
             self::ROLE_SEKRETARIS => 'Sekretaris',
-            self::ROLE_REVIEWER => 'Reviewer',
-            self::ROLE_KETUA => 'Ketua',
+            self::ROLE_REVIEWER   => 'Reviewer',
+            self::ROLE_KETUA      => 'Ketua',
         ][$this->role] ?? $this->role;
     }
 }
