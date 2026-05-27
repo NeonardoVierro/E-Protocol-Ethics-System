@@ -19,6 +19,7 @@ class SecretaryDashboardController extends Controller
             'title' => 'Dashboard Sekretaris',
             'total_proposal' => Proposal::count(),
             'new_proposal' => Proposal::where('status', Proposal::STATUS_NEW)->count(),
+            'in_process' => Proposal::where('status', Proposal::STATUS_IN_PROCESS)->count(),
             'on_review' => Proposal::where('status', Proposal::STATUS_ON_REVIEW)->count(),
             'approved' => Proposal::where('status', Proposal::STATUS_APPROVED)->count(),
             'rejected' => Proposal::where('status', Proposal::STATUS_REJECTED)->count(),

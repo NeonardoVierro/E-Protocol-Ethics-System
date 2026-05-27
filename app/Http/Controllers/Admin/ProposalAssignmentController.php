@@ -20,6 +20,7 @@ class ProposalAssignmentController extends Controller
         ])
         ->orderByRaw("FIELD(status,
             'new_proposal',
+            'in_process',
             'on_review',
             'waiting_for_publish',
             'approved',
@@ -123,7 +124,16 @@ class ProposalAssignmentController extends Controller
 
             $proposal->update([
                 'sekretaris_id' => $assignment->assigned_to,
-                'status'        => Proposal::STATUS_ON_REVIEW,
+                'status'        => Proposal::STATUS_IN_PROCESS,
+            ]);
+
+            // Record activity log for assignment to sekretaris
+            \App\Models\DocumentLog::create([
+                'proposal_id' => $proposal->id,
+                'user_id'     => auth()->id(),
+                'activity'    => \App\Models\DocumentLog::ACTIVITY_ASSIGN,
+                'description' => 'Submission processed and assigned to sekretaris.',
+                'metadata'    => ['assigned_to' => $assignment->assigned_to],
             ]);
         });
 
@@ -175,6 +185,15 @@ class ProposalAssignmentController extends Controller
             $proposal->update([
                 'ketua_id' => $assignment->assigned_to,
                 'status'   => Proposal::STATUS_WAITING_FOR_PUBLISH,
+            ]);
+
+            // Record activity log for assignment to ketua
+            \App\Models\DocumentLog::create([
+                'proposal_id' => $proposal->id,
+                'user_id'     => auth()->id(),
+                'activity'    => \App\Models\DocumentLog::ACTIVITY_ASSIGN,
+                'description' => 'Submission processed and assigned to ketua.',
+                'metadata'    => ['assigned_to' => $assignment->assigned_to],
             ]);
         });
 

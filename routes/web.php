@@ -148,6 +148,8 @@ Route::middleware('auth')->group(function () {
         // Review Proposal
         Route::get('/review-proposal', [ReviewProposalController::class, 'index'])
             ->name('review-proposal');
+        Route::get('/review-proposal/{id}', [ReviewProposalController::class, 'show'])
+            ->name('review-proposal.show');
         Route::post('/review-proposal', [ReviewProposalController::class, 'store'])
             ->name('review-proposal.store');
 
@@ -200,6 +202,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name('sekretaris.')->group(function () {
     Route::get('/  ', [SekretarisController::class, 'dashboard'])->name('dashboard');
     Route::get('/manajemen-proposal', [SekretarisController::class, 'manajemenProposal'])->name('manajemen-proposal');
+    Route::get('/proposal/{proposal}', [SekretarisController::class, 'showProposal'])->name('proposal.show');
+    Route::post('/proposal/{proposal}/review-type', [SekretarisController::class, 'updateReviewType'])->name('proposal.update-review-type');
+    Route::post('/proposal/{proposal}/assign-reviewer', [SekretarisController::class, 'assignReviewerToProposal'])->name('proposal.assign-reviewer');
+    Route::post('/proposal/{proposal}/send-to-reviewer', [SekretarisController::class, 'sendProposalToReviewer'])->name('proposal.send-to-reviewer');
+    Route::get('/proposal/{proposal}/activity-logs', [SekretarisController::class, 'activityLogs'])->name('proposal.activity-logs');
+    Route::get('/proposal-file/{file}/view', [SekretarisController::class, 'viewProposalFile'])->name('proposal-file.view');
+    Route::get('/proposal-file/{file}/download', [SekretarisController::class, 'downloadProposalFile'])->name('proposal-file.download');
     Route::get('/assign-reviewer', [SekretarisController::class, 'assignReviewer'])->name('assign-reviewer');
     Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
     Route::get('/keputusan', [SekretarisController::class, 'keputusan'])->name('keputusan');

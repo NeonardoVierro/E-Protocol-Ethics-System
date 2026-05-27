@@ -334,6 +334,15 @@ class PengajuanController extends Controller
 
         $request->session()->forget(['proposal_step1', 'proposal_step2']);
 
+        // Record activity log for submission
+        \App\Models\DocumentLog::create([
+            'proposal_id' => $proposal->id,
+            'user_id'     => Auth::id(),
+            'activity'    => \App\Models\DocumentLog::ACTIVITY_UPLOAD,
+            'description' => 'Submission created by researcher',
+            'metadata'    => [],
+        ]);
+
         return redirect()->route('pengajuan.success')->with('success', 'Proposal Anda telah berhasil diajukan!');
     }
 

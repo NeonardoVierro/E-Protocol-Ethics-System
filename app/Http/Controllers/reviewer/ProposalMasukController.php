@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Reviewer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Proposal;
+use App\Models\ProposalAssignment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProposalMasukController extends Controller
 {
@@ -12,27 +15,15 @@ class ProposalMasukController extends Controller
      */
     public function index()
     {
-        // Data sementara (nanti ambil dari database dengan status 'assigned' atau 'pending review')
-        $proposals = [
-            [
-                'id' => 'EC-101',
-                'judul' => 'Analisis Dampak Etis AI di Sektor Kesehatan',
-                'pemohon' => 'Dr. Rahmat Wijaya',
-                'tanggal_masuk' => '2025-10-23',
-            ],
-            [
-                'id' => 'EC-102',
-                'judul' => 'Penggunaan Data Genetik dalam Riset Medis',
-                'pemohon' => 'Prof. Siti Nurhaliza',
-                'tanggal_masuk' => '2025-10-24',
-            ],
-            [
-                'id' => 'EC-105',
-                'judul' => 'Etika Pengawasan Biometrik di Publik',
-                'pemohon' => 'Maya Indah, M.Sc',
-                'tanggal_masuk' => '2025-10-25',
-            ],
-        ];
+        // Fetch proposals assigned to current reviewer via ProposalAssignment
+        $proposals = Proposal::whereHas('assignments', function ($query) {
+            $query->where('role', ProposalAssignment::ROLE_REVIEWER)
+                  ->where('assigned_to', Auth::id())
+                  ->whereNotNull('sent_at');
+        })
+            ->with(['researcher', 'files'])
+            ->orderByDesc('submission_date')
+            ->get();
 
         return view('reviewer.proposal-masuk.index', compact('proposals'));
     }

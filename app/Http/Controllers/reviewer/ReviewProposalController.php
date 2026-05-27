@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reviewer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Proposal;
+use App\Models\ProposalAssignment;
 use App\Models\Review;
 use App\Models\ReviewFeedback;
 use Illuminate\Http\Request;
@@ -30,13 +31,35 @@ class ReviewProposalController extends Controller
             $proposal = Proposal::with(['files' => function ($query) {
                 $query->where('is_active', true);
             }])
-                ->whereIn('status', [Proposal::STATUS_NEW, Proposal::STATUS_ON_REVIEW, Proposal::STATUS_REVISED])
+                ->whereIn('status', [Proposal::STATUS_NEW, Proposal::STATUS_IN_PROCESS, Proposal::STATUS_ON_REVIEW, Proposal::STATUS_REVISED])
                 ->orderByDesc('submission_date')
                 ->orderByDesc('created_at')
                 ->first();
         }
 
         return view('reviewer.review-proposal.index', compact('proposal'));
+    }
+
+    /**
+     * Menampilkan detail proposal untuk ditinjau dengan layout rinci.
+     */
+    public function show($id)
+    {
+        $proposal = Proposal::with([
+            'researcher',
+            'files' => function ($query) {
+                $query->where('is_active', true);
+            },
+            'reviews' => function ($query) {
+                $query->with('feedback', 'reviewer');
+            },
+            'assignments' => function ($query) {
+                $query->where('role', ProposalAssignment::ROLE_REVIEWER)
+                      ->with('assignedBy', 'assignedTo');
+            },
+        ])->findOrFail($id);
+
+        return view('reviewer.review-proposal.show', compact('proposal'));
     }
 
     /**

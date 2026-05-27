@@ -166,119 +166,61 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{-- Row 1 --}}
-                    <tr>
-                        <td>
-                            <div class="id-code">EP-2023-</div>
-                            <div class="id-code">9904</div>
-                        </td>
-                        <td>
-                            <div class="judul-title">Genomic…</div>
-                            <div class="judul-sub">Clinical Trial • Phase II</div>
-                        </td>
-                        <td>
-                            <div class="peneliti-wrap">
-                                <div class="avatar">AA</div>
-                                <span class="peneliti-name">Dr. Aris Ahmad</span>
-                            </div>
-                        </td>
-                        <td><span class="date-main">Oct 12, 2023</span></td>
-                        <td><span class="date-deadline">Oct 26, 2023</span></td>
-                        <td><span class="badge badge-new">NEW</span></td>
-                        <td>
-                            <a href="{{ route('reviewer.review-proposal') }}">
-                                <button class="btn-review-now">Review Now</button>
-                            </a>
-                        </td>
-                    </tr>
-
-                    {{-- Row 2 --}}
-                    <tr>
-                        <td>
-                            <div class="id-code">EP-2023-</div>
-                            <div class="id-code">8812</div>
-                        </td>
-                        <td>
-                            <div class="judul-title">Social Behavior…</div>
-                            <div class="judul-sub">Observational Study • Sociology</div>
-                        </td>
-                        <td>
-                            <div class="peneliti-wrap">
-                                <div class="avatar gray">LH</div>
-                                <span class="peneliti-name">Prof. Linda H.</span>
-                            </div>
-                        </td>
-                        <td><span class="date-main">Oct 10, 2023</span></td>
-                        <td><span class="date-main">Nov 01, 2023</span></td>
-                        <td><span class="badge badge-queued">QUEUED</span></td>
-                        <td>
-                            <button class="btn-view-detail" onclick="featureInDevelopment('View Details')">View Details</button>
-                        </td>
-                    </tr>
-
-                    {{-- Row 3 --}}
-                    <tr>
-                        <td>
-                            <div class="id-code">EP-2023-</div>
-                            <div class="id-code">7751</div>
-                        </td>
-                        <td>
-                            <div class="judul-title">AI-Assisted…</div>
-                            <div class="judul-sub">Technology Trial • Oncology</div>
-                        </td>
-                        <td>
-                            <div class="peneliti-wrap">
-                                <div class="avatar">RK</div>
-                                <span class="peneliti-name">Dr. Robert K.</span>
-                            </div>
-                        </td>
-                        <td><span class="date-main">Oct 09, 2023</span></td>
-                        <td><span class="date-main">Oct 29, 2023</span></td>
-                        <td><span class="badge badge-queued">QUEUED</span></td>
-                        <td>
-                            <button class="btn-view-detail" onclick="featureInDevelopment('View Details')">View Details</button>
-                        </td>
-                    </tr>
-
-                    {{-- Row 4 --}}
-                    <tr>
-                        <td>
-                            <div class="id-code">EP-2023-</div>
-                            <div class="id-code">9998</div>
-                        </td>
-                        <td>
-                            <div class="judul-title">Ethical…</div>
-                            <div class="judul-sub">Policy Proposal • Ethics</div>
-                        </td>
-                        <td>
-                            <div class="peneliti-wrap">
-                                <div class="avatar gray">SM</div>
-                                <span class="peneliti-name">Sarah M. PhD</span>
-                            </div>
-                        </td>
-                        <td><span class="date-main">Oct 14, 2023</span></td>
-                        <td><span class="date-main">Nov 04, 2023</span></td>
-                        <td><span class="badge badge-new">NEW</span></td>
-                        <td>
-                            <a href="{{ route('reviewer.review-proposal') }}">
-                                <button class="btn-review-now">Review Now</button>
-                            </a>
-                        </td>
-                    </tr>
+                    @forelse($proposals as $proposal)
+                        <tr>
+                            <td>
+                                <div class="id-code">EP-</div>
+                                <div class="id-code">{{ str_pad($proposal->id, 4, '0', STR_PAD_LEFT) }}</div>
+                            </td>
+                            <td>
+                                <div class="judul-title">{{ Str::limit($proposal->title, 20, '…') }}</div>
+                                <div class="judul-sub">{{ $proposal->description ? Str::limit($proposal->description, 25, '…') : 'Research Proposal' }}</div>
+                            </td>
+                            <td>
+                                <div class="peneliti-wrap">
+                                    <div class="avatar">{{ substr($proposal->researcher->name ?? 'U', 0, 1) }}</div>
+                                    <span class="peneliti-name">{{ Str::limit($proposal->researcher->name ?? 'Unknown', 20) }}</span>
+                                </div>
+                            </td>
+                            <td><span class="date-main">{{ optional($proposal->submission_date)->format('M d, Y') ?? 'N/A' }}</span></td>
+                            <td><span class="date-deadline">{{ optional($proposal->submission_date)->addDays(14)->format('M d, Y') ?? 'N/A' }}</span></td>
+                            <td>
+                                @if($proposal->status === 'new_proposal')
+                                    <span class="badge badge-new">NEW</span>
+                                @elseif($proposal->status === 'in_process')
+                                    <span class="badge badge-queued">IN PROCESS</span>
+                                @elseif($proposal->status === 'on_review')
+                                    <span class="badge badge-queued">IN REVIEW</span>
+                                @else
+                                    <span class="badge badge-queued">{{ strtoupper(str_replace('_', ' ', $proposal->status)) }}</span>
+                                @endif
+                            </td>
+                            <td>
+                                <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}">
+                                    <button class="btn-review-now">Review Now</button>
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <p class="text-gray-500">Tidak ada proposal untuk ditinjau saat ini.</p>
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
 
         {{-- Pagination --}}
         <div class="table-footer">
-            <span class="page-info">Showing 1–4 of 24 proposals</span>
+            <span class="page-info">Showing 1–{{ $proposals->count() }} of {{ $proposals->count() }} proposals</span>
             <div class="page-btns">
                 <button class="page-btn active">1</button>
-                <button class="page-btn">2</button>
-                <button class="page-btn">3</button>
-                <span class="page-dots">…</span>
-                <button class="page-btn">8</button>
-                <button class="page-btn add-btn" onclick="featureInDevelopment('Tambah Proposal')">+</button>
+                @if($proposals->count() > 10)
+                    <button class="page-btn">2</button>
+                    <button class="page-btn">3</button>
+                @endif
             </div>
         </div>
     </div>
