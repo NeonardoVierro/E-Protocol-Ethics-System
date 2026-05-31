@@ -28,6 +28,8 @@
                         <span class="text-yellow-600">Revisi</span>
                     @elseif($proposal->status === 'rejected')
                         <span class="text-red-600">Ditolak</span>
+                    @elseif($proposal->status === 'in_process')
+                        <span class="text-cyan-600">Dalam Proses</span>
                     @elseif($proposal->status === 'on_review')
                         <span class="text-indigo-600">Sedang Direview</span>
                     @else

@@ -39,6 +39,7 @@ class Proposal extends Model
 
     // ── Status constants ──────────────────────────
     const STATUS_NEW                = 'new_proposal';
+    const STATUS_IN_PROCESS         = 'in_process';
     const STATUS_ON_REVIEW          = 'on_review';
     const STATUS_REVISED            = 'revised';
     const STATUS_APPROVED           = 'approved';
@@ -125,7 +126,7 @@ class Proposal extends Model
 
     public function canBeReviewed()
     {
-        return in_array($this->status, [self::STATUS_NEW, self::STATUS_REVISED]);
+        return in_array($this->status, [self::STATUS_NEW, self::STATUS_IN_PROCESS, self::STATUS_REVISED]);
     }
 
     public function isDocumentComplete()
@@ -136,6 +137,76 @@ class Proposal extends Model
     public function getDocumentStatusAttribute()
     {
         return $this->isDocumentComplete() ? 'lengkap' : 'kurang';
+    }
+
+    public function getReviewRoundAttribute()
+    {
+        if ($this->relationLoaded('reviews')) {
+            return $this->reviews->where('status', Review::STATUS_COMPLETED)->count();
+        }
+
+        return $this->reviews()->where('status', Review::STATUS_COMPLETED)->count();
+    }
+
+    public function getProcessLabelAttribute()
+    {
+        return match ($this->status) {
+            self::STATUS_NEW, self::STATUS_IN_PROCESS => 'PROCESS',
+            self::STATUS_ON_REVIEW, self::STATUS_REVISED => 'PROCESS',
+            self::STATUS_APPROVED => 'COMPLETE',
+            self::STATUS_REJECTED => 'CLOSED',
+            default => strtoupper(str_replace('_', ' ', $this->status)),
+        };
+    }
+
+    public function getProgressLabelAttribute()
+    {
+        return match ($this->status) {
+            self::STATUS_NEW => 'READY',
+            self::STATUS_IN_PROCESS => 'PROCESSING',
+            self::STATUS_ON_REVIEW => 'PROGRESS',
+            self::STATUS_REVISED => 'REVISING',
+            self::STATUS_APPROVED => 'COMPLETED',
+            self::STATUS_REJECTED => 'REJECTED',
+            default => strtoupper(str_replace('_', ' ', $this->status)),
+        };
+    }
+
+    public function getRoundLabelAttribute()
+    {
+        return 'Round ' . max(0, $this->review_round);
+    }
+
+    public function getProcessBadgeClassesAttribute()
+    {
+        return match ($this->status) {
+            self::STATUS_NEW => 'bg-blue-600 text-white',
+            self::STATUS_IN_PROCESS => 'bg-cyan-600 text-white',
+            self::STATUS_ON_REVIEW, self::STATUS_REVISED => 'bg-indigo-600 text-white',
+            self::STATUS_APPROVED => 'bg-emerald-600 text-white',
+            self::STATUS_REJECTED => 'bg-red-600 text-white',
+            default => 'bg-gray-900 text-white',
+        };
+    }
+
+    public function getProgressBadgeClassesAttribute()
+    {
+        return match ($this->status) {
+            self::STATUS_NEW => 'bg-slate-400 text-white',
+            self::STATUS_IN_PROCESS => 'bg-yellow-400 text-gray-900',
+            self::STATUS_ON_REVIEW => 'bg-amber-400 text-gray-900',
+            self::STATUS_REVISED => 'bg-orange-400 text-gray-900',
+            self::STATUS_APPROVED => 'bg-emerald-400 text-gray-900',
+            self::STATUS_REJECTED => 'bg-red-400 text-white',
+            default => 'bg-gray-900 text-white',
+        };
+    }
+
+    public function getRoundBadgeClassesAttribute()
+    {
+        return $this->review_round > 0
+            ? 'bg-gray-900 text-white'
+            : 'bg-slate-700 text-white';
     }
 
     public function updateStatus($newStatus)
@@ -153,6 +224,7 @@ class Proposal extends Model
     {
         return [
             self::STATUS_NEW                 => 'New Proposal',
+            self::STATUS_IN_PROCESS          => 'In Process',
             self::STATUS_ON_REVIEW           => 'On Review',
             self::STATUS_REVISED             => 'Revisi',
             self::STATUS_APPROVED            => 'Approved',
@@ -166,6 +238,7 @@ class Proposal extends Model
     {
         return [
             self::STATUS_NEW                 => 'bg-blue-100 text-blue-800',
+            self::STATUS_IN_PROCESS          => 'bg-cyan-100 text-cyan-800',
             self::STATUS_ON_REVIEW           => 'bg-yellow-100 text-yellow-800',
             self::STATUS_REVISED             => 'bg-orange-100 text-orange-800',
             self::STATUS_APPROVED            => 'bg-green-100 text-green-800',

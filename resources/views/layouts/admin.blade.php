@@ -43,6 +43,7 @@
 <!-- ═══════════════════════════════════
      SIDEBAR
 ═══════════════════════════════════ -->
+@section('sidebar')
 <div class="w-64 min-h-screen bg-white border-r border-[#e8ecf0] fixed left-0 top-0 flex flex-col z-[100]">
 
     <!-- Brand -->
@@ -110,6 +111,7 @@
     </nav>
 
 </div>
+@show
 
 <!-- ═══════════════════════════════════
      MAIN CONTENT

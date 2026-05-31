@@ -15,10 +15,13 @@ class ProposalAssignment extends Model
         'assigned_to',
         'role',
         'notes',
+        'due_date',
+        'comment_to_review',
         'sent_at',
     ];
 
     protected $casts = [
+        'due_date' => 'date',
         'sent_at' => 'datetime',
     ];
 
