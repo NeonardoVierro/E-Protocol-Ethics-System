@@ -268,6 +268,20 @@ class SekretarisController extends Controller
 
         $proposal->update(['status' => Proposal::STATUS_ON_REVIEW]);
 
+        // Create reviewer notification
+        \App\Models\Notification::create([
+            'user_id' => $reviewer->id,
+            'title' => 'Penugasan Review Baru',
+            'message' => 'Anda telah ditugaskan untuk mereview proposal: ' . $proposal->title,
+            'type' => \App\Models\Notification::TYPE_REVIEW_ASSIGNMENT,
+            'status' => \App\Models\Notification::STATUS_UNREAD,
+            'data' => [
+                'proposal_id' => $proposal->id,
+                'review_type' => $request->review_type,
+                'due_date' => $request->due_date,
+            ],
+        ]);
+
         // Record activity log for assignment to reviewer
         \App\Models\DocumentLog::create([
             'proposal_id' => $proposal->id,

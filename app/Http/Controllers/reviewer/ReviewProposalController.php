@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Reviewer;
 use App\Http\Controllers\Controller;
 use App\Models\Proposal;
 use App\Models\ProposalAssignment;
+use App\Models\ProposalFile;
 use App\Models\Review;
 use App\Models\ReviewFeedback;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ReviewProposalController extends Controller
 {
@@ -60,6 +62,26 @@ class ReviewProposalController extends Controller
         ])->findOrFail($id);
 
         return view('reviewer.review-proposal.show', compact('proposal'));
+    }
+
+    public function downloadProposalFile(ProposalFile $file)
+    {
+        $proposal = $file->proposal;
+        $assigned = $proposal->assignments()
+            ->where('role', ProposalAssignment::ROLE_REVIEWER)
+            ->where('assigned_to', Auth::id())
+            ->whereNotNull('sent_at')
+            ->exists();
+
+        if (! $assigned) {
+            abort(403);
+        }
+
+        if (! Storage::disk('public')->exists($file->file_path)) {
+            abort(404);
+        }
+
+        return response()->download(Storage::disk('public')->path($file->file_path), $file->original_name);
     }
 
     /**
