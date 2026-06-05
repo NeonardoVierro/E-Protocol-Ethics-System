@@ -90,7 +90,7 @@
                                         <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-md">v1</span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <a href="{{ route('storage.download', $file->id) }}" class="text-green-600 hover:text-green-700">
+                                        <a href="{{ route('reviewer.proposal-file.download', $file->id) }}" class="text-green-600 hover:text-green-700">
                                             <i class="fas fa-download text-lg"></i>
                                         </a>
                                     </td>
@@ -104,7 +104,7 @@
                                     <td colspan="5" class="px-6 py-3">
                                         <div class="text-xs text-gray-600">
                                             <p><strong>Version v1</strong> - {{ $file->created_at->format('d M Y H:i') }}</p>
-                                            <p class="text-gray-500"><a href="{{ route('storage.download', $file->id) }}" class="text-blue-600 hover:underline">Download</a></p>
+                                            <p class="text-gray-500"><a href="{{ route('reviewer.proposal-file.download', $file->id) }}" class="text-blue-600 hover:underline">Download</a></p>
                                         </div>
                                     </td>
                                 </tr>

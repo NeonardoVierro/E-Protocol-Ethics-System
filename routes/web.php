@@ -153,6 +153,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/review-proposal', [ReviewProposalController::class, 'store'])
             ->name('review-proposal.store');
 
+        // Download file proposal reviewer
+        Route::get('/proposal-file/{file}/download', [ReviewProposalController::class, 'downloadProposalFile'])
+            ->name('proposal-file.download');
+
+        // Notifikasi Reviewer
+        Route::get('/notifikasi', [App\Http\Controllers\Reviewer\NotificationController::class, 'index'])->name('notifikasi.index');
+        Route::get('/notifikasi/latest', [App\Http\Controllers\Reviewer\NotificationController::class, 'getLatest'])->name('notifikasi.latest');
+        Route::post('/notifikasi/mark-read/{id}', [App\Http\Controllers\Reviewer\NotificationController::class, 'markAsRead'])->name('notifikasi.mark-read');
+        Route::post('/notifikasi/mark-all-read', [App\Http\Controllers\Reviewer\NotificationController::class, 'markAllAsRead'])->name('notifikasi.mark-all-read');
+        Route::delete('/notifikasi/{id}', [App\Http\Controllers\Reviewer\NotificationController::class, 'destroy'])->name('notifikasi.destroy');
+        Route::post('/notifikasi/clear-read', [App\Http\Controllers\Reviewer\NotificationController::class, 'clearRead'])->name('notifikasi.clear-read');
+        Route::get('/notifikasi/redirect/{id}', [App\Http\Controllers\Reviewer\NotificationController::class, 'redirectFromNotification'])->name('notifikasi.redirect');
+
         // Riwayat Review
         Route::get('/riwayat-review', [RiwayatReviewController::class, 'index'])
             ->name('riwayat-review');
