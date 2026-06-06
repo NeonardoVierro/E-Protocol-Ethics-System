@@ -109,34 +109,34 @@
         {{-- Total Queue --}}
         <div class="stat-card">
             <div class="stat-label">Total Queue</div>
-            <div class="stat-value">24</div>
+            <div class="stat-value">{{ $total ?? $proposals->count() }}</div>
             <div class="stat-sub">
-                <span class="arrow-up">↑</span> +4 since yesterday
+                <span class="arrow-up">↑</span> Real-time
             </div>
         </div>
 
         {{-- Urgent (24h) --}}
         <div class="stat-card urgent">
             <div class="stat-label">Urgent (24h)</div>
-            <div class="stat-value urgent">03</div>
+            <div class="stat-value urgent">{{ $urgent ?? 0 }}</div>
             <div class="urgent-note">⚑ Requires immediate action</div>
         </div>
 
         {{-- Average Wait --}}
         <div class="stat-card">
             <div class="stat-label">Average Wait</div>
-            <div class="stat-value">4.2d</div>
+            <div class="stat-value">{{ $avgWait ?? 0 }}d</div>
             <div class="stat-sub">
-                <i class="fas fa-clock" style="color:#9ca3af;font-size:.65rem"></i> Within target window
+                <i class="fas fa-clock" style="color:#9ca3af;font-size:.65rem"></i> Avg days since submission
             </div>
         </div>
 
         {{-- Team Capacity --}}
         <div class="stat-card">
             <div class="stat-label">Team Capacity</div>
-            <div class="stat-value">82%</div>
+            <div class="stat-value">{{ $teamCapacityPercent ?? 0 }}%</div>
             <div class="capacity-bar-bg">
-                <div class="capacity-bar-fg"></div>
+                <div class="capacity-bar-fg" style="width: {{ $teamCapacityPercent ?? 0 }}%;"></div>
             </div>
         </div>
     </div>
@@ -195,10 +195,20 @@
                                     <span class="badge badge-queued">{{ strtoupper(str_replace('_', ' ', $proposal->status)) }}</span>
                                 @endif
                             </td>
-                            <td>
-                                <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}">
-                                    <button class="btn-review-now">Review Now</button>
-                                </a>
+                                <td>
+                                @php
+                                    $isReviewed = isset($reviewStatuses[$proposal->id]) && $reviewStatuses[$proposal->id] === \App\Models\Review::STATUS_COMPLETED;
+                                @endphp
+                                @if($isReviewed)
+                                    <div class="inline-flex items-center gap-2 text-sm text-slate-600">
+                                        <span class="material-symbols-outlined" style="color: green;">check_circle</span>
+                                        <span class="font-semibold text-sm" style="color: green;">Submitted</span>
+                                    </div>
+                                @else
+                                    <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}">
+                                        <button class="btn-review-now">Review Now</button>
+                                    </a>
+                                @endif
                             </td>
                         </tr>
                     @empty
