@@ -208,12 +208,7 @@
             <span class="truncate">Proposal Masuk</span>
         </a>
 
-        {{-- Review Proposal --}}
-        <a href="{{ route('reviewer.review-proposal') }}"
-           class="sidebar-link group flex items-center gap-3 px-3 py-[9px] rounded-lg text-[12px] sm:text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] border-l-[3px] border-l-transparent hover:border-l-[#2563eb] text-[#4b5563] {{ request()->routeIs('reviewer.review-proposal') ? 'active bg-[#eef3fb] text-[#1e4d8c] border-l-[#2563eb]' : '' }}">
-            <i class="fas fa-edit text-[14px] sm:text-[15px] w-5 text-center shrink-0 {{ request()->routeIs('reviewer.review-proposal') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
-            <span class="truncate">Review Proposal</span>
-        </a>
+        {{-- Review Proposal removed: use Proposal Masuk --}}
 
         {{-- Riwayat Review --}}
         <a href="{{ route('reviewer.riwayat-review') }}"

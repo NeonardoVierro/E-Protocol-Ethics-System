@@ -103,9 +103,7 @@ class NotificationController extends Controller
 
         switch ($notification->type) {
             case Notification::TYPE_REVIEW_ASSIGNMENT:
-                if (isset($data['proposal_id'])) {
-                    return redirect()->route('reviewer.review-proposal.show', $data['proposal_id']);
-                }
+                // Review assignment should lead to the proposal queue (Proposal Masuk)
                 return redirect()->route('reviewer.proposal-masuk');
 
             case Notification::TYPE_PROPOSAL_STATUS:

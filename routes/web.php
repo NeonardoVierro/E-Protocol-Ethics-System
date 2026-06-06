@@ -145,17 +145,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/proposal-masuk', [ProposalMasukController::class, 'index'])
             ->name('proposal-masuk');
 
-        // Review Proposal
-        Route::get('/review-proposal', [ReviewProposalController::class, 'index'])
-            ->name('review-proposal');
-        Route::get('/review-proposal/{id}', [ReviewProposalController::class, 'show'])
-            ->name('review-proposal.show');
-        Route::post('/review-proposal', [ReviewProposalController::class, 'store'])
-            ->name('review-proposal.store');
+        // Review Proposal: keep index redirect but allow opening a specific proposal review
+        Route::redirect('/review-proposal', '/reviewer/proposal-masuk')->name('review-proposal');
+        Route::get('/review-proposal/{id}', [ReviewProposalController::class, 'show'])->name('review-proposal.show');
+        Route::post('/review-proposal', [ReviewProposalController::class, 'store'])->name('review-proposal.store');
 
-        // Download file proposal reviewer
+        // Reviewer proposal file access (download/preview) for inline reviewers' workspace
         Route::get('/proposal-file/{file}/download', [ReviewProposalController::class, 'downloadProposalFile'])
             ->name('proposal-file.download');
+        Route::get('/proposal-file/{file}/preview', [ReviewProposalController::class, 'previewProposalFile'])
+            ->name('proposal-file.preview');
 
         // Notifikasi Reviewer
         Route::get('/notifikasi', [App\Http\Controllers\Reviewer\NotificationController::class, 'index'])->name('notifikasi.index');
@@ -224,6 +223,7 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::get('/proposal-file/{file}/download', [SekretarisController::class, 'downloadProposalFile'])->name('proposal-file.download');
     Route::get('/assign-reviewer', [SekretarisController::class, 'assignReviewer'])->name('assign-reviewer');
     Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
+    Route::get('/hasil-review/{proposal}', [SekretarisController::class, 'hasilReviewShow'])->name('hasil-review.show');
     Route::get('/keputusan', [SekretarisController::class, 'keputusan'])->name('keputusan');
     Route::post('/keputusan/update', [SekretarisController::class, 'updateDecision'])->name('keputusan.update');
     Route::get('/draf-ethical-clearance', [SekretarisController::class, 'draftEthicalClearance'])->name('draf-ethical-clearance');

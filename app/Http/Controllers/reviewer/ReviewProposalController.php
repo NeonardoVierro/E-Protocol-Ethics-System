@@ -61,7 +61,18 @@ class ReviewProposalController extends Controller
             },
         ])->findOrFail($id);
 
-        return view('reviewer.review-proposal.show', compact('proposal'));
+        // Load existing review feedback for current user
+        $draftReview = Review::where('proposal_id', $id)
+            ->where('reviewer_id', Auth::id())
+            ->with('feedback')
+            ->first();
+
+        $draftFeedback = null;
+        if ($draftReview) {
+            $draftFeedback = $draftReview->feedback;
+        }
+
+        return view('reviewer.review-proposal.show', compact('proposal', 'draftReview', 'draftFeedback'));
     }
 
     public function downloadProposalFile(ProposalFile $file)
@@ -84,52 +95,99 @@ class ReviewProposalController extends Controller
         return response()->download(Storage::disk('public')->path($file->file_path), $file->original_name);
     }
 
+    public function previewProposalFile(ProposalFile $file)
+    {
+        $proposal = $file->proposal;
+        $assigned = $proposal->assignments()
+            ->where('role', ProposalAssignment::ROLE_REVIEWER)
+            ->where('assigned_to', Auth::id())
+            ->whereNotNull('sent_at')
+            ->exists();
+
+        if (! $assigned) {
+            abort(403);
+        }
+
+        if (! Storage::disk('public')->exists($file->file_path)) {
+            abort(404);
+        }
+
+        return response()->file(Storage::disk('public')->path($file->file_path));
+    }
+
     /**
-     * Menyimpan hasil review (submit review).
+     * Menyimpan hasil review (submit review atau simpan sebagai draft).
      */
     public function store(Request $request)
     {
         $request->validate([
             'proposal_id' => 'required|integer|exists:proposals,id',
-            'feedback' => 'nullable|string|min:10',
-            'status' => 'required|in:diterima,revisi,ditolak',
+            'save_mode' => 'required|in:draft,submit',
+            'autonomy' => 'nullable|string|max:2000',
+            'beneficence' => 'nullable|string|max:2000',
+            'justice' => 'nullable|string|max:2000',
+            'general_comments' => $request->input('save_mode') === 'submit' ? 'required|string|min:10|max:4000' : 'nullable|string|max:4000',
+            'recommendation' => $request->input('save_mode') === 'submit' ? 'required|in:approved,revision,rejected' : 'nullable|in:approved,revision,rejected',
         ]);
 
         $proposal = Proposal::findOrFail($request->proposal_id);
+        $isSubmit = $request->input('save_mode') === 'submit';
 
-        $mapping = [
-            'diterima' => Proposal::STATUS_ON_REVIEW,
-            'revisi' => Proposal::STATUS_REVISED,
-            'ditolak' => Proposal::STATUS_REJECTED,
-        ];
+        $review = Review::where('proposal_id', $proposal->id)
+            ->where('reviewer_id', Auth::id())
+            ->whereIn('status', [Review::STATUS_IN_PROGRESS, Review::STATUS_ASSIGNED])
+            ->first();
 
-        $recommendationMap = [
-            'diterima' => ReviewFeedback::RECOMMENDATION_APPROVED,
-            'revisi' => ReviewFeedback::RECOMMENDATION_REVISION,
-            'ditolak' => ReviewFeedback::RECOMMENDATION_REJECTED,
-        ];
+        if (! $review) {
+            $review = Review::create([
+                'proposal_id' => $proposal->id,
+                'reviewer_id' => Auth::id(),
+                'status' => $isSubmit ? Review::STATUS_COMPLETED : Review::STATUS_IN_PROGRESS,
+                'assigned_date' => now(),
+                'due_date' => now()->addDays(7),
+                'completed_date' => $isSubmit ? now() : null,
+            ]);
+        } else {
+            $review->update([
+                'status' => $isSubmit ? Review::STATUS_COMPLETED : Review::STATUS_IN_PROGRESS,
+                'completed_date' => $isSubmit ? now() : null,
+            ]);
+        }
 
-        $review = Review::create([
-            'proposal_id' => $proposal->id,
-            'reviewer_id' => Auth::id(),
-            'status' => Review::STATUS_COMPLETED,
-            'assigned_date' => now(),
-            'due_date' => now()->addDays(7),
-            'completed_date' => now(),
-        ]);
+        $feedbackData = json_encode([
+            'autonomy' => $request->input('autonomy'),
+            'beneficence' => $request->input('beneficence'),
+            'justice' => $request->input('justice'),
+            'general_comments' => $request->input('general_comments'),
+        ], JSON_UNESCAPED_UNICODE);
 
-        ReviewFeedback::create([
+        $reviewFeedback = ReviewFeedback::firstOrNew([
             'review_id' => $review->id,
             'proposal_id' => $proposal->id,
-            'feedback_text' => $request->feedback,
-            'recommendation' => $recommendationMap[$request->status],
-            'is_submitted' => true,
-            'submitted_at' => now(),
         ]);
 
-        $proposal->updateStatus($mapping[$request->status]);
+        $reviewFeedback->feedback_text = $feedbackData;
+        $reviewFeedback->recommendation = $request->input('recommendation');
+        $reviewFeedback->is_submitted = $isSubmit;
+        $reviewFeedback->submitted_at = $isSubmit ? now() : null;
+        $reviewFeedback->save();
 
-        return redirect()->route('reviewer.riwayat-review')
-            ->with('success', 'Review berhasil disubmit dan status proposal diupdate.');
+        if ($isSubmit) {
+            $statusMap = [
+                'approved' => Proposal::STATUS_APPROVED,
+                'revision' => Proposal::STATUS_REVISED,
+                'rejected' => Proposal::STATUS_REJECTED,
+            ];
+
+            if (isset($statusMap[$reviewFeedback->recommendation])) {
+                $proposal->updateStatus($statusMap[$reviewFeedback->recommendation]);
+            }
+
+            return redirect()->route('reviewer.riwayat-review')
+                ->with('success', 'Review berhasil disubmit dan status proposal diupdate.');
+        }
+
+        return redirect()->route('reviewer.review-proposal.show', $proposal->id)
+            ->with('success', 'Draft review berhasil disimpan.');
     }
 }

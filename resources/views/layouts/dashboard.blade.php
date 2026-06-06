@@ -15,8 +15,104 @@
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#2b5bb5",
+                        "on-primary-fixed": "#001945",
+                        "surface-bright": "#f8f9ff",
+                        "primary-container": "#0d47a1",
+                        "on-secondary-container": "#006f66",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "secondary-fixed": "#84f5e8",
+                        "surface-container-high": "#dce9ff",
+                        "tertiary": "#602100",
+                        "inverse-primary": "#b0c6ff",
+                        "secondary-fixed-dim": "#66d9cc",
+                        "surface-variant": "#d3e4fe",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-container": "#ffa781",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "on-error": "#ffffff",
+                        "primary": "#003178",
+                        "on-background": "#0b1c30",
+                        "on-primary-fixed-variant": "#00429c",
+                        "secondary-container": "#81f3e5",
+                        "background": "url('/images/bg-research.jpg')",
+                        "inverse-surface": "#213145",
+                        "outline-variant": "#c3c6d4",
+                        "on-secondary-fixed": "#00201d",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary-fixed": "#ffdbcd",
+                        "on-tertiary-fixed": "#360f00",
+                        "surface-container": "#e5eeff",
+                        "surface-dim": "#cbdbf5",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#d9e2ff",
+                        "tertiary-container": "#853100",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#a1bbff",
+                        "on-surface": "#0b1c30",
+                        "surface-container-low": "#eff4ff",
+                        "surface": "#f8f9ff",
+                        "outline": "#737783",
+                        "on-surface-variant": "#434652",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#005049",
+                        "secondary": "#006a62",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed-dim": "#b0c6ff"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem",
+                        "2xl": "1rem",
+                    },
+                    spacing: {
+                        "md": "16px",
+                        "container-max": "1440px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "xl": "32px",
+                        "lg": "24px",
+                        "sm": "12px",
+                        "gutter": "24px",
+                    },
+                    fontFamily: {
+                        "button": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "h2": ["Inter"],
+                        "body-md": ["Inter"],
+                        "h1": ["Inter"],
+                        "h3": ["Inter"],
+                    },
+                    fontSize: {
+                        "button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "h2": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "h1": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h3": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    },
+                    maxWidth: {
+                        "container-max": "1440px",
+                    },
+                },
+            },
+        }
+    </script>
     <style>
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -137,9 +233,9 @@
             100% { transform: rotate(0deg); }
         }
         
-        /* .notification-badge.has-new {
+        .notification-badge.has-new {
             animation: badgePop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), pulseGlow 1.5s infinite;
-        } */
+        }
         
         @keyframes pulseGlow {
             0% { box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.4); }

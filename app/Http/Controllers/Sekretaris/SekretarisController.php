@@ -11,6 +11,7 @@ use App\Models\ProposalFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
+use App\Models\ReviewFeedback;
 
 class SekretarisController extends Controller
 {
@@ -357,13 +358,78 @@ class SekretarisController extends Controller
         return view('sekretaris.assign-reviewer.index', compact('proposals', 'reviewers'));
     }
 
-    public function hasilReview()
+    public function hasilReview(Request $request)
     {
-        $reviews = [
-            ['proposal_id' => 'P001', 'judul' => 'Studi Etika AI', 'reviewer' => 'Dr. Andi', 'feedback' => 'Revisi minor, perbaiki metodologi', 'tanggal' => '2025-05-03'],
-            ['proposal_id' => 'P002', 'judul' => 'Penelitian Klinis', 'reviewer' => 'Prof. Siti', 'feedback' => 'Diterima dengan catatan', 'tanggal' => '2025-05-04'],
+        $query = ReviewFeedback::with(['proposal.researcher', 'review.reviewer'])
+            ->where('is_submitted', true)
+            ->orderByDesc('submitted_at');
+
+        // pencarian sederhana (judul proposal atau nama reviewer)
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($w) use ($q) {
+                $w->whereHas('proposal', function ($p) use ($q) {
+                    $p->where('title', 'like', "%{$q}%")
+                      ->orWhere('code', 'like', "%{$q}%");
+                })->orWhereHas('review.reviewer', function ($r) use ($q) {
+                    $r->where('name', 'like', "%{$q}%");
+                });
+            });
+        }
+
+        $feedbacks = $query->paginate(12)->withQueryString();
+
+        $stats = [
+            'total' => ReviewFeedback::where('is_submitted', true)->count(),
+            'approved' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_APPROVED)->count(),
+            'revision' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_REVISION)->count(),
+            'rejected' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_REJECTED)->count(),
         ];
-        return view('sekretaris.hasil-review.index', compact('reviews'));
+
+        return view('sekretaris.hasil-review.index', compact('feedbacks', 'stats'));
+    }
+
+    public function hasilReviewShow(Proposal $proposal)
+    {
+        $proposal->load(['researcher', 'files' => function ($q) { $q->where('is_active', true); }]);
+
+        $feedbacks = ReviewFeedback::with(['review.reviewer'])
+            ->where('proposal_id', $proposal->id)
+            ->where('is_submitted', true)
+            ->orderByDesc('submitted_at')
+            ->get();
+
+        // aggregate counts for summary
+        $summary = [
+            'approved' => $feedbacks->where('recommendation', ReviewFeedback::RECOMMENDATION_APPROVED)->count(),
+            'revision' => $feedbacks->where('recommendation', ReviewFeedback::RECOMMENDATION_REVISION)->count(),
+            'rejected' => $feedbacks->where('recommendation', ReviewFeedback::RECOMMENDATION_REJECTED)->count(),
+            'total_reviewers' => $feedbacks->count(),
+        ];
+
+        // Normalize feedback_text: if stored as JSON string, decode it for easier display in view
+        $feedbacks->transform(function ($fb) {
+            $parsed = null;
+            if (is_array($fb->feedback_text)) {
+                $parsed = $fb->feedback_text;
+            } elseif (is_string($fb->feedback_text)) {
+                $decoded = json_decode($fb->feedback_text, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $parsed = $decoded;
+                } else {
+                    // keep raw string under 'summary'
+                    $parsed = ['summary' => $fb->feedback_text];
+                }
+            } else {
+                $parsed = ['summary' => (string) $fb->feedback_text];
+            }
+
+            // Attach non-persistent property for the view
+            $fb->parsed_feedback = $parsed;
+            return $fb;
+        });
+
+        return view('sekretaris.hasil-review.show', compact('proposal', 'feedbacks', 'summary'));
     }
 
     public function keputusan()
