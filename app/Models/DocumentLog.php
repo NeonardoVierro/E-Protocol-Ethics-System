@@ -34,6 +34,7 @@ class DocumentLog extends Model
     const ACTIVITY_UPDATE = 'update';
     const ACTIVITY_ASSIGN = 'assign';
     const ACTIVITY_VERIFY = 'verify';
+    const ACTIVITY_DECISION = 'decision';
 
     // ========== RELATIONSHIPS ==========
     
@@ -71,6 +72,7 @@ class DocumentLog extends Model
             self::ACTIVITY_UPDATE => 'Update',
             self::ACTIVITY_ASSIGN => 'Assign',
             self::ACTIVITY_VERIFY => 'Verifikasi',
+            self::ACTIVITY_DECISION => 'Keputusan',
         ][$this->activity] ?? $this->activity;
     }
 }
