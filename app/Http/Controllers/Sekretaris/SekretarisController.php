@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\Proposal;
 use App\Models\ProposalAssignment;
 use App\Models\ProposalFile;
+use App\Models\Review;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
@@ -434,27 +435,136 @@ class SekretarisController extends Controller
 
     public function keputusan()
     {
-        $keputusan = Proposal::with('researcher')
+        // Hanya proposal yang di-assign ke sekretaris yang login
+        $assignmentConstraint = function ($query) {
+            $query->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+                ->where('assigned_to', Auth::id())
+                ->whereNotNull('sent_at');
+        };
+    
+        $keputusan = Proposal::with(['researcher', 'reviews'])
+            ->whereHas('assignments', $assignmentConstraint)
+            ->where('status', Proposal::STATUS_ON_REVIEW)
+            ->whereHas('reviews', function ($query) {
+                $query->where('status', Review::STATUS_COMPLETED);
+            })
             ->orderByDesc('submission_date')
-            ->orderByDesc('created_at')
             ->get();
-
+    
         return view('sekretaris.keputusan.index', compact('keputusan'));
     }
-
+    
     public function updateDecision(Request $request)
     {
         $request->validate([
-            'proposal_id' => 'required|integer|exists:proposals,id',
-            'status' => 'required|in:approved,revised,rejected',
+            'proposal_id'      => 'required|integer|exists:proposals,id',
+            'status'           => 'required|in:approved,revised,rejected',
+            // Sekretaris note wajib hanya saat 'rejected'; untuk 'revised' catatan bersifat opsional
+            'rejection_reason' => 'required_if:status,rejected|nullable|string|max:1000',
+            'revision_files'   => 'sometimes|array',
+            'revision_files.*' => 'file|mimes:pdf,doc,docx|max:10240',
+        ], [
+            'rejection_reason.required_if' => 'Alasan wajib diisi untuk keputusan penolakan.',
+            'revision_files.*.mimes' => 'Lampiran harus berupa file PDF atau Word.',
+            'revision_files.*.max' => 'Ukuran lampiran maksimal 10 MB per file.',
         ]);
-
+    
         $proposal = Proposal::findOrFail($request->proposal_id);
-        $proposal->updateStatus($request->status);
+    
+        // Pastikan sekretaris yang login memang assigned ke proposal ini
+        $assigned = $proposal->assignments()
+            ->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+            ->where('assigned_to', Auth::id())
+            ->whereNotNull('sent_at')
+            ->exists();
+    
+        if (!$assigned) {
+            abort(403, 'Anda tidak memiliki akses untuk memutuskan proposal ini.');
+        }
+    
+        if ($proposal->status === Proposal::STATUS_ON_REVIEW) {
+            $hasCompletedReview = $proposal->reviews()
+                ->where('status', Review::STATUS_COMPLETED)
+                ->exists();
+    
+            if (! $hasCompletedReview) {
+                abort(403, 'Keputusan tidak dapat disimpan sebelum reviewer menyelesaikan review.');
+            }
+        }
+    
+        // Update status dan rejection reason
+        $proposal->status = $request->status;
+        $proposal->rejection_reason = in_array($request->status, ['rejected', 'revised'])
+            ? $request->rejection_reason
+            : null;
+    
+        if (in_array($request->status, ['approved', 'rejected'])) {
+            $proposal->decision_date = now();
+        }
+    
+        $proposal->save();
+    
+        // Log aktivitas
+            // Handle optional revision files (store and create ProposalFile records)
+            $uploadedFileIds = [];
+            if ($request->hasFile('revision_files') && $request->status === 'revised') {
+                foreach ($request->file('revision_files') as $file) {
+                    $path = $file->store("proposals/{$proposal->id}/revisions", 'public');
 
+                    // Determine next version number for revision files
+                    $lastVersion = \App\Models\ProposalFile::where('proposal_id', $proposal->id)
+                        ->where('file_type', \App\Models\ProposalFile::TYPE_REVISION)
+                        ->max('version') ?? 0;
+
+                    $pf = \App\Models\ProposalFile::create([
+                        'proposal_id'  => $proposal->id,
+                        'file_path'    => $path,
+                        'file_type'    => \App\Models\ProposalFile::TYPE_REVISION,
+                        'original_name'=> $file->getClientOriginalName(),
+                        'file_size'    => $file->getSize(),
+                        'mime_type'    => $file->getClientMimeType(),
+                        'version'      => $lastVersion + 1,
+                        'is_active'    => true,
+                    ]);
+
+                    $uploadedFileIds[] = $pf->id;
+                }
+            }
+
+            \App\Models\DocumentLog::create([
+                'proposal_id' => $proposal->id,
+                'user_id'     => Auth::id(),
+                'activity'    => \App\Models\DocumentLog::ACTIVITY_DECISION,
+                'description' => 'Keputusan: ' . ucfirst($request->status)
+                    . ($request->rejection_reason ? ' — ' . $request->rejection_reason : ''),
+                'metadata'    => [
+                    'status'           => $request->status,
+                    'rejection_reason' => $request->rejection_reason,
+                    'revision_files'   => $uploadedFileIds,
+                ],
+            ]);
+    
+        // Notifikasi ke peneliti
+        \App\Models\Notification::create([
+            'user_id' => $proposal->user_id,
+            'title'   => 'Keputusan Proposal: ' . ucfirst($request->status),
+            'message' => match($request->status) {
+                'approved' => 'Proposal "' . $proposal->title . '" Anda telah disetujui.',
+                'revised'  => 'Proposal "' . $proposal->title . '" memerlukan revisi. Catatan: ' . $request->rejection_reason,
+                'rejected' => 'Proposal "' . $proposal->title . '" ditolak. Alasan: ' . $request->rejection_reason,
+            },
+            'type'   => \App\Models\Notification::TYPE_PROPOSAL_STATUS ?? 'proposal_status',
+            'status' => \App\Models\Notification::STATUS_UNREAD ?? 'unread',
+            'data'   => [
+                'proposal_id' => $proposal->id,
+                'status'      => $request->status,
+            ],
+        ]);
+    
         return redirect()->route('sekretaris.keputusan')
-            ->with('success', 'Status keputusan proposal berhasil diperbarui.');
+            ->with('success', 'Keputusan untuk proposal "' . $proposal->title . '" berhasil disimpan.');
     }
+ 
 
     public function draftEthicalClearance()
     {

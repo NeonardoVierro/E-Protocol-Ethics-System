@@ -136,6 +136,54 @@
                     <div class="min-h-[80px] border border-slate-100 rounded-lg p-4 text-slate-500">No document comments yet</div>
                 @endif
             </section>
+
+            @php
+                $revisionFiles = $proposal->files->where('file_type', App\Models\ProposalFile::TYPE_REVISION);
+            @endphp
+
+            <section class="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Revision Files</h3>
+                    <span class="text-sm text-slate-500">{{ $revisionFiles->count() }} file(s)</span>
+                </div>
+
+                @if($revisionFiles->isNotEmpty())
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600">
+                                <tr>
+                                    <th class="px-4 py-3 font-medium">Filename</th>
+                                    <th class="px-4 py-3 font-medium">Version</th>
+                                    <th class="px-4 py-3 font-medium">Uploaded</th>
+                                    <th class="px-4 py-3 font-medium">Access</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($revisionFiles as $r)
+                                <tr class="border-t border-slate-100">
+                                    <td class="px-4 py-4">
+                                        <div class="font-semibold text-slate-900">{{ $r->original_name }}</div>
+                                        <div class="text-xs text-slate-400 mt-1">{{ $r->mime_type }} · {{ number_format($r->file_size / 1024, 1) }} KB</div>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="inline-flex items-center rounded-full bg-blue-600 text-white px-3 py-1 text-xs font-semibold">v{{ $r->version ?? 1 }}</span>
+                                    </td>
+                                    <td class="px-4 py-4 text-slate-600">{{ optional($r->created_at)->format('d M Y H:i') }}</td>
+                                    <td class="px-4 py-4">
+                                        <a href="{{ route('sekretaris.proposal-file.download', $r) }}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
+                                            <i class="fas fa-download"></i>
+                                            Download
+                                        </a>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="rounded-2xl border border-slate-100 p-4 bg-slate-50 text-slate-500">Belum ada file revisi yang diunggah.</div>
+                @endif
+            </section>
         </div>
 
         <aside class="space-y-6">
@@ -150,24 +198,22 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Processing Action</h3>
 
                 @php
-                    $hasReviewerSent = $proposal->assignments()->where('role', App\Models\ProposalAssignment::ROLE_REVIEWER)->whereNotNull('sent_at')->exists();
+                    $reviewAssignments = $reviewAssignments ?? collect();
+                    $completedReviewsCount = $proposal->reviews->where('status', App\Models\Review::STATUS_COMPLETED)->count();
+                    $pendingReviewers = max(0, $reviewAssignments->count() - $completedReviewsCount);
                 @endphp
 
-                @if($proposal->status === App\Models\Proposal::STATUS_ON_REVIEW && $hasReviewerSent)
+                @if($proposal->status === App\Models\Proposal::STATUS_ON_REVIEW && $reviewAssignments->isNotEmpty() && $pendingReviewers > 0)
                     <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-left">
-                        <div class="text-sm text-yellow-800">Waiting for reviewers to complete their review.</div>
+                        <div class="text-sm text-yellow-800">Menunggu reviewer menyelesaikan review. Saat ini {{ $completedReviewsCount }} dari {{ $reviewAssignments->count() }} reviewer selesai.</div>
                     </div>
-
-                    <form action="{{ route('sekretaris.keputusan.update') }}" method="POST" class="mt-4">
-                        @csrf
-                        <input type="hidden" name="proposal_id" value="{{ $proposal->id }}">
-                        <input type="hidden" name="status" value="rejected">
-                        <button type="submit" class="w-full inline-flex items-center gap-2 justify-center rounded-lg bg-red-600 text-white px-4 py-3 font-semibold"> 
-                            <i class="fas fa-times-circle"></i>
-                            Reject
-                        </button>
-                    </form>
-
+                @elseif($proposal->status === App\Models\Proposal::STATUS_ON_REVIEW && $reviewAssignments->isNotEmpty())
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left">
+                        <div class="text-sm text-slate-700">Semua reviewer telah menyelesaikan review. Lanjutkan ke halaman keputusan untuk mengambil keputusan.</div>
+                        <a href="{{ route('sekretaris.keputusan') }}" class="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 text-white px-4 py-3 font-semibold">
+                            <i class="fas fa-gavel mr-2"></i> Lanjut ke Keputusan
+                        </a>
+                    </div>
                 @else
                 
                     <div class="space-y-3">

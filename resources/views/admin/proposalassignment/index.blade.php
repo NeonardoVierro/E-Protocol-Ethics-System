@@ -15,12 +15,6 @@
 </div>
 @endif
 
-{{-- Page Header --}}
-<div class="mb-6">
-    <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Proposal Assignment</h2>
-    <p class="text-sm text-slate-500 mt-1">Tetapkan sekretaris dan ketua untuk setiap proposal yang masuk.</p>
-</div>
-
 {{-- Tabel --}}
 <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden"
      x-data="proposalAssignment()">
@@ -600,7 +594,7 @@ async function kirimSekretaris(proposalId, btn) {
             } catch {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane text-[9px]"></i> Kirim';
-                alert('Gagal mengirim ke sekretaris.');
+                showErrorModal('Gagal mengirim ke sekretaris. Silakan coba lagi.');
             }
         }
     );
@@ -623,7 +617,7 @@ async function kirimKetua(proposalId, btn) {
             } catch {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-paper-plane text-[9px]"></i> Kirim';
-                alert('Gagal mengirim ke ketua.');
+                showErrorModal('Gagal mengirim ke ketua. Silakan coba lagi.');
             }
         }
     );
@@ -646,7 +640,7 @@ async function publishProposal(proposalId, btn) {
             } catch {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-globe text-[10px]"></i> Publish';
-                alert('Gagal mempublish proposal.');
+                showErrorModal('Gagal mempublish proposal. Silakan coba lagi.');
             }
         }
     );
