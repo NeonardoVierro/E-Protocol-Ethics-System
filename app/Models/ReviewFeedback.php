@@ -9,6 +9,11 @@ class ReviewFeedback extends Model
 {
     use HasFactory;
 
+    /**
+     * Explicit table name to avoid singular/plural mismatches
+     */
+    protected $table = 'review_feedbacks';
+
     protected $fillable = [
         'review_id',
         'proposal_id',
@@ -31,7 +36,7 @@ class ReviewFeedback extends Model
     const RECOMMENDATION_REJECTED = 'rejected';
 
     // ========== RELATIONSHIPS ==========
-    
+
     // Review yang memberikan feedback
     public function review()
     {
@@ -45,14 +50,14 @@ class ReviewFeedback extends Model
     }
 
     // ========== HELPER METHODS ==========
-    
+
     // Submit feedback
     public function submit()
     {
         $this->is_submitted = true;
         $this->submitted_at = now();
         $this->save();
-        
+
         // Update status review menjadi completed
         $this->review->updateStatus(Review::STATUS_COMPLETED);
     }
@@ -75,7 +80,7 @@ class ReviewFeedback extends Model
             self::RECOMMENDATION_REVISION => 'bg-yellow-100 text-yellow-800',
             self::RECOMMENDATION_REJECTED => 'bg-red-100 text-red-800',
         ];
-        
+
         return $badges[$this->recommendation] ?? 'bg-gray-100 text-gray-800';
     }
 }

@@ -38,6 +38,65 @@
                                             </span>
                                         </td>
                                     </tr>
+                                    @if($proposal->status === 'revised' && $proposal->submitted_review_feedbacks->isNotEmpty())
+                                        <tr class="bg-slate-50">
+                                            <td colspan="4" class="px-4 py-4">
+                                                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                                                        <div>
+                                                            <p class="text-sm font-semibold text-slate-900">Feedback Reviewer</p>
+                                                            <p class="text-xs text-slate-500">Silakan unggah revisi berdasarkan komentar reviewer.</p>
+                                                        </div>
+                                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $proposal->submitted_review_feedbacks->first()->recommendation_badge }}">
+                                                            {{ $proposal->submitted_review_feedbacks->first()->recommendation_label }}
+                                                        </span>
+                                                    </div>
+
+                                                    @foreach($proposal->submitted_review_feedbacks as $feedback)
+                                                        <div class="mb-4 last:mb-0">
+                                                            <div class="flex items-center justify-between mb-2 gap-4">
+                                                                <span class="text-sm font-medium text-slate-700">Reviewer: {{ $feedback->reviewer_name ?? 'N/A' }}</span>
+                                                                <span class="text-xs text-slate-500">{{ $feedback->submitted_at ?? '-' }}</span>
+                                                            </div>
+                                                            <div class="grid gap-3 sm:grid-cols-3 mb-3">
+                                                                @if(!empty($feedback->feedback['autonomy']))
+                                                                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                                                        <p class="text-xs uppercase tracking-wide text-slate-500">Autonomy</p>
+                                                                        <p class="text-sm text-slate-700">{{ $feedback->feedback['autonomy'] }}</p>
+                                                                    </div>
+                                                                @endif
+                                                                @if(!empty($feedback->feedback['beneficence']))
+                                                                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                                                        <p class="text-xs uppercase tracking-wide text-slate-500">Beneficence</p>
+                                                                        <p class="text-sm text-slate-700">{{ $feedback->feedback['beneficence'] }}</p>
+                                                                    </div>
+                                                                @endif
+                                                                @if(!empty($feedback->feedback['justice']))
+                                                                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                                                        <p class="text-xs uppercase tracking-wide text-slate-500">Justice</p>
+                                                                        <p class="text-sm text-slate-700">{{ $feedback->feedback['justice'] }}</p>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                            @if(!empty($feedback->feedback['general_comments']))
+                                                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-2">
+                                                                    <p class="text-xs uppercase tracking-wide text-slate-500 mb-2">Komentar Umum</p>
+                                                                    <p class="text-sm text-slate-700 leading-relaxed">{{ $feedback->feedback['general_comments'] }}</p>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+
+                                                    <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                        <a href="{{ route('pengajuan.upload-revisi', $proposal->id) }}" class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark transition">
+                                                            Unggah Revisi
+                                                        </a>
+                                                        <p class="text-sm text-slate-500">Setelah revisi diunggah, sekretariat akan menugaskan ulang ke reviewer sesuai alur.</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endif
                                 @endforeach
                             </tbody>
                         </table>

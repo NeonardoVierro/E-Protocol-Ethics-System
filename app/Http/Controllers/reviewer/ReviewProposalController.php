@@ -8,6 +8,7 @@ use App\Models\ProposalAssignment;
 use App\Models\ProposalFile;
 use App\Models\Review;
 use App\Models\ReviewFeedback;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -57,7 +58,7 @@ class ReviewProposalController extends Controller
             },
             'assignments' => function ($query) {
                 $query->where('role', ProposalAssignment::ROLE_REVIEWER)
-                      ->with('assignedBy', 'assignedTo');
+                    ->with('assignedBy', 'assignedTo');
             },
         ])->findOrFail($id);
 
@@ -180,7 +181,54 @@ class ReviewProposalController extends Controller
             ];
 
             if (isset($statusMap[$reviewFeedback->recommendation])) {
-                $proposal->updateStatus($statusMap[$reviewFeedback->recommendation]);
+                $newStatus = $statusMap[$reviewFeedback->recommendation];
+                \Log::info('Updating proposal status', [
+                    'proposal_id' => $proposal->id,
+                    'recommendation' => $reviewFeedback->recommendation,
+                    'new_status' => $newStatus,
+                    'current_status' => $proposal->status,
+                ]);
+                $proposal->updateStatus($newStatus);
+                // Refresh to verify
+                $proposal->refresh();
+                \Log::info('Proposal status updated', ['proposal_id' => $proposal->id, 'new_status' => $proposal->status]);
+
+                // Create notification for researcher (proposal owner)
+                $statusMessages = [
+                    Proposal::STATUS_APPROVED => [
+                        'title' => 'Proposal Disetujui! 🎉',
+                        'message' => 'Proposal Anda "' . $proposal->title . '" telah disetujui oleh reviewer.',
+                    ],
+                    Proposal::STATUS_REVISED => [
+                        'title' => 'Revisi Diperlukan',
+                        'message' => 'Proposal Anda "' . $proposal->title . '" memerlukan revisi. Silakan lihat feedback reviewer.',
+                    ],
+                    Proposal::STATUS_REJECTED => [
+                        'title' => 'Proposal Ditolak',
+                        'message' => 'Proposal Anda "' . $proposal->title . '" telah ditolak. Silakan hubungi sekretariat untuk informasi lebih lanjut.',
+                    ],
+                ];
+
+                if (isset($statusMessages[$newStatus])) {
+                    Notification::create([
+                        'user_id' => $proposal->user_id,
+                        'title' => $statusMessages[$newStatus]['title'],
+                        'message' => $statusMessages[$newStatus]['message'],
+                        'type' => Notification::TYPE_PROPOSAL_STATUS,
+                        'status' => Notification::STATUS_UNREAD,
+                        'data' => [
+                            'proposal_id' => $proposal->id,
+                            'old_status' => 'on_review',
+                            'new_status' => $newStatus,
+                            'recommendation' => $reviewFeedback->recommendation,
+                        ],
+                    ]);
+                }
+            } else {
+                \Log::warning('Recommendation not found in statusMap', [
+                    'recommendation' => $reviewFeedback->recommendation,
+                    'statusMap_keys' => array_keys($statusMap),
+                ]);
             }
 
             return redirect()->route('reviewer.riwayat-review')

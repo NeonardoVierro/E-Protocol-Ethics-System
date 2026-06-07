@@ -200,10 +200,22 @@
                                     $isReviewed = isset($reviewStatuses[$proposal->id]) && $reviewStatuses[$proposal->id] === \App\Models\Review::STATUS_COMPLETED;
                                 @endphp
                                 @if($isReviewed)
-                                    <div class="inline-flex items-center gap-2 text-sm text-slate-600">
-                                        <span class="material-symbols-outlined" style="color: green;">check_circle</span>
-                                        <span class="font-semibold text-sm" style="color: green;">Submitted</span>
-                                    </div>
+                                    @if($proposal->status === \App\Models\Proposal::STATUS_APPROVED)
+                                        <div class="inline-flex items-center gap-2 text-sm text-green-600">
+                                            <span class="material-symbols-outlined">check_circle</span>
+                                            <span class="font-semibold text-sm">Approved</span>
+                                        </div>
+                                    @else
+                                        <div class="inline-flex items-center gap-2 text-sm text-slate-600 flex-col gap-3">
+                                            <div class="inline-flex items-center gap-2">
+                                                <span class="material-symbols-outlined" style="color: green;">check_circle</span>
+                                                <span class="font-semibold text-sm" style="color: green;">Submitted</span>
+                                            </div>
+                                            <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}" class="text-blue-600 hover:text-blue-700 text-xs font-medium">
+                                                View Details
+                                            </a>
+                                        </div>
+                                    @endif
                                 @else
                                     <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}">
                                         <button class="btn-review-now">Review Now</button>

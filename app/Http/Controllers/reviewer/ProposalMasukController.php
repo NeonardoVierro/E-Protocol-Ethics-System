@@ -20,10 +20,12 @@ class ProposalMasukController extends Controller
         // Fetch proposals assigned to current reviewer via ProposalAssignment
         $proposals = Proposal::whereHas('assignments', function ($query) {
             $query->where('role', ProposalAssignment::ROLE_REVIEWER)
-                  ->where('assigned_to', Auth::id())
-                  ->whereNotNull('sent_at');
+                ->where('assigned_to', Auth::id())
+                ->whereNotNull('sent_at');
         })
-            ->with(['researcher', 'files'])
+            ->with(['researcher', 'files' => function ($q) {
+                $q->where('is_active', true);
+            }])
             ->orderByDesc('submission_date')
             ->get();
 

@@ -156,6 +156,7 @@
                                     $isRequired = strtolower($typeLabel) === 'required' || strtolower($typeLabel) === 'proposal_document';
                                     $badgeClass = $isRequired ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700';
                                     $version = $f->version ?? 1;
+                                    $isRevision = strtolower($typeLabel) === 'revision_document';
                                 @endphp
                                 <tr class="border-t border-slate-100 hover:bg-slate-50">
                                     <td class="px-3 py-3">
@@ -170,7 +171,14 @@
                                         </div>
                                     </td>
                                     <td class="px-3 py-3">
-                                        <span class="px-2 py-1 rounded-md text-xs font-semibold {{ $badgeClass }}">{{ $isRequired ? 'Required' : 'Optional' }}</span>
+                                        <div class="flex gap-2 flex-wrap">
+                                            <span class="px-2 py-1 rounded-md text-xs font-semibold {{ $badgeClass }}">{{ $isRequired ? 'Required' : 'Optional' }}</span>
+                                            @if($isRevision)
+                                                <span class="px-2 py-1 rounded-md text-xs font-semibold bg-amber-100 text-amber-700">[Revision]</span>
+                                            @else
+                                                <span class="px-2 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-700">[Original]</span>
+                                            @endif
+                                        </div>
                                     </td>
                                     <td class="px-3 py-3">v{{ $version }}</td>
                                     <td class="px-3 py-3">

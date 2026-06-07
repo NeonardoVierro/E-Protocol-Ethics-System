@@ -21,11 +21,11 @@ class PengajuanController extends Controller
         if (!Auth::check()) {
             return 'guest';
         }
-        
+
         if (Auth::user()->status !== 'active') {
             return 'pending';
         }
-        
+
         return null; // aktif, bisa akses
     }
 
@@ -35,7 +35,7 @@ class PengajuanController extends Controller
     public function uploadProposal()
     {
         $access = $this->checkAccess();
-        
+
         if ($access === 'guest') {
             return view('peneliti.pengajuan.guest-message', [
                 'title' => 'Upload Proposal',
@@ -43,7 +43,7 @@ class PengajuanController extends Controller
                 'icon' => 'upload_file'
             ]);
         }
-        
+
         if ($access === 'pending') {
             return view('peneliti.pengajuan.pending-message', [
                 'title' => 'Upload Proposal',
@@ -51,7 +51,7 @@ class PengajuanController extends Controller
                 'icon' => 'pending'
             ]);
         }
-        
+
         // User aktif - tampilkan konten sebenarnya
         $templates = TemplateProposal::where('is_active', true)
             ->orderBy('kategori')
@@ -59,7 +59,7 @@ class PengajuanController extends Controller
             ->get();
 
         $proposalData = session('proposal_step1', []);
-        
+
         return view('peneliti.pengajuan.upload-proposal', compact('templates', 'proposalData'));
     }
 
@@ -69,7 +69,7 @@ class PengajuanController extends Controller
     public function downloadTemplate()
     {
         $access = $this->checkAccess();
-        
+
         if ($access === 'guest') {
             return view('peneliti.pengajuan.guest-message', [
                 'title' => 'Download Template',
@@ -77,7 +77,7 @@ class PengajuanController extends Controller
                 'icon' => 'download'
             ]);
         }
-        
+
         if ($access === 'pending') {
             return view('peneliti.pengajuan.pending-message', [
                 'title' => 'Download Template',
@@ -85,7 +85,7 @@ class PengajuanController extends Controller
                 'icon' => 'pending'
             ]);
         }
-        
+
         // User aktif - tampilkan konten sebenarnya
         $templates = TemplateProposal::where('is_active', true)
             ->orderBy('kategori')
@@ -102,7 +102,7 @@ class PengajuanController extends Controller
     public function riwayatPengajuan()
     {
         $access = $this->checkAccess();
-        
+
         if ($access === 'guest') {
             return view('peneliti.pengajuan.guest-message', [
                 'title' => 'Riwayat Pengajuan',
@@ -110,7 +110,7 @@ class PengajuanController extends Controller
                 'icon' => 'history'
             ]);
         }
-        
+
         if ($access === 'pending') {
             return view('peneliti.pengajuan.pending-message', [
                 'title' => 'Riwayat Pengajuan',
@@ -118,14 +118,126 @@ class PengajuanController extends Controller
                 'icon' => 'pending'
             ]);
         }
-        
+
         // User aktif - tampilkan konten sebenarnya
-        $proposals = Proposal::where('user_id', Auth::id())
+        $proposals = Proposal::with(['reviewFeedbacks.review.reviewer'])
+            ->where('user_id', Auth::id())
             ->orderByDesc('submission_date')
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            ->map(function ($proposal) {
+                $proposal->submitted_review_feedbacks = $proposal->reviewFeedbacks
+                    ->where('is_submitted', true)
+                    ->map(function ($feedback) {
+                        $parsed = null;
+                        if (is_array($feedback->feedback_text)) {
+                            $parsed = $feedback->feedback_text;
+                        } elseif (is_string($feedback->feedback_text)) {
+                            $decoded = json_decode($feedback->feedback_text, true);
+                            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                $parsed = $decoded;
+                            } else {
+                                $parsed = ['general_comments' => $feedback->feedback_text];
+                            }
+                        } else {
+                            $parsed = ['general_comments' => (string) $feedback->feedback_text];
+                        }
+
+                        return (object) [
+                            'recommendation' => $feedback->recommendation,
+                            'recommendation_label' => $feedback->recommendation_label,
+                            'recommendation_badge' => $feedback->recommendation_badge,
+                            'reviewer_name' => optional($feedback->review->reviewer)->name,
+                            'submitted_at' => optional($feedback->submitted_at)->format('d M Y'),
+                            'feedback' => $parsed,
+                        ];
+                    });
+
+                return $proposal;
+            });
 
         return view('peneliti.pengajuan.riwayat-pengajuan', compact('proposals'));
+    }
+
+    /**
+     * Tampilkan form unggah revisi untuk proposal tertentu (peneliti pemilik)
+     */
+    public function uploadRevisi($proposalId)
+    {
+        $access = $this->checkAccess();
+
+        if ($access === 'guest') {
+            return view('peneliti.pengajuan.guest-message', [
+                'title' => 'Unggah Revisi',
+                'message' => 'Silakan login terlebih dahulu untuk mengunggah revisi.',
+                'icon' => 'upload_file'
+            ]);
+        }
+
+        if ($access === 'pending') {
+            return view('peneliti.pengajuan.pending-message', [
+                'title' => 'Unggah Revisi',
+                'message' => 'Akun Anda belum diaktivasi. Tunggu aktivasi sekretariat.',
+                'icon' => 'pending'
+            ]);
+        }
+
+        $proposal = Proposal::with('revisions')->where('id', $proposalId)->where('user_id', Auth::id())->firstOrFail();
+
+        return view('peneliti.pengajuan.upload-revisi', compact('proposal'));
+    }
+
+    /**
+     * Proses unggah revisi
+     */
+    public function submitRevisi(Request $request, $proposalId)
+    {
+        $access = $this->checkAccess();
+
+        if ($access !== null) {
+            if ($access === 'guest') {
+                return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu untuk mengajukan revisi.');
+            }
+            if ($access === 'pending') {
+                return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+            }
+        }
+
+        $proposal = Proposal::where('id', $proposalId)->where('user_id', Auth::id())->firstOrFail();
+
+        $request->validate([
+            'revision_file' => 'required|file|mimes:pdf|max:10240',
+            'revision_note' => 'nullable|string|max:2000',
+        ]);
+
+        $file = $request->file('revision_file');
+        $path = $file->store('proposals/revisions', 'public');
+
+        $proposalFile = ProposalFile::create([
+            'proposal_id' => $proposal->id,
+            'file_path' => $path,
+            'file_type' => ProposalFile::TYPE_REVISION,
+            'original_name' => $file->getClientOriginalName(),
+            'file_size' => $file->getSize(),
+            'mime_type' => $file->getClientMimeType(),
+            'version' => ($proposal->files()->max('version') ?? 0) + 1,
+            'is_active' => true,
+        ]);
+
+        $revisionNumber = $proposal->revisions()->count() + 1;
+
+        $revision = \App\Models\ProposalRevision::create([
+            'proposal_id' => $proposal->id,
+            'revision_number' => $revisionNumber,
+            'revision_note' => $request->input('revision_note'),
+            'requested_date' => now(),
+            'status' => \App\Models\ProposalRevision::STATUS_IN_PROGRESS,
+        ]);
+
+        // Submit the revision (this will attach file and update proposal status)
+        $revision->submit($proposalFile->id);
+
+        return redirect()->route('pengajuan.riwayat-pengajuan')->with('success', 'Revisi berhasil diunggah.');
     }
 
     /**
@@ -134,7 +246,7 @@ class PengajuanController extends Controller
     public function store(Request $request)
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu untuk mengajukan proposal.');
@@ -165,7 +277,7 @@ class PengajuanController extends Controller
     public function uploadBerkas()
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -195,7 +307,7 @@ class PengajuanController extends Controller
     public function submitBerkas(Request $request)
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -266,7 +378,7 @@ class PengajuanController extends Controller
     public function review()
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -292,7 +404,7 @@ class PengajuanController extends Controller
     public function finalSubmit(Request $request)
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -352,18 +464,18 @@ class PengajuanController extends Controller
     public function success()
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             return redirect()->route('peneliti.dashboard');
         }
-        
+
         return view('peneliti.pengajuan.success');
     }
 
     public function downloadFile(TemplateProposal $template)
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
