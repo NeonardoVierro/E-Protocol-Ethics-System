@@ -133,22 +133,19 @@ class ReviewProposalController extends Controller
         $proposal = Proposal::findOrFail($request->proposal_id);
         $isSubmit = $request->input('save_mode') === 'submit';
 
-        // Find or create review—check without status filter to avoid duplicate errors
-        $review = Review::where('proposal_id', $proposal->id)
-            ->where('reviewer_id', Auth::id())
-            ->first();
-
-        if (! $review) {
-            $review = Review::create([
-                'proposal_id' => $proposal->id,
-                'reviewer_id' => Auth::id(),
+        // Use firstOrCreate to avoid race conditions creating duplicate reviews
+        $review = Review::firstOrCreate(
+            ['proposal_id' => $proposal->id, 'reviewer_id' => Auth::id()],
+            [
                 'status' => $isSubmit ? Review::STATUS_COMPLETED : Review::STATUS_IN_PROGRESS,
                 'assigned_date' => now(),
                 'due_date' => now()->addDays(7),
                 'completed_date' => $isSubmit ? now() : null,
-            ]);
-        } else {
-            // Update existing review
+            ]
+        );
+
+        // Ensure status is updated for existing review
+        if ($review->wasRecentlyCreated === false) {
             $review->update([
                 'status' => $isSubmit ? Review::STATUS_COMPLETED : Review::STATUS_IN_PROGRESS,
                 'completed_date' => $isSubmit ? now() : null,
