@@ -9,6 +9,11 @@ class ReviewFeedback extends Model
 {
     use HasFactory;
 
+    /**
+     * Explicit table name to avoid pluralization mismatches.
+     */
+    protected $table = 'review_feedbacks';
+
     protected $fillable = [
         'review_id',
         'proposal_id',

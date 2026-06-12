@@ -133,9 +133,9 @@ class ReviewProposalController extends Controller
         $proposal = Proposal::findOrFail($request->proposal_id);
         $isSubmit = $request->input('save_mode') === 'submit';
 
+        // Find or create review—check without status filter to avoid duplicate errors
         $review = Review::where('proposal_id', $proposal->id)
             ->where('reviewer_id', Auth::id())
-            ->whereIn('status', [Review::STATUS_IN_PROGRESS, Review::STATUS_ASSIGNED])
             ->first();
 
         if (! $review) {
@@ -148,6 +148,7 @@ class ReviewProposalController extends Controller
                 'completed_date' => $isSubmit ? now() : null,
             ]);
         } else {
+            // Update existing review
             $review->update([
                 'status' => $isSubmit ? Review::STATUS_COMPLETED : Review::STATUS_IN_PROGRESS,
                 'completed_date' => $isSubmit ? now() : null,
