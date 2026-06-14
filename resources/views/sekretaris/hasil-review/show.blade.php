@@ -271,7 +271,7 @@
                             <p class="text-body-sm text-blue-200 mt-md italic">Catatan: Gunakan ringkasan ini sebagai referensi untuk pengambilan keputusan.</p>
                         </div>
                     </div>
-                    <a href="{{ route('sekretaris.keputusan') }}" class="bg-white text-blue-900 font-bold px-lg py-md rounded-lg text-button font-button hover:bg-blue-50 transition-all flex items-center gap-3 shadow-md active:scale-95">
+                    <a href="{{ route('sekretaris.keputusan') }}?proposal_id={{ $proposal->id }}" class="bg-white text-blue-900 font-bold px-lg py-md rounded-lg text-button font-button hover:bg-blue-50 transition-all flex items-center gap-3 shadow-md active:scale-95">
                         Lanjut ke Keputusan
                         <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
                     </a>

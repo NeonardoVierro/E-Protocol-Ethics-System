@@ -72,7 +72,14 @@
                 @forelse($proposals as $proposal)
                     <tr class="hover:bg-slate-50">
                         <td class="px-6 py-4 max-w-[300px] text-slate-900">
-                            <div class="font-semibold">{{ Str::limit($proposal->title, 50) }}</div>
+                            <div class="flex items-center gap-2">
+                                <div class="font-semibold">{{ Str::limit($proposal->title, 50) }}</div>
+                                @if($proposal->revisions_count > 0)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold">
+                                    Vol.{{ $proposal->revisions_count + 1 }}
+                                </span>
+                                @endif
+                            </div>
                             <div class="mt-1 text-xs text-slate-500">{{ Str::limit($proposal->description ?? '-', 60) }}</div>
                         </td>
                         <td class="px-6 py-4 text-slate-700">{{ $proposal->researcher->name ?? $proposal->nama_peneliti ?? 'Unknown' }}</td>

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\ReviewFeedback;
+use App\Models\EthicsDocument;
 
 class SekretarisController extends Controller
 {
@@ -432,28 +433,158 @@ class SekretarisController extends Controller
         return view('sekretaris.hasil-review.show', compact('proposal', 'feedbacks', 'summary'));
     }
 
-    public function keputusan()
+    public function keputusan(Request $request)
     {
-        $keputusan = Proposal::with('researcher')
+        // Filter: hanya proposal yang di-assign ke sekretaris yg login
+        $assignmentConstraint = function ($query) {
+            $query->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+                ->where('assigned_to', Auth::id())
+                ->whereNotNull('sent_at');
+        };
+    
+        $keputusan = Proposal::with(['researcher'])
+            ->withCount('revisions')
+            ->whereHas('assignments', $assignmentConstraint)
+            // Hanya proposal yang sudah selesai direview (on_review atau lebih)
+            ->whereNotIn('status', [
+                Proposal::STATUS_NEW,
+                Proposal::STATUS_IN_PROCESS,
+            ])
+            ->orderByRaw("FIELD(status,
+                'on_review',
+                'revised',
+                'approved',
+                'waiting_for_publish',
+                'published',
+                'rejected'
+            )")
             ->orderByDesc('submission_date')
-            ->orderByDesc('created_at')
             ->get();
-
-        return view('sekretaris.keputusan.index', compact('keputusan'));
+    
+        // Proposal yang langsung dibuka modalnya (dari "Lanjut ke Keputusan")
+        $autoOpenProposalId = $request->query('proposal_id');
+        $autoOpenProposal   = null;
+    
+        if ($autoOpenProposalId) {
+            $autoOpenProposal = $keputusan->firstWhere('id', (int) $autoOpenProposalId);
+        }
+    
+        return view('sekretaris.keputusan.index', compact('keputusan', 'autoOpenProposalId', 'autoOpenProposal'));
     }
-
+    
+    // ── METHOD updateDecision() ───────────────────────────────────────
     public function updateDecision(Request $request)
     {
         $request->validate([
-            'proposal_id' => 'required|integer|exists:proposals,id',
-            'status' => 'required|in:approved,revised,rejected',
+            'proposal_id'      => 'required|integer|exists:proposals,id',
+            'status'           => 'required|in:approved,revised,rejected',
+            'rejection_reason' => 'required_if:status,rejected,revised|nullable|string|max:1000',
+        ], [
+            'rejection_reason.required_if' => 'Alasan wajib diisi untuk keputusan revisi atau penolakan.',
         ]);
-
+    
         $proposal = Proposal::findOrFail($request->proposal_id);
-        $proposal->updateStatus($request->status);
+    
+        // Cegah edit keputusan yang sudah dibuat (semua keputusan bersifat final)
+        $finalStatuses = [Proposal::STATUS_APPROVED, Proposal::STATUS_REJECTED, Proposal::STATUS_REVISED, Proposal::STATUS_WAITING_FOR_PUBLISH, Proposal::STATUS_PUBLISHED];
+        if (in_array($proposal->status, $finalStatuses)) {
+            return redirect()->route('sekretaris.keputusan')
+                ->with('error', 'Keputusan untuk proposal ini sudah dibuat dan tidak dapat diubah. Jika peneliti mengirim revisi, akan dibuat dokumen versi baru (vol2).');
+        }
+    
+        // Pastikan sekretaris yang login memang assigned ke proposal ini
+        $assigned = $proposal->assignments()
+            ->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+            ->where('assigned_to', Auth::id())
+            ->whereNotNull('sent_at')
+            ->exists();
+    
+        if (!$assigned) {
+            abort(403, 'Anda tidak memiliki akses untuk memutuskan proposal ini.');
+        }
+    
+        // Update status dan rejection reason
+        $proposal->status           = $request->status;
+        $proposal->rejection_reason = in_array($request->status, ['rejected', 'revised'])
+            ? $request->rejection_reason
+            : null;
+    
+        if (in_array($request->status, ['approved', 'rejected'])) {
+            $proposal->decision_date = now();
+        }
+    
+        $proposal->save();
 
+        // ── Jika REVISED: buat record revision untuk peneliti submit revisi ──
+        if ($request->status === 'revised') {
+            // Hitung nomor revisi berikutnya
+            $nextRevisionNumber = $proposal->revisions()->max('revision_number') + 1;
+
+            \App\Models\ProposalRevision::create([
+                'proposal_id'       => $proposal->id,
+                'revision_number'   => $nextRevisionNumber,
+                'revision_note'     => $request->rejection_reason,
+                'requested_date'    => now(),
+                'submitted_date'    => null,
+                'status'            => 'requested',
+                'file_id'           => null,
+            ]);
+
+            // Notifikasi ke peneliti untuk submit revisi
+            \App\Models\Notification::create([
+                'user_id' => $proposal->user_id,
+                'title'   => 'Permintaan Revisi Proposal',
+                'message' => 'Proposal "' . $proposal->title . '" memerlukan revisi. Silakan upload dokumen revisi (Vol.' . $nextRevisionNumber . '). Catatan: ' . $request->rejection_reason,
+                'type'    => \App\Models\Notification::TYPE_REVISION_REQUEST,
+                'status'  => \App\Models\Notification::STATUS_UNREAD ?? 'unread',
+                'data'    => json_encode([
+                    'proposal_id'     => $proposal->id,
+                    'revision_number' => $nextRevisionNumber,
+                    'revision_note'   => $request->rejection_reason,
+                ]),
+            ]);
+        }
+    
+        // ── Jika APPROVED: buat draft Ethics Document ─────────────────
+        if ($request->status === 'approved') {
+            // Generate nomor dokumen sementara (bisa diubah admin nanti)
+            $nomorDraft = 'DRAFT-EC-' . now()->format('Ymd') . '-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
+    
+            \App\Models\EthicsDocument::firstOrCreate(
+                ['proposal_id' => $proposal->id],
+                [
+                    'document_number' => $nomorDraft,
+                    'status'          => \App\Models\EthicsDocument::STATUS_DRAFT,
+                    'file_path'       => '',
+                    'original_name'   => '',
+                    'notes'           => 'Draft otomatis dibuat saat proposal disetujui oleh sekretaris.',
+                ]
+            );
+        }
+    
+        // ── Notifikasi ke peneliti (untuk approved dan rejected saja, revised sudah dihandle di atas) ──
+        if ($request->status !== 'revised') {
+            \App\Models\Notification::create([
+                'user_id' => $proposal->user_id,
+                'title'   => 'Keputusan Proposal: ' . match($request->status) {
+                    'approved' => 'Disetujui',
+                    'rejected' => 'Ditolak',
+                },
+                'message' => match($request->status) {
+                    'approved' => 'Selamat! Proposal "' . $proposal->title . '" Anda telah disetujui oleh sekretaris.',
+                    'rejected' => 'Proposal "' . $proposal->title . '" ditolak. Alasan: ' . $request->rejection_reason,
+                },
+                'type'   => \App\Models\Notification::TYPE_PROPOSAL_STATUS ?? 'proposal_status',
+                'status' => \App\Models\Notification::STATUS_UNREAD ?? 'unread',
+                'data'   => json_encode([
+                    'proposal_id' => $proposal->id,
+                    'status'      => $request->status,
+                ]),
+            ]);
+        }
+    
         return redirect()->route('sekretaris.keputusan')
-            ->with('success', 'Status keputusan proposal berhasil diperbarui.');
+            ->with('success', 'Keputusan untuk proposal "' . $proposal->title . '" berhasil disimpan.');
     }
 
     public function draftEthicalClearance()
