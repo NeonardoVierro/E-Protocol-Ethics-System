@@ -9,6 +9,8 @@ class EthicsDocument extends Model
 {
     use HasFactory;
 
+    protected $table = 'ethics_documents';
+
     protected $fillable = [
         'proposal_id',
         'document_number',
@@ -22,76 +24,46 @@ class EthicsDocument extends Model
     ];
 
     protected $casts = [
-        'signed_date' => 'date',
+        'signed_date'    => 'date',
         'published_date' => 'date',
     ];
 
-    // Konstanta status dokumen
-    const STATUS_DRAFT = 'draft';
-    const STATUS_SIGNED = 'signed';
+    const STATUS_DRAFT     = 'draft';
+    const STATUS_SIGNED    = 'signed';
     const STATUS_PUBLISHED = 'published';
-    const STATUS_ARCHIVED = 'archived';
+    const STATUS_ARCHIVED  = 'archived';
 
-    // ========== RELATIONSHIPS ==========
-    
-    // Proposal yang menghasilkan dokumen ini
+    // ── Relationships ─────────────────────────────
+
     public function proposal()
     {
         return $this->belongsTo(Proposal::class);
     }
 
-    // Ketua yang menandatangani
     public function ketua()
     {
         return $this->belongsTo(User::class, 'ketua_id');
     }
 
-    // Log dokumen
-    public function logs()
-    {
-        return $this->hasMany(DocumentLog::class);
-    }
+    // ── Helpers ───────────────────────────────────
 
-    // ========== HELPER METHODS ==========
-    
-    // Tanda tangan dokumen
-    public function sign($userId)
-    {
-        $this->ketua_id = $userId;
-        $this->status = self::STATUS_SIGNED;
-        $this->signed_date = now();
-        $this->save();
-    }
-
-    // Publikasi dokumen
-    public function publish()
-    {
-        $this->status = self::STATUS_PUBLISHED;
-        $this->published_date = now();
-        $this->save();
-    }
-
-    // Arsip dokumen
-    public function archive()
-    {
-        $this->status = self::STATUS_ARCHIVED;
-        $this->save();
-    }
-
-    // Mendapatkan URL file
-    public function getUrlAttribute()
-    {
-        return asset('storage/' . $this->file_path);
-    }
-
-    // Mendapatkan label status
-    public function getStatusLabelAttribute()
+    public function getStatusLabelAttribute(): string
     {
         return [
-            self::STATUS_DRAFT => 'Draft',
-            self::STATUS_SIGNED => 'Sudah Ditandatangani',
-            self::STATUS_PUBLISHED => 'Dipublikasikan',
-            self::STATUS_ARCHIVED => 'Diarsipkan',
+            self::STATUS_DRAFT     => 'Draft',
+            self::STATUS_SIGNED    => 'Ditandatangani',
+            self::STATUS_PUBLISHED => 'Dipublikasi',
+            self::STATUS_ARCHIVED  => 'Diarsipkan',
         ][$this->status] ?? $this->status;
+    }
+
+    public function getStatusBadgeAttribute(): string
+    {
+        return [
+            self::STATUS_DRAFT     => 'bg-slate-100 text-slate-600',
+            self::STATUS_SIGNED    => 'bg-blue-100 text-blue-700',
+            self::STATUS_PUBLISHED => 'bg-emerald-100 text-emerald-700',
+            self::STATUS_ARCHIVED  => 'bg-orange-100 text-orange-700',
+        ][$this->status] ?? 'bg-slate-100 text-slate-600';
     }
 }
