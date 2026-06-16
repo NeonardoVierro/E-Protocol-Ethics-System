@@ -104,6 +104,11 @@ class Proposal extends Model
         return $this->hasMany(DocumentLog::class);
     }
 
+    public function notes()
+    {
+        return $this->hasMany(ProposalNote::class);
+    }
+
     // Assignment sekretaris yang sudah dikirim
     public function sekretarisAssignment()
     {

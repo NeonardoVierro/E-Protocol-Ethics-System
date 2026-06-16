@@ -197,6 +197,82 @@
                     </table>
                 </div>
             </div>
+
+            @if($hasRevisions && $proposal->revisions->count() > 0)
+            <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm mt-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <span style="display: inline-flex; align-items: center; padding: 0.22rem 0.6rem; border-radius: 20px; font-size: 0.68rem; font-weight: 700; letter-spacing: .03em; background: #fce7f3; color: #be185d; gap: 0.3rem;">
+                        ✎ REVISED DOCUMENTS
+                    </span>
+                </div>
+                <p class="text-sm text-slate-600 mb-4">Peneliti telah mengirimkan revisi. Bandingkan dengan dokumen asli di bawah ini.</p>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs text-slate-500 uppercase">
+                                <th class="px-3 py-2">Document</th>
+                                <th class="px-3 py-2">Revision #</th>
+                                <th class="px-3 py-2">Submitted</th>
+                                <th class="px-3 py-2">Download</th>
+                                <th class="px-3 py-2">Preview</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($proposal->revisions as $revision)
+                                <tr class="border-t border-slate-100 hover:bg-slate-50">
+                                    <td class="px-3 py-3">
+                                        <div class="flex items-center gap-3">
+                                            <span class="inline-flex h-6 w-6 items-center justify-center rounded bg-slate-100 text-blue-600">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </span>
+                                            <div>
+                                                <div class="font-medium text-slate-900">{{ $revision->file->original_name ?? ('Revisi #' . $revision->revision_number) }}</div>
+                                                <div class="text-xs text-slate-500">{{ $revision->file ? 'Revision Document' : $revision->getStatusLabelAttribute() }}</div>
+                                                @if(!$revision->file && $revision->revision_note)
+                                                    <div class="text-xs text-slate-500 mt-1">Catatan: {{ $revision->revision_note }}</div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <span class="px-2 py-1 rounded-md text-xs font-semibold bg-pink-100 text-pink-700">v{{ $revision->file?->version ?? ($revision->revision_number + 1) }}</span>
+                                    </td>
+                                    <td class="px-3 py-3 text-xs text-slate-600">{{ optional($revision->submitted_date ?? $revision->requested_date)->format('M d, Y') }}</td>
+                                    <td class="px-3 py-3">
+                                        @if($revision->file)
+                                            <a href="{{ route('reviewer.proposal-file.download', ['file' => $revision->file->id]) }}" class="text-green-600 hover:text-green-700" title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        @else
+                                            <span class="text-xs text-slate-400">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        @if($revision->file)
+                                            <button type="button" onclick="togglePreviewRow({{ $revision->file->id }}, '{{ $revision->file->mime_type }}')" class="text-slate-600 hover:text-blue-600" title="Preview">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        @else
+                                            <span class="text-xs text-slate-400">No file</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @if($revision->file)
+                                <tr class="preview-row hidden bg-slate-50" data-file-id="{{ $revision->file->id }}">
+                                    <td colspan="5" class="px-3 py-4">
+                                        <div id="preview-container-{{ $revision->file->id }}" class="rounded-lg border border-slate-200 bg-white p-4">
+                                            <div class="text-sm text-slate-500">Loading preview...</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endif
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
         </div>
 
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

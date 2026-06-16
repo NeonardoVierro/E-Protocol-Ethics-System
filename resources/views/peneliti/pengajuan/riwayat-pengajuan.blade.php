@@ -28,14 +28,98 @@
                             </thead>
                             <tbody class="divide-y divide-slate-200 bg-white">
                                 @foreach($proposals as $proposal)
-                                    <tr>
+                                    <tr class="group">
                                         <td class="px-4 py-4 text-sm text-slate-700">{{ $loop->iteration }}</td>
-                                        <td class="px-4 py-4 text-sm text-slate-700">{{ $proposal->title }}</td>
+                                        <td class="px-4 py-4 text-sm text-slate-700 font-medium text-slate-900">{{ $proposal->title }}</td>
                                         <td class="px-4 py-4 text-sm text-slate-700">{{ optional($proposal->submission_date)->format('d M Y') }}</td>
+                                        @php
+                                            $proposalStatusLabel = $proposal->status === \App\Models\Proposal::STATUS_IN_PROCESS ? 'On Review' : $proposal->status_label;
+                                            $proposalStatusBadge = $proposal->status === \App\Models\Proposal::STATUS_IN_PROCESS ? 'bg-yellow-100 text-yellow-800' : $proposal->status_badge;
+                                        @endphp
                                         <td class="px-4 py-4">
-                                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $proposal->status_badge }}">
-                                                {{ $proposal->status_label }}
-                                            </span>
+                                            <button type="button" data-toggle-feedback="proposal-feedback-{{ $proposal->id }}" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $proposalStatusBadge }} transition hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                                {{ $proposalStatusLabel }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr id="proposal-feedback-{{ $proposal->id }}" class="hidden bg-slate-50">
+                                        <td colspan="4" class="p-6">
+                                            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                                                <div class="mb-4">
+                                                    <p class="text-sm font-semibold text-slate-900">Detail Feedback Reviewer</p>
+                                                </div>
+                                                @if($proposal->status === \App\Models\Proposal::STATUS_REVISED)
+                                                    <div class="flex gap-2 items-center mb-4">
+                                                        <a href="{{ route('pengajuan.riwayat-pengajuan.revision', $proposal->id) }}" class="bg-amber-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-amber-700">Revisi</a>
+                                                        <p class="text-sm text-slate-500">Klik untuk membuka halaman unggah revisi.</p>
+                                                    </div>
+                                                @endif
+
+                                                @if($proposal->reviewFeedbacks->isEmpty())
+                                                    <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-slate-600">
+                                                        Belum ada feedback reviewer yang dikirim untuk proposal ini.
+                                                    </div>
+                                                @else
+                                                    <div class="space-y-6">
+                                                        @foreach($proposal->reviewFeedbacks as $fb)
+                                                            <div class="rounded-3xl border border-slate-200 bg-surface-container-low p-5">
+                                                                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                                                    <div>
+                                                                        <p class="text-sm uppercase tracking-[0.16em] text-slate-500 mb-1">Reviewer</p>
+                                                                        <p class="text-base font-semibold text-slate-900">{{ optional($fb->review->reviewer)->name ?? 'Reviewer' }}</p>
+                                                                        <p class="text-sm text-slate-500">{{ optional($fb->submitted_at)->format('d M Y') }}</p>
+                                                                    </div>
+                                                                    <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold {{ $fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-800' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800') }}">
+                                                                        {{ $fb->getRecommendationLabelAttribute() }}
+                                                                    </div>
+                                                                </div>
+
+                                                                @php
+                                                                    $fields = [
+                                                                        ['label' => 'Autonomy', 'keys' => ['autonomy', 'autonomi', 'autonomy_feedback']],
+                                                                        ['label' => 'Beneficence', 'keys' => ['beneficence', 'benefit', 'beneficence_feedback']],
+                                                                        ['label' => 'Justice', 'keys' => ['justice', 'fairness', 'justice_feedback']],
+                                                                        ['label' => 'Komentar Umum', 'keys' => ['general_comments', 'comments', 'general_comment', 'catatan', 'comments_general']],
+                                                                    ];
+                                                                    $renderField = function ($parsed, $keys) {
+                                                                        foreach ($keys as $key) {
+                                                                            if (is_array($parsed) && array_key_exists($key, $parsed) && !empty($parsed[$key])) {
+                                                                                $value = $parsed[$key];
+                                                                                if (is_array($value)) {
+                                                                                    return implode("\n", array_map('strval', $value));
+                                                                                }
+                                                                                return (string) $value;
+                                                                            }
+                                                                        }
+                                                                        return '-';
+                                                                    };
+                                                                @endphp
+
+                                                                <div class="grid gap-4 lg:grid-cols-2 mt-6">
+                                                                    @foreach($fields as $field)
+                                                                        <div class="rounded-2xl bg-white border border-slate-200 p-4 min-h-[140px]">
+                                                                            <p class="text-xs uppercase tracking-[0.16em] text-slate-500 mb-2">{{ $field['label'] }}</p>
+                                                                            <p class="whitespace-pre-wrap text-sm text-slate-700">{{ $renderField($fb->parsed_feedback, $field['keys']) }}</p>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+
+                                                                @if($fb->file_path)
+                                                                    <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                                                        <p class="text-xs uppercase tracking-[0.16em] text-slate-500 mb-2">Lampiran Reviewer</p>
+                                                                        <div class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                                                            <span class="material-symbols-outlined">description</span>
+                                                                            {{ $fb->original_name ?? 'Lampiran Reviewer' }}
+                                                                        </div>
+                                                                    </div>
+                                                                @endif
+
+                                                                    {{-- Revision upload now handled on separate page --}}
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -108,4 +192,34 @@
         </div>
     @endauth
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-toggle-feedback]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var targetId = button.getAttribute('data-toggle-feedback');
+                var targetRow = document.getElementById(targetId);
+                if (!targetRow) return;
+
+                document.querySelectorAll('tr[id^="proposal-feedback-"]').forEach(function (row) {
+                    if (row.id !== targetId) {
+                        row.classList.add('hidden');
+                    }
+                });
+
+                targetRow.classList.toggle('hidden');
+            });
+        });
+
+        // Toggle revision form
+        document.querySelectorAll('[data-toggle-revision]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-toggle-revision');
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.classList.toggle('hidden');
+            });
+        });
+    });
+</script>
 @endsection

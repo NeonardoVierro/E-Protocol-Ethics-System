@@ -104,9 +104,21 @@
                             @endif
                         </td>
                         <td class="px-6 py-4">
-                            <a href="{{ route('sekretaris.proposal.show', $proposal) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500 text-white hover:bg-amber-600 transition-colors duration-150">
-                                <i class="fas fa-cog"></i>
-                            </a>
+                            @php
+                                $showProcessing = $proposal->status === App\Models\Proposal::STATUS_IN_PROCESS
+                                    || $proposal->status === App\Models\Proposal::STATUS_ON_REVIEW
+                                    || ($proposal->status === App\Models\Proposal::STATUS_REVISED && $proposal->revisions()->where('status', App\Models\ProposalRevision::STATUS_SUBMITTED)->exists());
+                            @endphp
+
+                            @if($showProcessing)
+                                <a href="{{ route('sekretaris.proposal.show', $proposal) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500 text-white hover:bg-amber-600 transition-colors duration-150">
+                                    <i class="fas fa-cog"></i>
+                                </a>
+                            @else
+                                <a href="{{ route('sekretaris.proposal.show', $proposal) }}" class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-200 text-slate-600 cursor-default">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            @endif
                         </td>
                     </tr>
                 @empty
