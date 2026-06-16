@@ -14,6 +14,7 @@ class ProposalFile extends Model
         'file_path',
         'file_type',
         'original_name',
+        'group_name',
         'file_size',
         'mime_type',
         'version',

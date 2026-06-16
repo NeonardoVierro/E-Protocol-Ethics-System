@@ -192,7 +192,10 @@
                                 <div class="w-10 h-10 rounded bg-slate-200 flex items-center justify-center font-bold text-slate-600">{{ strtoupper(substr(optional($fb->review->reviewer)->name ?? 'R',0,1)) }}</div>
                                 <div>
                                     <p class="font-bold text-on-background font-body-lg">{{ optional($fb->review->reviewer)->name ?? 'Reviewer' }}</p>
-                                    <p class="text-body-sm text-slate-500">{{ optional($fb->review->reviewer)->roles()->pluck('name')->first() ?? 'Reviewer' }} • {{ optional($fb->submitted_at)->format('d M Y') }}</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <p class="text-body-sm text-slate-500">{{ optional($fb->review->reviewer)->roles()->pluck('name')->first() ?? 'Reviewer' }} • {{ optional($fb->submitted_at)->format('d M Y') }}</p>
+                                        <span class="text-[10px] px-2 py-0.5 rounded font-bold {{ $fb->getReviewTypeBadgeClasses() }}">{{ $fb->getReviewTypeLabel() }}</span>
+                                    </div>
                                 </div>
                             </div>
                             <span class="{{ $fb->recommendation === 'approved' ? 'bg-green-100 text-green-700' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') }} px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">{{ $fb->getRecommendationLabelAttribute() }}</span>
@@ -238,16 +241,54 @@
                         @if($fb->file_path)
                         <div class="px-lg pb-lg">
                             <p class="text-label-caps font-label-caps text-slate-400 uppercase mb-xs text-[10px]">Lampiran Reviewer</p>
-                            <div class="flex gap-md">
-                                <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded text-sm text-slate-600"> 
+                            <div class="flex flex-col gap-sm sm:flex-row sm:items-center sm:justify-between">
+                                <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded text-sm text-slate-600">
                                     <span class="material-symbols-outlined text-sm" data-icon="description">description</span>
                                     {{ $fb->original_name ?? 'Lampiran' }}
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="{{ route('sekretaris.review-feedback.file.view', $fb) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+                                        <span class="material-symbols-outlined text-sm" data-icon="visibility">visibility</span>
+                                        Lihat
+                                    </a>
+                                    <a href="{{ route('sekretaris.review-feedback.file.download', $fb) }}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition">
+                                        <span class="material-symbols-outlined text-sm" data-icon="download">download</span>
+                                        Download
+                                    </a>
                                 </div>
                             </div>
                         </div>
                         @endif
                     </div>
                 @endforeach
+            </div>
+
+            <div class="bg-white border border-outline-variant rounded-xl p-lg shadow-sm">
+                <h4 class="text-h3 font-h3 text-on-background mb-md">Revisi Peneliti</h4>
+                @if($proposal->revisions && $proposal->revisions->count())
+                    @foreach($proposal->revisions as $rev)
+                        <div class="border-t border-outline-variant p-md flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="font-semibold">Revisi #{{ $rev->revision_number ?? $loop->iteration }} &middot; <span class="text-sm text-slate-500">{{ $rev->getStatusLabelAttribute() }}</span></div>
+                                <div class="text-sm text-slate-500">{{ optional($rev->submitted_date)->format('d M Y') ?? '-' }}</div>
+                                @if($rev->revision_note)
+                                    <div class="mt-2 text-body-md whitespace-pre-wrap">{{ $rev->revision_note }}</div>
+                                @endif
+                            </div>
+                            @if($rev->file)
+                                <div class="flex flex-col items-end gap-2 ml-4">
+                                    <div class="text-sm text-slate-600">{{ $rev->file->original_name }}</div>
+                                    <div class="flex gap-2">
+                                        <a href="{{ route('sekretaris.proposal-file.view', $rev->file) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">Lihat</a>
+                                        <a href="{{ route('sekretaris.proposal-file.download', $rev->file) }}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition">Download</a>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                @else
+                    <div class="p-md text-slate-500">Belum ada revisi yang dikirim peneliti.</div>
+                @endif
             </div>
 
             <div class="bg-blue-900 text-white rounded-xl p-xl shadow-lg mt-xl">

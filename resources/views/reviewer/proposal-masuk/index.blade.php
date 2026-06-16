@@ -195,19 +195,34 @@
                                     <span class="badge badge-queued">{{ strtoupper(str_replace('_', ' ', $proposal->status)) }}</span>
                                 @endif
                             </td>
-                                <td>
+                            <td>
                                 @php
                                     $isReviewed = isset($reviewStatuses[$proposal->id]) && $reviewStatuses[$proposal->id] === \App\Models\Review::STATUS_COMPLETED;
+                                    $needsRevisedReview = $proposal->hasRevisionSubmitted && (
+                                        !$proposal->lastReviewCompletedDate ||
+                                        $proposal->lastReviewCompletedDate < $proposal->lastSubmittedRevisionDate
+                                    );
                                 @endphp
-                                @if($isReviewed)
+                                @if($isReviewed && !$needsRevisedReview)
                                     <div class="inline-flex items-center gap-2 text-sm text-slate-600">
                                         <span class="material-symbols-outlined" style="color: green;">check_circle</span>
                                         <span class="font-semibold text-sm" style="color: green;">Submitted</span>
                                     </div>
                                 @else
-                                    <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}">
-                                        <button class="btn-review-now">Review Now</button>
-                                    </a>
+                                    {{-- Show special action if there's a submitted revision --}}
+                                    @if(!empty($proposal->hasRevisionSubmitted) && $proposal->hasRevisionSubmitted)
+                                        <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}">
+                                            <button class="btn-review-now">Review Revised</button>
+                                        </a>
+                                    @elseif(!empty($proposal->hasRevisionRequested) && $proposal->hasRevisionRequested)
+                                        <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}">
+                                            <button class="btn-view-detail">View Revision Request</button>
+                                        </a>
+                                    @else
+                                        <a href="{{ route('reviewer.review-proposal.show', $proposal->id) }}">
+                                            <button class="btn-review-now">Review Now</button>
+                                        </a>
+                                    @endif
                                 @endif
                             </td>
                         </tr>
@@ -218,8 +233,8 @@
                             </td>
                         </tr>
                     @endforelse
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
         </div>
 
         {{-- Pagination --}}

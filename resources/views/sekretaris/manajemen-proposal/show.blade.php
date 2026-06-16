@@ -39,10 +39,10 @@
                         <h3 class="text-lg font-semibold text-gray-900">Submitted Documents</h3>
                         <p class="text-sm text-gray-500">Daftar dokumen yang diunggah oleh peneliti.</p>
                     </div>
-                    <div class="text-sm text-slate-600">Documents: <span class="font-semibold">{{ $proposal->files->count() }}</span></div>
+                    <div class="text-sm text-slate-600">Documents: <span class="font-semibold">{{ $proposal->files->count() + ($proposal->revisions ? $proposal->revisions->count() : 0) }}</span></div>
                 </div>
 
-                @if($proposal->files->isNotEmpty())
+                @if($proposal->files->isNotEmpty() || ($proposal->revisions && $proposal->revisions->count()))
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-slate-50 text-slate-600">
@@ -84,6 +84,44 @@
                                     </td>
                                 </tr>
                                 @endforeach
+
+                                @if($proposal->revisions && $proposal->revisions->count())
+                                    @foreach($proposal->revisions as $rev)
+                                    <tr class="border-t border-slate-100 bg-amber-50">
+                                        <td class="px-4 py-4">
+                                            <div class="font-semibold text-slate-900">{{ $rev->file?->original_name ?? 'Revision File' }}</div>
+                                            @if($rev->revision_note)
+                                            <div class="text-xs text-slate-600 mt-1">{{ $rev->revision_note }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-4 text-slate-700">
+                                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-amber-100 text-amber-700">Revisi #{{ $rev->revision_number }}</span>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <span class="inline-flex items-center rounded-full bg-amber-600 text-white px-3 py-1 text-xs font-semibold">v{{ $rev->file?->version ?? $rev->revision_number + 1 }}</span>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            @if($rev->file)
+                                            <a href="{{ route('sekretaris.proposal-file.download', $rev->file) }}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
+                                                <i class="fas fa-download"></i>
+                                                Download
+                                            </a>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            @if($rev->file)
+                                            <button type="button" 
+                                                    class="inline-flex items-center justify-center rounded-full border border-slate-200 w-9 h-9 text-slate-600 btn-history"
+                                                    data-version="{{ $rev->file?->version ?? $rev->revision_number + 1 }}"
+                                                    data-date="{{ $rev->submitted_date ? $rev->submitted_date->format('d M Y') : '-' }}"
+                                                    data-author="{{ $proposal->researcher->name ?? '-' }}">
+                                                <i class="fas fa-clock"></i>
+                                            </button>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                @endif
                             </tbody>
                         </table>
                     </div>
@@ -95,45 +133,128 @@
             </section>
 
             @php
-                $discussionNotes = $reviewAssignments->filter(fn($assignment) => filled($assignment->notes));
-                $documentComments = $reviewAssignments->filter(fn($assignment) => filled($assignment->comment_to_review));
+                $reviewFeedbacks = $proposal->reviews
+                    ->filter(fn($review) => $review->feedback && $review->feedback->is_submitted && filled($review->feedback->feedback_text));
             @endphp
 
             <section class="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-3">Discussion</h3>
-                @if($discussionNotes->isNotEmpty())
-                    <div class="space-y-4">
-                        @foreach($discussionNotes as $assignment)
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                <p class="text-sm text-slate-800">{{ $assignment->notes }}</p>
-                                <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ $assignment->assignedBy->name ?? 'Sekretaris' }}</span>
-                                    <span>{{ optional($assignment->created_at)->format('d M Y H:i') }}</span>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">Saran dari Reviewer</h3>
+                @if($reviewFeedbacks->isNotEmpty())
+                    <div class="space-y-3">
+                        @foreach($reviewFeedbacks as $review)
+                            @php
+                                $feedbackData = [];
+                                if (is_string($review->feedback->feedback_text)) {
+                                    $decoded = json_decode($review->feedback->feedback_text, true);
+                                    $feedbackData = is_array($decoded) ? $decoded : [];
+                                }
+                            @endphp
+                            
+                            @if(count($feedbackData) > 0)
+                                @if(isset($feedbackData['autonomy']) && filled($feedbackData['autonomy']))
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="flex-1">
+                                            <p class="font-semibold text-slate-900">{{ $review->reviewer->name ?? 'Reviewer' }}</p>
+                                            <p class="text-xs text-slate-600 mt-0.5">{{ $review->reviewer->email ?? '-' }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2 ml-3">
+                                            <span class="text-xs font-semibold text-slate-600 bg-slate-200 px-2 py-1 rounded">Autonomy</span>
+                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold {{ $review->feedback->recommendation_badge }}">
+                                                {{ $review->feedback->recommendation_label }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-slate-800">{{ $feedbackData['autonomy'] }}</p>
+                                    <div class="mt-3 text-xs text-slate-500">
+                                        {{ optional($review->feedback->submitted_at)->format('d M Y H:i') ?? 'Submitted' }}
+                                    </div>
                                 </div>
-                            </div>
+                                @endif
+                                
+                                @if(isset($feedbackData['beneficence']) && filled($feedbackData['beneficence']))
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="flex-1">
+                                            <p class="font-semibold text-slate-900">{{ $review->reviewer->name ?? 'Reviewer' }}</p>
+                                            <p class="text-xs text-slate-600 mt-0.5">{{ $review->reviewer->email ?? '-' }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2 ml-3">
+                                            <span class="text-xs font-semibold text-slate-600 bg-slate-200 px-2 py-1 rounded">Beneficence</span>
+                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold {{ $review->feedback->recommendation_badge }}">
+                                                {{ $review->feedback->recommendation_label }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-slate-800">{{ $feedbackData['beneficence'] }}</p>
+                                    <div class="mt-3 text-xs text-slate-500">
+                                        {{ optional($review->feedback->submitted_at)->format('d M Y H:i') ?? 'Submitted' }}
+                                    </div>
+                                </div>
+                                @endif
+                                
+                                @if(isset($feedbackData['justice']) && filled($feedbackData['justice']))
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="flex-1">
+                                            <p class="font-semibold text-slate-900">{{ $review->reviewer->name ?? 'Reviewer' }}</p>
+                                            <p class="text-xs text-slate-600 mt-0.5">{{ $review->reviewer->email ?? '-' }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2 ml-3">
+                                            <span class="text-xs font-semibold text-slate-600 bg-slate-200 px-2 py-1 rounded">Justice</span>
+                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold {{ $review->feedback->recommendation_badge }}">
+                                                {{ $review->feedback->recommendation_label }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-slate-800">{{ $feedbackData['justice'] }}</p>
+                                    <div class="mt-3 text-xs text-slate-500">
+                                        {{ optional($review->feedback->submitted_at)->format('d M Y H:i') ?? 'Submitted' }}
+                                    </div>
+                                </div>
+                                @endif
+                                
+                                @if(isset($feedbackData['general_comments']) && filled($feedbackData['general_comments']))
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="flex-1">
+                                            <p class="font-semibold text-slate-900">{{ $review->reviewer->name ?? 'Reviewer' }}</p>
+                                            <p class="text-xs text-slate-600 mt-0.5">{{ $review->reviewer->email ?? '-' }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2 ml-3">
+                                            <span class="text-xs font-semibold text-slate-600 bg-slate-200 px-2 py-1 rounded">Komentar Umum</span>
+                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold {{ $review->feedback->recommendation_badge }}">
+                                                {{ $review->feedback->recommendation_label }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-slate-800">{{ $feedbackData['general_comments'] }}</p>
+                                    <div class="mt-3 text-xs text-slate-500">
+                                        {{ optional($review->feedback->submitted_at)->format('d M Y H:i') ?? 'Submitted' }}
+                                    </div>
+                                </div>
+                                @endif
+                            @else
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div>
+                                            <p class="font-semibold text-slate-900">{{ $review->reviewer->name ?? 'Reviewer' }}</p>
+                                            <p class="text-xs text-slate-600 mt-0.5">{{ $review->reviewer->email ?? '-' }}</p>
+                                        </div>
+                                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $review->feedback->recommendation_badge }}">
+                                            {{ $review->feedback->recommendation_label }}
+                                        </span>
+                                    </div>
+                                    <p class="text-sm text-slate-800 whitespace-pre-wrap">{{ $review->feedback->feedback_text }}</p>
+                                    <div class="mt-3 text-xs text-slate-500">
+                                        {{ optional($review->feedback->submitted_at)->format('d M Y H:i') ?? 'Submitted' }}
+                                    </div>
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 @else
-                    <div class="min-h-[120px] border border-slate-100 rounded-lg p-4 text-slate-500">No discussion notes yet</div>
-                @endif
-            </section>
-
-            <section class="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-3">Document Comments</h3>
-                @if($documentComments->isNotEmpty())
-                    <div class="space-y-4">
-                        @foreach($documentComments as $assignment)
-                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                <p class="text-sm text-slate-800">{{ $assignment->comment_to_review }}</p>
-                                <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
-                                    <span>{{ $assignment->assignedBy->name ?? 'Sekretaris' }}</span>
-                                    <span>{{ optional($assignment->created_at)->format('d M Y H:i') }}</span>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="min-h-[80px] border border-slate-100 rounded-lg p-4 text-slate-500">No document comments yet</div>
+                    <div class="min-h-[120px] border border-slate-100 rounded-lg p-4 text-slate-500">Belum ada saran dari reviewer.</div>
                 @endif
             </section>
         </div>
@@ -146,14 +267,16 @@
                 <p class="text-xs text-slate-400 mt-2">Submitter</p>
             </div>
 
+            @php
+                $hasReviewerSent = $proposal->assignments()->where('role', App\Models\ProposalAssignment::ROLE_REVIEWER)->whereNotNull('sent_at')->exists();
+                $hasSubmittedRevision = $proposal->revisions()->where('status', App\Models\ProposalRevision::STATUS_SUBMITTED)->exists();
+            @endphp
+
+            @if(! ($processingActionHidden ?? false))
             <section class="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Processing Action</h3>
 
-                @php
-                    $hasReviewerSent = $proposal->assignments()->where('role', App\Models\ProposalAssignment::ROLE_REVIEWER)->whereNotNull('sent_at')->exists();
-                @endphp
-
-                @if($proposal->status === App\Models\Proposal::STATUS_ON_REVIEW && $hasReviewerSent)
+                @if($proposal->status === App\Models\Proposal::STATUS_ON_REVIEW && $hasReviewerSent && ! $hasSubmittedRevision)
                     <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-left">
                         <div class="text-sm text-yellow-800">Waiting for reviewers to complete their review.</div>
                     </div>
@@ -198,6 +321,8 @@
                     </form>
                 @endif
             </section>
+            @else
+            @endif
 
             @if(isset($reviewAssignments) && $reviewAssignments->isNotEmpty())
                 <section class="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">

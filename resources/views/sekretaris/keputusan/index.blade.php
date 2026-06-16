@@ -108,7 +108,7 @@
                     'published'           => ['bg-teal-50 text-teal-700',     'Published'],
                 ];
                 [$badge, $label] = $statusConfig[$proposal->status] ?? ['bg-slate-100 text-slate-600', $proposal->status];
-                $sudahDiputuskan = in_array($proposal->status, ['approved','rejected','revised','waiting_for_publish','published']);
+                $sudahDiputuskan = $proposal->decision_date !== null;
                 @endphp
                 <tr class="hover:bg-slate-50/60 transition-colors"
                     :class="'{{ $proposal->id }}' == highlightId ? 'bg-blue-50/40 ring-2 ring-blue-200 ring-inset' : ''"
@@ -160,7 +160,6 @@
                         @if($sudahDiputuskan)
                             <div class="flex items-center justify-end gap-2">
                                 <span class="text-[12px] text-slate-400 italic">Sudah diputuskan</span>
-                                {{-- Lihat detail hasil review --}}
                                 <a href="{{ route('sekretaris.hasil-review.show', $proposal->id) }}"
                                    class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" title="Lihat Hasil Review">
                                     <i class="fas fa-eye text-xs"></i>

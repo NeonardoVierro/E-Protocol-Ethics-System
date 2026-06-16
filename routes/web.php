@@ -97,6 +97,11 @@ Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::get('/success', [PengajuanController::class, 'success'])->name('success');
     Route::get('/download-template', [PengajuanController::class, 'downloadTemplate'])->name('download-template');
     Route::get('/riwayat-pengajuan', [PengajuanController::class, 'riwayatPengajuan'])->name('riwayat-pengajuan');
+    Route::get('/riwayat-pengajuan/{proposal}', [PengajuanController::class, 'showProposalFeedback'])->name('riwayat-pengajuan.show');
+    Route::post('/riwayat-pengajuan/{proposal}/submit-revision', [PengajuanController::class, 'submitRevision'])->name('riwayat-pengajuan.submit-revision');
+    Route::get('/riwayat-pengajuan/{proposal}/revisi', [PengajuanController::class, 'showRevisionForm'])->name('riwayat-pengajuan.revision');
+    Route::get('/riwayat-pengajuan/{proposal}/revisi/{file}/view', [PengajuanController::class, 'viewRevisionFile'])->name('riwayat-pengajuan.revision-file.view');
+    Route::get('/riwayat-pengajuan/{proposal}/revisi/{file}/download', [PengajuanController::class, 'downloadRevisionFile'])->name('riwayat-pengajuan.revision-file.download');
     Route::get('/download-template/{template}', [PengajuanController::class, 'downloadFile'])->name('download-template.file');
 });
 
@@ -221,6 +226,8 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::get('/proposal/{proposal}/activity-logs', [SekretarisController::class, 'activityLogs'])->name('proposal.activity-logs');
     Route::get('/proposal-file/{file}/view', [SekretarisController::class, 'viewProposalFile'])->name('proposal-file.view');
     Route::get('/proposal-file/{file}/download', [SekretarisController::class, 'downloadProposalFile'])->name('proposal-file.download');
+    Route::get('/review-feedback/{feedback}/view', [SekretarisController::class, 'viewReviewFeedbackFile'])->name('review-feedback.file.view');
+    Route::get('/review-feedback/{feedback}/download', [SekretarisController::class, 'downloadReviewFeedbackFile'])->name('review-feedback.file.download');
     Route::get('/assign-reviewer', [SekretarisController::class, 'assignReviewer'])->name('assign-reviewer');
     Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
     Route::get('/hasil-review/{proposal}', [SekretarisController::class, 'hasilReviewShow'])->name('hasil-review.show');

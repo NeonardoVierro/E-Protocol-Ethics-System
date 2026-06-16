@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\Proposal;
 use App\Models\ProposalAssignment;
 use App\Models\ProposalFile;
+use App\Models\ProposalRevision;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
@@ -125,9 +126,12 @@ class SekretarisController extends Controller
             'reviews' => function ($q) {
                 $q->with('feedback', 'reviewer');
             },
+            'revisions',
         ]);
 
         $proposal->sekretaris_assignment = $proposal->assignments->first();
+
+        $hasSubmittedRevision = $proposal->revisions->where('status', ProposalRevision::STATUS_SUBMITTED)->isNotEmpty();
 
         $reviewers = User::whereHas('roles', function ($q) {
                 $q->where('name', 'reviewer');
@@ -147,9 +151,27 @@ class SekretarisController extends Controller
             ->with(['assignedTo', 'assignedBy'])
             ->get();
 
+        $latestReviewerAssignment = ProposalAssignment::where('proposal_id', $proposal->id)
+            ->where('role', ProposalAssignment::ROLE_REVIEWER)
+            ->whereNotNull('sent_at')
+            ->orderByDesc('sent_at')
+            ->first();
+
+        $latestSubmittedRevision = ProposalRevision::where('proposal_id', $proposal->id)
+            ->where('status', ProposalRevision::STATUS_SUBMITTED)
+            ->orderByDesc('created_at')
+            ->first();
+
+        $processingActionHidden = false;
+        if ($latestReviewerAssignment) {
+            if (! $latestSubmittedRevision || $latestReviewerAssignment->sent_at >= $latestSubmittedRevision->created_at) {
+                $processingActionHidden = true;
+            }
+        }
+
         $logs = $proposal->documentLogs()->latest()->get();
 
-        return view('sekretaris.manajemen-proposal.show', compact('proposal', 'reviewers', 'currentReviewer', 'reviewAssignments', 'logs'));
+        return view('sekretaris.manajemen-proposal.show', compact('proposal', 'reviewers', 'currentReviewer', 'reviewAssignments', 'logs', 'processingActionHidden'));
     }
 
     public function updateReviewType(Request $request, Proposal $proposal)
@@ -270,7 +292,34 @@ class SekretarisController extends Controller
 
         $proposal->update(['status' => Proposal::STATUS_ON_REVIEW]);
 
-        // Create reviewer notification
+        // Create or refresh a review task for this reviewer
+        $review = \App\Models\Review::where('proposal_id', $proposal->id)
+            ->where('reviewer_id', $reviewer->id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($review && $review->status === \App\Models\Review::STATUS_COMPLETED) {
+            $review->update([
+                'status' => \App\Models\Review::STATUS_ASSIGNED,
+                'assigned_date' => now(),
+                'due_date' => $request->due_date,
+                'completed_date' => null,
+            ]);
+        } elseif (! $review) {
+            \App\Models\Review::create([
+                'proposal_id' => $proposal->id,
+                'reviewer_id' => $reviewer->id,
+                'status' => \App\Models\Review::STATUS_ASSIGNED,
+                'assigned_date' => now(),
+                'due_date' => $request->due_date,
+            ]);
+        } else {
+            $review->update([
+                'assigned_date' => now(),
+                'due_date' => $request->due_date,
+            ]);
+        }
+
         \App\Models\Notification::create([
             'user_id' => $reviewer->id,
             'title' => 'Penugasan Review Baru',
@@ -445,10 +494,13 @@ class SekretarisController extends Controller
         $keputusan = Proposal::with(['researcher'])
             ->withCount('revisions')
             ->whereHas('assignments', $assignmentConstraint)
-            // Hanya proposal yang sudah selesai direview (on_review atau lebih)
-            ->whereNotIn('status', [
-                Proposal::STATUS_NEW,
-                Proposal::STATUS_IN_PROCESS,
+            ->whereHas('reviewFeedbacks', function ($query) {
+                $query->where('is_submitted', true);
+            })
+            ->whereNull('decision_date')
+            ->whereIn('status', [
+                Proposal::STATUS_ON_REVIEW,
+                Proposal::STATUS_REVISED,
             ])
             ->orderByRaw("FIELD(status,
                 'on_review',
@@ -487,33 +539,39 @@ class SekretarisController extends Controller
     
         // Cegah edit keputusan yang sudah dibuat (semua keputusan bersifat final)
         $finalStatuses = [Proposal::STATUS_APPROVED, Proposal::STATUS_REJECTED, Proposal::STATUS_REVISED, Proposal::STATUS_WAITING_FOR_PUBLISH, Proposal::STATUS_PUBLISHED];
-        if (in_array($proposal->status, $finalStatuses)) {
+        if (in_array($proposal->status, $finalStatuses) && $proposal->decision_date !== null) {
             return redirect()->route('sekretaris.keputusan')
                 ->with('error', 'Keputusan untuk proposal ini sudah dibuat dan tidak dapat diubah. Jika peneliti mengirim revisi, akan dibuat dokumen versi baru (vol2).');
         }
-    
+
         // Pastikan sekretaris yang login memang assigned ke proposal ini
         $assigned = $proposal->assignments()
             ->where('role', ProposalAssignment::ROLE_SEKRETARIS)
             ->where('assigned_to', Auth::id())
             ->whereNotNull('sent_at')
             ->exists();
-    
+
         if (!$assigned) {
             abort(403, 'Anda tidak memiliki akses untuk memutuskan proposal ini.');
         }
-    
-        // Update status dan rejection reason
+
+        // Update status, decision date, dan rejection reason
         $proposal->status           = $request->status;
         $proposal->rejection_reason = in_array($request->status, ['rejected', 'revised'])
             ? $request->rejection_reason
             : null;
-    
-        if (in_array($request->status, ['approved', 'rejected'])) {
-            $proposal->decision_date = now();
-        }
-    
+        $proposal->decision_date    = now();
         $proposal->save();
+
+        // ── Simpan catatan sekretaris ke ProposalNote ──
+        if ($request->rejection_reason) {
+            \App\Models\ProposalNote::create([
+                'proposal_id' => $proposal->id,
+                'user_id'     => Auth::id(),
+                'note_type'   => \App\Models\ProposalNote::TYPE_SECRETARY,
+                'content'     => $request->rejection_reason,
+            ]);
+        }
 
         // ── Jika REVISED: buat record revision untuk peneliti submit revisi ──
         if ($request->status === 'revised') {
@@ -523,7 +581,7 @@ class SekretarisController extends Controller
             \App\Models\ProposalRevision::create([
                 'proposal_id'       => $proposal->id,
                 'revision_number'   => $nextRevisionNumber,
-                'revision_note'     => $request->rejection_reason,
+                'revision_note'     => null,
                 'requested_date'    => now(),
                 'submitted_date'    => null,
                 'status'            => 'requested',
@@ -534,13 +592,12 @@ class SekretarisController extends Controller
             \App\Models\Notification::create([
                 'user_id' => $proposal->user_id,
                 'title'   => 'Permintaan Revisi Proposal',
-                'message' => 'Proposal "' . $proposal->title . '" memerlukan revisi. Silakan upload dokumen revisi (Vol.' . $nextRevisionNumber . '). Catatan: ' . $request->rejection_reason,
+                'message' => 'Proposal "' . $proposal->title . '" memerlukan revisi. Silakan upload dokumen revisi (Vol.' . $nextRevisionNumber . ').',
                 'type'    => \App\Models\Notification::TYPE_REVISION_REQUEST,
                 'status'  => \App\Models\Notification::STATUS_UNREAD ?? 'unread',
                 'data'    => json_encode([
                     'proposal_id'     => $proposal->id,
                     'revision_number' => $nextRevisionNumber,
-                    'revision_note'   => $request->rejection_reason,
                 ]),
             ]);
         }
@@ -589,9 +646,23 @@ class SekretarisController extends Controller
 
     public function draftEthicalClearance()
     {
-        $drafts = [
-            ['id' => 'EC001', 'proposal_id' => 'P002', 'judul' => 'Penelitian Klinis', 'status' => 'draft', 'tanggal' => '2025-05-10'],
-        ];
+        // Ambil daftar ethics documents yang berstatus draft dari database
+        $docs = EthicsDocument::with('proposal')
+            ->where('status', EthicsDocument::STATUS_DRAFT)
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Map model collection ke array yang dipakai oleh view lama
+        $drafts = $docs->map(function ($d) {
+            return [
+                'id' => $d->document_number ?? ('EC' . str_pad($d->id, 3, '0', STR_PAD_LEFT)),
+                'proposal_id' => $d->proposal?->id ?? null,
+                'judul' => $d->proposal?->title ?? ($d->original_name ?? 'Untitled'),
+                'status' => $d->status,
+                'tanggal' => $d->created_at?->toDateString() ?? now()->toDateString(),
+            ];
+        })->toArray();
+
         return view('sekretaris.draf-ethical-clearance.index', compact('drafts'));
     }
 
