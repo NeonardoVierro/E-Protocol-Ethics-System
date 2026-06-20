@@ -228,12 +228,17 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::get('/proposal-file/{file}/download', [SekretarisController::class, 'downloadProposalFile'])->name('proposal-file.download');
     Route::get('/review-feedback/{feedback}/view', [SekretarisController::class, 'viewReviewFeedbackFile'])->name('review-feedback.file.view');
     Route::get('/review-feedback/{feedback}/download', [SekretarisController::class, 'downloadReviewFeedbackFile'])->name('review-feedback.file.download');
-    Route::get('/assign-reviewer', [SekretarisController::class, 'assignReviewer'])->name('assign-reviewer');
     Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
     Route::get('/hasil-review/{proposal}', [SekretarisController::class, 'hasilReviewShow'])->name('hasil-review.show');
     Route::get('/keputusan', [SekretarisController::class, 'keputusan'])->name('keputusan');
     Route::post('/keputusan/update', [SekretarisController::class, 'updateDecision'])->name('keputusan.update');
     Route::get('/draf-ethical-clearance', [SekretarisController::class, 'draftEthicalClearance'])->name('draf-ethical-clearance');
+    Route::post('/draf-ethical-clearance', [SekretarisController::class, 'storeDraft'])->name('draf-ethical-clearance.store');
+    Route::post('/draf-ethical-clearance/{document}/send', [SekretarisController::class, 'sendDraft'])->name('draf-ethical-clearance.send');
+    Route::post('/draf-ethical-clearance/send-to-admin', [SekretarisController::class, 'sendToAdmin'])->name('draf-ethical-clearance.sendToAdmin');
+    Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
+    Route::get('/arsip-dokumen', [SekretarisController::class, 'arsipDokumen'])->name('arsip-dokumen');
+    Route::get('/persetujuan-ttd', [SekretarisController::class, 'persetujuanTtd'])->name('persetujuan-ttd');
     Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
     Route::get('/user-management', [SekretarisController::class, 'userManagement'])->name('user-management');
     Route::post('/user-management/activate/{id}', [SekretarisController::class, 'activateUser'])->name('user-management.activate');

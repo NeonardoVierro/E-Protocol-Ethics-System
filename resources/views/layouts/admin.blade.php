@@ -9,13 +9,107 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: 'class',
+          theme: {
+            extend: {
+              colors: {
+                'primary-fixed-dim': '#b0c6ff',
+                'inverse-on-surface': '#eaf1ff',
+                'background': '#f8f9ff',
+                'surface-container': '#e5eeff',
+                'secondary-container': '#81f3e5',
+                'on-error-container': '#93000a',
+                'on-surface': '#0b1c30',
+                'on-secondary-container': '#006f66',
+                'on-error': '#ffffff',
+                'secondary-fixed': '#84f5e8',
+                'outline': '#737783',
+                'secondary-fixed-dim': '#66d9cc',
+                'outline-variant': '#c3c6d4',
+                'surface-tint': '#2b5bb5',
+                'primary-container': '#0d47a1',
+                'on-background': '#0b1c30',
+                'inverse-surface': '#213145',
+                'on-primary-fixed': '#001945',
+                'tertiary': '#602100',
+                'on-tertiary-fixed': '#360f00',
+                'surface-container-high': '#dce9ff',
+                'surface-container-highest': '#d3e4fe',
+                'error': '#ba1a1a',
+                'surface': '#f8f9ff',
+                'on-secondary-fixed-variant': '#005049',
+                'tertiary-fixed': '#ffdbcd',
+                'surface-bright': '#f8f9ff',
+                'inverse-primary': '#b0c6ff',
+                'surface-dim': '#cbdbf5',
+                'on-secondary-fixed': '#00201d',
+                'primary-fixed': '#d9e2ff',
+                'error-container': '#ffdad6',
+                'on-secondary': '#ffffff',
+                'surface-variant': '#d3e4fe',
+                'secondary': '#006a62',
+                'surface-container-low': '#eff4ff',
+                'on-surface-variant': '#434652',
+                'on-primary': '#ffffff',
+                'on-tertiary-fixed-variant': '#7d2d00'
+              },
+              borderRadius: {
+                DEFAULT: '0.125rem',
+                lg: '0.25rem',
+                xl: '0.5rem',
+                full: '0.75rem'
+              },
+              spacing: {
+                base: '4px',
+                lg: '24px',
+                md: '16px',
+                xs: '8px',
+                xl: '32px',
+                gutter: '24px'
+              },
+              maxWidth: {
+                'container-max': '1440px'
+              },
+              fontFamily: {
+                'body-lg': ['Inter', 'sans-serif'],
+                h1: ['Inter', 'sans-serif'],
+                'label-caps': ['Inter', 'sans-serif'],
+                button: ['Inter', 'sans-serif'],
+                'body-sm': ['Inter', 'sans-serif'],
+                h3: ['Inter', 'sans-serif'],
+                h2: ['Inter', 'sans-serif'],
+                'body-md': ['Inter', 'sans-serif']
+              },
+              fontSize: {
+                'body-lg': ['16px', {'lineHeight': '24px', 'fontWeight': '400'}],
+                h1: ['30px', {'lineHeight': '38px', 'letterSpacing': '-0.02em', 'fontWeight': '700'}],
+                'label-caps': ['12px', {'lineHeight': '16px', 'letterSpacing': '0.05em', 'fontWeight': '600'}],
+                button: ['14px', {'lineHeight': '20px', 'fontWeight': '500'}],
+                'body-sm': ['12px', {'lineHeight': '16px', 'fontWeight': '400'}],
+                h3: ['20px', {'lineHeight': '28px', 'fontWeight': '600'}],
+                h2: ['24px', {'lineHeight': '32px', 'letterSpacing': '-0.01em', 'fontWeight': '600'}],
+                'body-md': ['14px', {'lineHeight': '20px', 'fontWeight': '400'}]
+              }
+            }
+          }
+        }
+    </script>
     
     <!-- Custom Tailwind overrides -->
     <style>
+        .font-h2 { font-family: 'Inter', sans-serif; font-weight: 700; }
+        .font-h3 { font-family: 'Inter', sans-serif; font-weight: 600; }
+        .font-body-md { font-family: 'Inter', sans-serif; }
+        .font-button { font-family: 'Inter', sans-serif; }
+        .font-body-sm { font-family: 'Inter', sans-serif; }
+        .text-label-caps { text-transform: uppercase; letter-spacing: .05em; }
         @keyframes toast-in {
             from { opacity: 0; transform: translateY(12px) scale(0.96); }
             to { opacity: 1; transform: translateY(0) scale(1); }
@@ -38,7 +132,7 @@
 
     @stack('styles')
 </head>
-<body class="font-['DM_Sans'] m-0 bg-[#f4f6f9]">
+<body class="font-['Inter'] m-0 bg-[#f4f6f9]">
 
 <!-- ═══════════════════════════════════
      SIDEBAR
@@ -83,6 +177,12 @@
             Template Proposal
         </a>
 
+        <a href="{{ route('admin.proposal-assignment.index') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.proposal-assignment.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-clipboard-list text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.proposal-assignment.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Proposal Assignment
+        </a>
+
         <a href="{{ route('admin.ethicalclearance.index') }}"
         class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.ethicalclearance.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
             <i class="fas fa-file-signature text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.ethicalclearance.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
@@ -99,12 +199,6 @@
         class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.systemmonitoring.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
             <i class="fas fa-chart-line text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.systemmonitoring.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
             System Monitoring
-        </a>
-
-        <a href="{{ route('admin.proposal-assignment.index') }}"
-        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.proposal-assignment.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
-            <i class="fas fa-clipboard-list text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.proposal-assignment.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
-            Proposal Assignment
         </a>
 
         <div class="flex-1"></div>
