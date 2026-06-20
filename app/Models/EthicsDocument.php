@@ -45,6 +45,11 @@ class EthicsDocument extends Model
         return $this->belongsTo(User::class, 'ketua_id');
     }
 
+    public function documentLogs()
+    {
+        return $this->hasMany(DocumentLog::class, 'ethics_document_id');
+    }
+
     // ── Helpers ───────────────────────────────────
 
     public function getStatusLabelAttribute(): string

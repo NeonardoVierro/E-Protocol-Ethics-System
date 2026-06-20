@@ -37,30 +37,27 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
-                    @php
-                    $proposals = [
-                        ['id'=>'EC-2023-0891','researcher'=>'Dr. Helena Vane',  'title'=>'Impact of Micro-p...','date'=>'Oct 24, 2023'],
-                        ['id'=>'EC-2023-0902','researcher'=>'Prof. Alan Turing','title'=>'Neural Pattern An...','date'=>'Oct 25, 2023'],
-                        ['id'=>'EC-2023-0915','researcher'=>'Sarah Connor',     'title'=>'Societal Resilienc...','date'=>'Oct 26, 2023'],
-                        ['id'=>'EC-2023-0924','researcher'=>'Dr. Marcus Wright','title'=>'Cyber-Human Inte...', 'date'=>'Oct 27, 2023'],
-                    ];
-                    @endphp
-
-                    @foreach($proposals as $p)
-                    <tr class="hover:bg-slate-50/60 transition-colors cursor-pointer"
-                        :class="selectedId === '{{ $p['id'] }}' ? 'bg-blue-50/60' : ''"
-                        @click="selectProposal('{{ $p['id'] }}', '{{ $p['researcher'] }}', '{{ $p['title'] }}')">
-                        <td class="px-6 py-4">
-                            <span class="text-[13.5px] font-bold leading-snug"
-                                  :class="selectedId === '{{ $p['id'] }}' ? 'text-[#1e3a5f]' : 'text-slate-800'">
-                                {{ $p['id'] }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-4 text-[13px] text-slate-600">{{ $p['researcher'] }}</td>
-                        <td class="px-4 py-4 text-[13px] text-slate-500 truncate max-w-[140px]">{{ $p['title'] }}</td>
-                        <td class="px-4 py-4 text-[13px] text-slate-500">{{ $p['date'] }}</td>
-                    </tr>
-                    @endforeach
+                        @foreach($docs as $d)
+                        @php
+                            $docId = $d->document_number ?: 'EC-' . $d->id;
+                            $researcher = $d->proposal?->researcher?->name ?? $d->proposal?->nama_peneliti ?? ($d->ketua?->name ?? '-');
+                            $title = $d->proposal?->title ?? ($d->original_name ?? 'Untitled');
+                            $date = $d->created_at?->format('M d, Y') ?? '-';
+                        @endphp
+                        <tr class="hover:bg-slate-50/60 transition-colors cursor-pointer"
+                            :class="selectedId === '{{ $docId }}' ? 'bg-blue-50/60' : ''"
+                            @click="selectProposal('{{ $docId }}', '{{ addslashes($researcher) }}', '{{ addslashes($title) }}')">
+                            <td class="px-6 py-4">
+                                <span class="text-[13.5px] font-bold leading-snug"
+                                      :class="selectedId === '{{ $docId }}' ? 'text-[#1e3a5f]' : 'text-slate-800'">
+                                    {{ $docId }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-[13px] text-slate-600">{{ $researcher }}</td>
+                            <td class="px-4 py-4 text-[13px] text-slate-500 truncate max-w-[140px]">{{ $title }}</td>
+                            <td class="px-4 py-4 text-[13px] text-slate-500">{{ $date }}</td>
+                        </tr>
+                        @endforeach
                 </tbody>
             </table>
         </div>
@@ -207,14 +204,13 @@
 <script>
 function ethicalClearance() {
     return {
-        selectedId:      'EC-2023-0902',
-        clearanceNumber: 'ETH-2023-VII-00902',
+        selectedId:      '{{ $docs->first() ? ($docs->first()->document_number ?: "EC-".$docs->first()->id) : "" }}',
+        clearanceNumber: '{{ $docs->first() ? ($docs->first()->document_number ?: "") : "" }}',
 
         selectProposal(id, researcher, title) {
             this.selectedId = id;
-            // Auto-generate nomor dari ID
-            const parts = id.split('-');
-            this.clearanceNumber = `ETH-${parts[1]}-VII-${parts[2]}`;
+            // set clearanceNumber to id when available
+            this.clearanceNumber = id;
         },
     };
 }

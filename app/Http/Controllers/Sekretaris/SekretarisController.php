@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\ReviewFeedback;
 use App\Models\EthicsDocument;
+use App\Models\DocumentLog;
 
 class SekretarisController extends Controller
 {
@@ -663,27 +664,201 @@ class SekretarisController extends Controller
             ];
         })->toArray();
 
-        return view('sekretaris.draf-ethical-clearance.index', compact('drafts'));
+        // Daftar admin aktif untuk dipilih sebagai penanggung jawab draft
+        $admins = User::whereHas('roles', function ($q) {
+                $q->where('name', 'admin');
+            })
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
+
+        // Daftar proposal yang berstatus approved dan assigned ke sekretaris yang login
+                $approvedProposals = Proposal::whereHas('assignments', function ($q) {
+                $q->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+                  ->where('assigned_to', Auth::id())
+                  ->whereNotNull('sent_at');
+            })
+                        ->where('status', Proposal::STATUS_APPROVED)
+                        ->whereDoesntHave('ethicsDocument', function ($docQ) {
+                            $docQ->where('status', EthicsDocument::STATUS_DRAFT)
+                                 ->whereHas('documentLogs', function ($logQ) {
+                                     $logQ->where('activity', DocumentLog::ACTIVITY_ASSIGN);
+                                 });
+                        })
+                        ->with('researcher')
+                        ->orderByDesc('submission_date')
+                        ->get();
+
+        return view('sekretaris.draf-ethical-clearance.new', compact('drafts', 'admins', 'approvedProposals'));
+    }
+
+    public function storeDraft(Request $request)
+    {
+        $request->validate([
+            'proposal_id' => 'nullable|exists:proposals,id',
+            'title' => 'required|string|max:1024',
+            'principal_investigator' => 'required|string|max:255',
+            'members' => 'nullable|string|max:2000',
+            'institution' => 'required|string|max:255',
+            'research_place' => 'required|string|max:255',
+            'admin_id' => 'nullable|exists:users,id',
+        ]);
+
+        $payload = [
+            'title' => $request->title,
+            'principal_investigator' => $request->principal_investigator,
+            'members' => $request->members,
+            'institution' => $request->institution,
+            'research_place' => $request->research_place,
+            'admin_id' => $request->admin_id,
+        ];
+
+        // Simpan minimal ke kolom notes sebagai JSON agar data draft tetap tersedia
+        $doc = EthicsDocument::updateOrCreate(
+            ['proposal_id' => $request->proposal_id],
+            [
+                'document_number' => '',
+                'ketua_id' => null,
+                'status' => EthicsDocument::STATUS_DRAFT,
+                'file_path' => '',
+                'original_name' => '',
+                'notes' => json_encode($payload),
+            ]
+        );
+
+        return redirect()->route('sekretaris.draf-ethical-clearance')->with('success', 'Draft berhasil disimpan. Anda dapat mengedit atau mengirimkannya ke pemohon.');
+    }
+
+    public function sendDraft(Request $request, EthicsDocument $document)
+    {
+        // Menandai draft sebagai siap dikirimkan (kita simpan notifikasi ke peneliti)
+        $document->update(['status' => EthicsDocument::STATUS_DRAFT]);
+
+        if ($document->proposal && $document->proposal->user_id) {
+            \App\Models\Notification::create([
+                'user_id' => $document->proposal->user_id,
+                'title' => 'Draft Ethical Clearance Tersedia',
+                'message' => 'Draft sertifikat kelaikan etik untuk proposal "' . ($document->proposal->title ?? '—') . '" telah dibuat oleh sekretariat.',
+                'type' => \App\Models\Notification::TYPE_PROPOSAL_STATUS ?? 'proposal_status',
+                'status' => \App\Models\Notification::STATUS_UNREAD ?? 'unread',
+                'data' => json_encode(['document_id' => $document->id, 'proposal_id' => $document->proposal->id ?? null]),
+            ]);
+        }
+
+        return redirect()->route('sekretaris.draf-ethical-clearance')->with('success', 'Draft berhasil dikirimkan ke pemohon (notifikasi dibuat).');
+    }
+
+    public function sendToAdmin(Request $request)
+    {
+        $request->validate([
+            'proposal_id' => 'required|exists:proposals,id',
+            'admin_id' => 'required|exists:users,id',
+        ]);
+
+        $proposal = Proposal::findOrFail($request->proposal_id);
+
+        // Find or create ethics document for this proposal
+        $document = EthicsDocument::firstOrCreate(
+            ['proposal_id' => $proposal->id],
+            [
+                'document_number' => '',
+                'ketua_id' => null,
+                'status' => EthicsDocument::STATUS_DRAFT,
+                'file_path' => '',
+                'original_name' => '',
+                'notes' => 'Draft created by sekretariat and sent to admin.',
+            ]
+        );
+
+        // Assign to admin (ketua_id used here as handler)
+        $document->ketua_id = $request->admin_id;
+        $document->status = EthicsDocument::STATUS_DRAFT;
+        // add admin assignment into notes (merge if JSON)
+        try {
+            $notes = json_decode($document->notes ?: '{}', true);
+            if (!is_array($notes)) $notes = ['notes' => (string)$document->notes];
+        } catch (\Throwable $e) {
+            $notes = ['notes' => (string)$document->notes];
+        }
+        $notes['assigned_admin_id'] = $request->admin_id;
+        $notes['assigned_at'] = now()->toDateTimeString();
+        $document->notes = json_encode($notes);
+        $document->save();
+
+        // Notify the admin
+        \App\Models\Notification::create([
+            'user_id' => $request->admin_id,
+            'title' => 'Draft Ethical Clearance Diterima',
+            'message' => 'Draft untuk proposal "' . ($proposal->title ?? '—') . '" telah dikirim untuk ditinjau.',
+            'type' => \App\Models\Notification::TYPE_DOCUMENT_READY,
+            'status' => \App\Models\Notification::STATUS_UNREAD,
+            'data' => json_encode(['document_id' => $document->id, 'proposal_id' => $proposal->id]),
+        ]);
+
+        // Create a document log entry so it appears in archives/log
+        DocumentLog::create([
+            'ethics_document_id' => $document->id,
+            'proposal_id' => $proposal->id,
+            'user_id' => Auth::id(),
+            'activity' => DocumentLog::ACTIVITY_ASSIGN,
+            'ip_address' => request()->ip(),
+            'description' => 'Draft dikirim ke admin ID ' . $request->admin_id,
+            'metadata' => ['assigned_admin_id' => $request->admin_id],
+        ]);
+
+        return response()->json(['status' => 'ok', 'message' => 'Draft berhasil dikirim ke admin.']);
     }
 
     public function arsipDokumen()
     {
-        $arsip = [
-            ['nama' => 'Proposal P001 - Studi Etika AI', 'tipe' => 'PDF', 'tanggal' => '2025-04-01', 'ukuran' => '2.3 MB'],
-            ['nama' => 'Ethical Clearance EC001', 'tipe' => 'PDF', 'tanggal' => '2025-05-12', 'ukuran' => '1.1 MB'],
-            ['nama' => 'Surat Tugas Reviewer P002', 'tipe' => 'DOCX', 'tanggal' => '2025-05-02', 'ukuran' => '0.5 MB'],
-        ];
-        return view('sekretaris.arsip-dokumen.index', compact('arsip'));
+        // Show ethics documents that were assigned/sent to admin. Some legacy rows have
+        // non-JSON `notes`, so we also include docs that have a related DocumentLog
+        // of type 'assign'. Paginate results (10 per page).
+        $documents = EthicsDocument::with('proposal', 'ketua')
+            ->where(function ($q) {
+                $q->whereRaw("JSON_VALID(notes) = 1 AND JSON_EXTRACT(notes, '$.assigned_admin_id') IS NOT NULL")
+                  ->orWhereExists(function ($sub) {
+                      $sub->select(\DB::raw(1))
+                          ->from('document_logs')
+                          ->whereColumn('document_logs.ethics_document_id', 'ethics_documents.id')
+                          ->where('document_logs.activity', DocumentLog::ACTIVITY_ASSIGN);
+                  });
+            })
+            ->orderByDesc('created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('sekretaris.arsip-dokumen.index', compact('documents'));
     }
 
     public function arsip()
     {
-        $arsip = [
-            ['nama' => 'Proposal P001 - Studi Etika AI', 'tipe' => 'PDF', 'tanggal' => '2025-04-01', 'ukuran' => '2.3 MB'],
-            ['nama' => 'Ethical Clearance EC001', 'tipe' => 'PDF', 'tanggal' => '2025-05-12', 'ukuran' => '1.1 MB'],
-            ['nama' => 'Surat Tugas Reviewer P002', 'tipe' => 'DOCX', 'tanggal' => '2025-05-02', 'ukuran' => '0.5 MB'],
-        ];
-        return view('sekretaris.arsip-dokumen.index', compact('arsip'));
+        $documents = EthicsDocument::with('proposal', 'ketua')
+            ->where(function ($q) {
+                $q->whereRaw("JSON_VALID(notes) = 1 AND JSON_EXTRACT(notes, '$.assigned_admin_id') IS NOT NULL")
+                  ->orWhereExists(function ($sub) {
+                      $sub->select(\DB::raw(1))
+                          ->from('document_logs')
+                          ->whereColumn('document_logs.ethics_document_id', 'ethics_documents.id')
+                          ->where('document_logs.activity', DocumentLog::ACTIVITY_ASSIGN);
+                  });
+            })
+            ->orderByDesc('created_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('sekretaris.arsip-dokumen.index', compact('documents'));
+    }
+
+    public function persetujuanTtd()
+    {
+        // show documents that need persetujuan / tanda tangan
+        $docs = EthicsDocument::with('proposal', 'ketua')
+            ->where('status', EthicsDocument::STATUS_DRAFT)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('sekretaris.persetujuan-ttd.index', compact('docs'));
     }
 
     public function userManagement()

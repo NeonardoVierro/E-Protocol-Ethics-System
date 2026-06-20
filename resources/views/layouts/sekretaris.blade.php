@@ -21,16 +21,16 @@
             Dashboard
         </a>
 
+        <a href="{{ route('sekretaris.user-management') }}"
+           class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('sekretaris.user-management') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-users text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('sekretaris.user-management') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Manajemen User
+        </a>
+
         <a href="{{ route('sekretaris.manajemen-proposal') }}"
            class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('sekretaris.manajemen-proposal') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
             <i class="fas fa-file-alt text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('sekretaris.manajemen-proposal') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
             Manajemen Proposal
-        </a>
-
-        <a href="{{ route('sekretaris.assign-reviewer') }}"
-           class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('sekretaris.assign-reviewer') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
-            <i class="fas fa-user-check text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('sekretaris.assign-reviewer') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
-            Assign Reviewer
         </a>
 
         <a href="{{ route('sekretaris.hasil-review') }}"
@@ -51,11 +51,19 @@
             Draft Ethical Clearance
         </a>
 
-        <a href="{{ route('sekretaris.user-management') }}"
-           class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('sekretaris.user-management') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
-            <i class="fas fa-users text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('sekretaris.user-management') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
-            Manajemen User
+        <a href="{{ route('sekretaris.arsip') }}"
+           class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('sekretaris.arsip') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-archive text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('sekretaris.arsip') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Arsip Dokumen
         </a>
+
+        <a href="{{ route('sekretaris.persetujuan-ttd') }}"
+           class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('sekretaris.persetujuan-ttd') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-pen-fancy text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('sekretaris.persetujuan-ttd') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Persetujuan & TTD
+        </a>
+
+       
 
         <div class="flex-1"></div>
     </nav>
