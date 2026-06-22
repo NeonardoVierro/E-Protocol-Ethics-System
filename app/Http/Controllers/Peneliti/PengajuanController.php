@@ -763,4 +763,34 @@ class PengajuanController extends Controller
 
         return response()->download(Storage::disk('public')->path($file->file_path), $file->original_name);
     }
+
+    public function downloadEthicsDocument(Proposal $proposal)
+    {
+        $access = $this->checkAccess();
+        if ($access === 'guest') {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+
+        if ($access === 'pending') {
+            return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+        }
+
+        if ($proposal->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $ethicsDocument = $proposal->ethicsDocument;
+        if (!$ethicsDocument || $ethicsDocument->status !== \App\Models\EthicsDocument::STATUS_PUBLISHED) {
+            abort(404, 'Dokumen Ethical Clearance belum tersedia.');
+        }
+
+        if (!$ethicsDocument->file_path || !Storage::disk('public')->exists($ethicsDocument->file_path)) {
+            abort(404, 'File dokumen tidak ditemukan.');
+        }
+
+        return response()->download(
+            Storage::disk('public')->path($ethicsDocument->file_path),
+            $ethicsDocument->original_name ?: 'Ethical-Clearance-' . $proposal->nomor_ec . '.pdf'
+        );
+    }
 }

@@ -37,9 +37,18 @@
                                             $proposalStatusBadge = $proposal->status === \App\Models\Proposal::STATUS_IN_PROCESS ? 'bg-yellow-100 text-yellow-800' : $proposal->status_badge;
                                         @endphp
                                         <td class="px-4 py-4">
-                                            <button type="button" data-toggle-feedback="proposal-feedback-{{ $proposal->id }}" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $proposalStatusBadge }} transition hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                                                {{ $proposalStatusLabel }}
-                                            </button>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" data-toggle-feedback="proposal-feedback-{{ $proposal->id }}" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $proposalStatusBadge }} transition hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                                    {{ $proposalStatusLabel }}
+                                                </button>
+                                                @if($proposal->status === \App\Models\Proposal::STATUS_PUBLISHED && $proposal->ethicsDocument && $proposal->ethicsDocument->status === \App\Models\EthicsDocument::STATUS_PUBLISHED)
+                                                    <a href="{{ route('pengajuan.riwayat-pengajuan.download-ethics-document', $proposal->id) }}"
+                                                       class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition">
+                                                        <i class="fas fa-download text-[10px]"></i>
+                                                        Download EC
+                                                    </a>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr id="proposal-feedback-{{ $proposal->id }}" class="hidden bg-slate-50">

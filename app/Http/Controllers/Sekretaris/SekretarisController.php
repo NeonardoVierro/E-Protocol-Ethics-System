@@ -770,21 +770,6 @@ class SekretarisController extends Controller
             ]
         );
 
-        // Assign to admin (ketua_id used here as handler)
-        $document->ketua_id = $request->admin_id;
-        $document->status = EthicsDocument::STATUS_DRAFT;
-        // add admin assignment into notes (merge if JSON)
-        try {
-            $notes = json_decode($document->notes ?: '{}', true);
-            if (!is_array($notes)) $notes = ['notes' => (string)$document->notes];
-        } catch (\Throwable $e) {
-            $notes = ['notes' => (string)$document->notes];
-        }
-        $notes['assigned_admin_id'] = $request->admin_id;
-        $notes['assigned_at'] = now()->toDateTimeString();
-        $document->notes = json_encode($notes);
-        $document->save();
-
         // Notify the admin
         \App\Models\Notification::create([
             'user_id' => $request->admin_id,
@@ -800,10 +785,10 @@ class SekretarisController extends Controller
             'ethics_document_id' => $document->id,
             'proposal_id' => $proposal->id,
             'user_id' => Auth::id(),
-            'activity' => DocumentLog::ACTIVITY_ASSIGN,
+            'activity' => DocumentLog::ACTIVITY_SENT_TO_ADMIN,
             'ip_address' => request()->ip(),
-            'description' => 'Draft dikirim ke admin ID ' . $request->admin_id,
-            'metadata' => ['assigned_admin_id' => $request->admin_id],
+            'description' => 'Draft dikirim ke admin oleh sekretaris',
+            'metadata' => ['admin_id' => $request->admin_id],
         ]);
 
         return response()->json(['status' => 'ok', 'message' => 'Draft berhasil dikirim ke admin.']);
@@ -848,17 +833,6 @@ class SekretarisController extends Controller
             ->withQueryString();
 
         return view('sekretaris.arsip-dokumen.index', compact('documents'));
-    }
-
-    public function persetujuanTtd()
-    {
-        // show documents that need persetujuan / tanda tangan
-        $docs = EthicsDocument::with('proposal', 'ketua')
-            ->where('status', EthicsDocument::STATUS_DRAFT)
-            ->orderByDesc('created_at')
-            ->get();
-
-        return view('sekretaris.persetujuan-ttd.index', compact('docs'));
     }
 
     public function userManagement()

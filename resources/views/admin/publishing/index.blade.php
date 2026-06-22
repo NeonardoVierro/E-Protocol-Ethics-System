@@ -64,7 +64,7 @@
             <p class="text-[9.5px] font-bold tracking-widest uppercase text-blue-300/70 mb-0.5">Selection Mode</p>
             <p class="text-[13px] font-bold text-white"><span x-text="selected">0</span> items selected</p>
         </div>
-        <button onclick="featureInDevelopment('Publish Selected Certificates')"
+        <button onclick="publishSelected()"
                 class="inline-flex items-center gap-2 bg-emerald-400 hover:bg-emerald-300 text-slate-900 text-[13px] font-bold px-5 py-2.5 rounded-xl transition-colors cursor-pointer">
             <i class="fas fa-cloud-arrow-up text-sm"></i>
             Publish Selected Certificates
@@ -113,34 +113,29 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-50">
+            @forelse($docs as $i => $doc)
             @php
-            $certs = [
-                ['id'=>'EC-2023-0891','initials'=>'HV','color'=>'bg-slate-400','researcher'=>'Dr. Helena Vane',   'clearance'=>'ETH-2023-VII-00902', 'date'=>'Oct 12, 2023','status'=>'READY',   'statusClass'=>'bg-emerald-50 text-emerald-700'],
-                ['id'=>'EC-2023-0942','initials'=>'MS','color'=>'bg-blue-500', 'researcher'=>'Marcus Sterling',   'clearance'=>'ETH-2023-IX-11204',  'date'=>'Oct 15, 2023','status'=>'PRIVATE', 'statusClass'=>'bg-slate-100 text-slate-600'],
-                ['id'=>'EC-2023-1102','initials'=>'AL','color'=>'bg-slate-400','researcher'=>'Prof. Anita Lowe',  'clearance'=>'ETH-2023-XI-00431',  'date'=>'Oct 18, 2023','status'=>'READY',   'statusClass'=>'bg-emerald-50 text-emerald-700'],
-                ['id'=>'EC-2023-1125','initials'=>'JD','color'=>'bg-slate-300','researcher'=>'John Doe',          'clearance'=>'ETH-2023-X-08812',   'date'=>'Oct 20, 2023','status'=>'READY',   'statusClass'=>'bg-emerald-50 text-emerald-700'],
-            ];
+                $initials = strtoupper(substr($doc->proposal?->researcher?->name ?? 'U', 0, 2));
+                $date = $doc->signed_date?->format('M d, Y') ?? '-';
             @endphp
-
-            @foreach($certs as $i => $c)
             <tr class="hover:bg-slate-50/60 transition-colors" :class="checked[{{ $i }}] ? 'bg-blue-50/40' : ''">
                 <td class="px-6 py-4">
                     <input type="checkbox" x-model="checked[{{ $i }}]"
                            class="w-4 h-4 rounded border-slate-300 cursor-pointer accent-[#1e3a5f]">
                 </td>
                 <td class="px-4 py-4">
-                    <span class="text-[13.5px] font-bold text-[#1e3a5f]">{{ $c['id'] }}</span>
+                    <span class="text-[13.5px] font-bold text-[#1e3a5f]">{{ $doc->document_number ?: ('EC-'.$doc->id) }}</span>
                 </td>
                 <td class="px-4 py-4">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-7 h-7 rounded-full {{ $c['color'] }} flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">{{ $c['initials'] }}</div>
-                        <span class="text-[13px] font-medium text-slate-700">{{ $c['researcher'] }}</span>
+                        <div class="w-7 h-7 rounded-full bg-slate-400 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">{{ $initials }}</div>
+                        <span class="text-[13px] font-medium text-slate-700">{{ $doc->proposal?->researcher?->name ?? '-' }}</span>
                     </div>
                 </td>
-                <td class="px-4 py-4 text-[13px] text-slate-600 font-medium">{{ $c['clearance'] }}</td>
-                <td class="px-4 py-4 text-[13px] text-slate-500">{{ $c['date'] }}</td>
+                <td class="px-4 py-4 text-[13px] text-slate-600 font-medium">{{ $doc->proposal?->nomor_ec ?? '-' }}</td>
+                <td class="px-4 py-4 text-[13px] text-slate-500">{{ $date }}</td>
                 <td class="px-4 py-4">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase {{ $c['statusClass'] }}">{{ $c['status'] }}</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase bg-emerald-50 text-emerald-700">READY</span>
                 </td>
                 <td class="px-6 py-4">
                     <div class="flex items-center justify-end gap-2">
@@ -152,36 +147,51 @@
                                 class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="Export">
                             <i class="fas fa-arrow-up-right-from-square text-xs"></i>
                         </button>
-                        <button onclick="featureInDevelopment('Publish')"
+                        <button onclick="publishDocument({{ $doc->id }}, this)"
                                 class="inline-flex items-center gap-1.5 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[12px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer">
                             Publish
                         </button>
                     </div>
                 </td>
             </tr>
-            @endforeach
+            @empty
+            <tr>
+                <td colspan="7" class="px-6 py-16 text-center">
+                    <i class="fas fa-inbox text-slate-300 text-4xl mb-3 block"></i>
+                    <p class="text-[14px] text-slate-400 font-medium">Belum ada proposal siap dipublish</p>
+                </td>
+            </tr>
+            @endforelse
         </tbody>
     </table>
 
     {{-- Pagination --}}
+    @if($proposals->hasPages())
     <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100">
-        <span class="text-[12.5px] text-slate-400">Showing 4 of 42 ready certificates</span>
+        <span class="text-[12.5px] text-slate-400">
+            Showing {{ $proposals->firstItem() }}–{{ $proposals->lastItem() }} of {{ $proposals->total() }}
+        </span>
         <div class="flex items-center gap-1">
-            <button onclick="featureInDevelopment('Previous')"
-                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors cursor-pointer">
-                <i class="fas fa-chevron-left text-xs"></i>
-            </button>
-            <button class="w-8 h-8 flex items-center justify-center bg-[#1e3a5f] text-white text-[13px] font-semibold rounded-lg">1</button>
-            <button onclick="featureInDevelopment('Page 2')"
-                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-[13px] text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">2</button>
-            <button onclick="featureInDevelopment('Page 3')"
-                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-[13px] text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer">3</button>
-            <button onclick="featureInDevelopment('Next')"
-                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors cursor-pointer">
-                <i class="fas fa-chevron-right text-xs"></i>
-            </button>
+            @if($proposals->onFirstPage())
+                <span class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-300 cursor-not-allowed"><i class="fas fa-chevron-left text-xs"></i></span>
+            @else
+                <a href="{{ $proposals->previousPageUrl() }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><i class="fas fa-chevron-left text-xs"></i></a>
+            @endif
+            @foreach($proposals->getUrlRange(1, $proposals->lastPage()) as $page => $url)
+                @if($page == $proposals->currentPage())
+                    <span class="w-8 h-8 flex items-center justify-center bg-[#1e3a5f] text-white text-[13px] font-semibold rounded-lg">{{ $page }}</span>
+                @else
+                    <a href="{{ $url }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-[13px] text-slate-600 hover:bg-slate-50 transition-colors">{{ $page }}</a>
+                @endif
+            @endforeach
+            @if($proposals->hasMorePages())
+                <a href="{{ $proposals->nextPageUrl() }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><i class="fas fa-chevron-right text-xs"></i></a>
+            @else
+                <span class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-300 cursor-not-allowed"><i class="fas fa-chevron-right text-xs"></i></span>
+            @endif
         </div>
     </div>
+    @endif
 </div>
 
 {{-- ═══════════════════════════════════════════
@@ -238,12 +248,60 @@
 <script>
 function bulkSelect() {
     return {
-        checked: { 0: false, 1: false, 2: false, 3: false },
+        checked: {},
         toggleAll(e) {
             const val = e.target.checked;
             Object.keys(this.checked).forEach(k => this.checked[k] = val);
         },
     };
+}
+
+// ── Publish Proposal ───────────────────────────────────────────────
+async function publishDocument(documentId, btn) {
+    if (!confirm('Dokumen ini akan dipublish ke publik. Tindakan ini tidak dapat dibatalkan.')) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[9px]"></i> Publishing...';
+    try {
+        const res = await fetch(`/admin/publishing/${documentId}/publish`, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
+        });
+        if (!res.ok) throw new Error();
+        location.reload();
+    } catch {
+        btn.disabled = false;
+        btn.innerHTML = 'Publish';
+        alert('Gagal mempublish dokumen.');
+    }
+}
+
+// ── Publish Selected ───────────────────────────────────────────────
+async function publishSelected() {
+    const bulkData = Alpine.$data(document.querySelector('[x-data]'));
+    const selectedIds = Object.keys(bulkData.checked).filter(k => bulkData.checked[k]);
+
+    if (selectedIds.length === 0) {
+        alert('Pilih minimal satu dokumen untuk dipublish.');
+        return;
+    }
+
+    if (!confirm(`Anda akan mempublish ${selectedIds.length} dokumen. Tindakan ini tidak dapat dibatalkan.`)) return;
+
+    try {
+        const res = await fetch('/admin/publishing/bulk-publish', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+            },
+            body: JSON.stringify({ document_ids: selectedIds }),
+        });
+        if (!res.ok) throw new Error();
+        location.reload();
+    } catch {
+        alert('Gagal mempublish dokumen terpilih.');
+    }
 }
 </script>
 @endpush

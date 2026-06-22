@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Proposal;
 use App\Models\ProposalAssignment;
+use App\Models\ProposalFile;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -210,5 +211,28 @@ class ProposalAssignmentController extends Controller
         $proposal->update(['status' => Proposal::STATUS_PUBLISHED]);
 
         return response()->json(['success' => true]);
+    }
+
+    // ── PREVIEW PROPOSAL ───────────────────────────
+    public function previewProposal(Proposal $proposal)
+    {
+        // Get the proposal document file
+        $file = $proposal->files()
+            ->where('file_type', ProposalFile::TYPE_PROPOSAL)
+            ->where('is_active', true)
+            ->latest()
+            ->first();
+        
+        if (!$file) {
+            return response()->json(['error' => 'File proposal tidak ditemukan'], 404);
+        }
+
+        $filePath = storage_path('app/public/' . $file->file_path);
+        
+        if (!file_exists($filePath)) {
+            return response()->json(['error' => 'File tidak ditemukan'], 404);
+        }
+
+        return response()->file($filePath);
     }
 }
