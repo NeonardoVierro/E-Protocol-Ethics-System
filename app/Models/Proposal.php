@@ -44,8 +44,9 @@ class Proposal extends Model
     const STATUS_REVISED            = 'revised';
     const STATUS_APPROVED           = 'approved';
     const STATUS_REJECTED           = 'rejected';
-    const STATUS_WAITING_FOR_PUBLISH= 'waiting_for_publish';
-    const STATUS_PUBLISHED          = 'published';
+    const STATUS_WAITING_FOR_CONFIRMATION = 'waiting_for_confirmation';
+    const STATUS_WAITING_FOR_PUBLISH      = 'waiting_for_publish';
+    const STATUS_PUBLISHED                = 'published';
 
     // ── Review type constants ─────────────────────
     const REVIEW_EXEMPTED   = 'exempted';
@@ -232,10 +233,11 @@ class Proposal extends Model
             self::STATUS_IN_PROCESS          => 'In Process',
             self::STATUS_ON_REVIEW           => 'On Review',
             self::STATUS_REVISED             => 'Revisi',
-            self::STATUS_APPROVED            => 'Approved',
-            self::STATUS_REJECTED            => 'Rejected',
-            self::STATUS_WAITING_FOR_PUBLISH => 'Waiting For Publish',
-            self::STATUS_PUBLISHED           => 'Published',
+            self::STATUS_APPROVED                 => 'Approved',
+            self::STATUS_REJECTED                 => 'Rejected',
+            self::STATUS_WAITING_FOR_CONFIRMATION => 'Waiting For Confirmation',
+            self::STATUS_WAITING_FOR_PUBLISH      => 'Waiting For Publish',
+            self::STATUS_PUBLISHED                => 'Published',
         ][$this->status] ?? $this->status;
     }
 
@@ -248,6 +250,7 @@ class Proposal extends Model
             self::STATUS_REVISED             => 'bg-orange-100 text-orange-800',
             self::STATUS_APPROVED            => 'bg-green-100 text-green-800',
             self::STATUS_REJECTED            => 'bg-red-100 text-red-800',
+            self::STATUS_WAITING_FOR_CONFIRMATION => 'bg-amber-100 text-amber-800',
             self::STATUS_WAITING_FOR_PUBLISH => 'bg-purple-100 text-purple-800',
             self::STATUS_PUBLISHED           => 'bg-teal-100 text-teal-800',
         ][$this->status] ?? 'bg-gray-100 text-gray-800';

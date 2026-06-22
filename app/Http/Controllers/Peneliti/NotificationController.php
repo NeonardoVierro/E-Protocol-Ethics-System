@@ -144,8 +144,11 @@ class NotificationController extends Controller
                 return redirect()->route('reviewer.proposal-masuk');
             
             case Notification::TYPE_DOCUMENT_READY:
-                if (isset($data['ethics_document_id'])) {
-                    return redirect()->route('peneliti.dashboard');
+                if (isset($data['proposal_id'])) {
+                    $proposal = \App\Models\Proposal::find($data['proposal_id']);
+                    if ($proposal && $proposal->status === \App\Models\Proposal::STATUS_WAITING_FOR_CONFIRMATION) {
+                        return redirect()->route('pengajuan.ethical-clearance.confirm', $proposal->id);
+                    }
                 }
                 return redirect()->route('pengajuan.riwayat-pengajuan');
             

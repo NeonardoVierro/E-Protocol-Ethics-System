@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Proposal;
 use App\Models\ProposalAssignment;
-use App\Models\ProposalFile;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +22,7 @@ class ProposalAssignmentController extends Controller
             'new_proposal',
             'in_process',
             'on_review',
+            'waiting_for_confirmation',
             'waiting_for_publish',
             'approved',
             'published',
@@ -136,6 +136,19 @@ class ProposalAssignmentController extends Controller
                 'description' => 'Submission processed and assigned to sekretaris.',
                 'metadata'    => ['assigned_to' => $assignment->assigned_to],
             ]);
+
+            // Notifikasi ke sekretaris
+            \App\Models\Notification::create([
+                'user_id' => $assignment->assigned_to,
+                'title'   => 'Proposal Baru Ditugaskan',
+                'message' => 'Proposal "' . $proposal->title . '" telah dikirim kepada Anda untuk diproses.',
+                'type'    => \App\Models\Notification::TYPE_DOCUMENT_READY,
+                'status'  => \App\Models\Notification::STATUS_UNREAD,
+                'data'    => json_encode([
+                    'proposal_id' => $proposal->id,
+                    'role'        => 'sekretaris',
+                ]),
+            ]);
         });
 
         return response()->json(['success' => true]);
@@ -158,7 +171,14 @@ class ProposalAssignmentController extends Controller
             ->whereNull('sent_at')
             ->delete();
 
+        // Update nomor_ec di proposal dan sinkronisasi ke ethics_documents
         $proposal->update(['nomor_ec' => $request->nomor_ec]);
+
+        // Sinkronisasi penomoran ke ethics_documents
+        $ethicsDocument = \App\Models\EthicsDocument::where('proposal_id', $proposal->id)->first();
+        if ($ethicsDocument) {
+            $ethicsDocument->update(['document_number' => $request->nomor_ec]);
+        }
 
         ProposalAssignment::create([
             'proposal_id' => $proposal->id,
@@ -167,36 +187,6 @@ class ProposalAssignmentController extends Controller
             'role'        => ProposalAssignment::ROLE_KETUA,
             'sent_at'     => null,
         ]);
-
-        return response()->json(['success' => true]);
-    }
-
-    // ── KIRIM KE KETUA ────────────────────────────
-    public function kirimKetua(Proposal $proposal)
-    {
-        $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
-            ->where('role', ProposalAssignment::ROLE_KETUA)
-            ->whereNull('sent_at')
-            ->latest()
-            ->firstOrFail();
-
-        DB::transaction(function () use ($assignment, $proposal) {
-            $assignment->update(['sent_at' => now()]);
-
-            $proposal->update([
-                'ketua_id' => $assignment->assigned_to,
-                'status'   => Proposal::STATUS_WAITING_FOR_PUBLISH,
-            ]);
-
-            // Record activity log for assignment to ketua
-            \App\Models\DocumentLog::create([
-                'proposal_id' => $proposal->id,
-                'user_id'     => auth()->id(),
-                'activity'    => \App\Models\DocumentLog::ACTIVITY_ASSIGN,
-                'description' => 'Submission processed and assigned to ketua.',
-                'metadata'    => ['assigned_to' => $assignment->assigned_to],
-            ]);
-        });
 
         return response()->json(['success' => true]);
     }
@@ -211,28 +201,5 @@ class ProposalAssignmentController extends Controller
         $proposal->update(['status' => Proposal::STATUS_PUBLISHED]);
 
         return response()->json(['success' => true]);
-    }
-
-    // ── PREVIEW PROPOSAL ───────────────────────────
-    public function previewProposal(Proposal $proposal)
-    {
-        // Get the proposal document file
-        $file = $proposal->files()
-            ->where('file_type', ProposalFile::TYPE_PROPOSAL)
-            ->where('is_active', true)
-            ->latest()
-            ->first();
-        
-        if (!$file) {
-            return response()->json(['error' => 'File proposal tidak ditemukan'], 404);
-        }
-
-        $filePath = storage_path('app/public/' . $file->file_path);
-        
-        if (!file_exists($filePath)) {
-            return response()->json(['error' => 'File tidak ditemukan'], 404);
-        }
-
-        return response()->file($filePath);
     }
 }

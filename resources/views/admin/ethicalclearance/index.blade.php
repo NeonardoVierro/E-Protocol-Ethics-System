@@ -162,11 +162,11 @@
                             class="w-full py-3 rounded-xl text-[13.5px] font-bold text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
                             :class="isSaved ? 'bg-purple-600 hover:bg-purple-700' : 'bg-slate-300 cursor-not-allowed'">
                         <i class="fas fa-paper-plane text-sm"></i>
-                        Kirim ke Ketua
+                        Kirim ke Peneliti
                     </button>
                 </div>
                 <p class="text-[11px] text-slate-400 text-center leading-snug -mt-2">
-                    By sending to ketua, the proposal will be moved to the publishing queue.
+                    Dengan mengirim ke peneliti, proposal akan melewati tahap konfirmasi akhir sebelum dikirim ke ketua untuk tanda tangan.
                 </p>
 
             </div>
@@ -325,7 +325,7 @@ function ethicalClearance() {
                 });
                 if (!res.ok) throw new Error();
                 this.isSaved = true;
-                alert('Assignment berhasil disimpan. Klik "Kirim ke Ketua" untuk mengirim.');
+                alert('Assignment berhasil disimpan. Klik "Kirim ke Peneliti" untuk mengirim.');
             } catch {
                 alert('Gagal menyimpan assignment.');
             }
@@ -343,10 +343,10 @@ function ethicalClearance() {
                     body: JSON.stringify({ proposal_id: this.activePropId }),
                 });
                 if (!res.ok) throw new Error();
-                alert('Proposal berhasil dikirim ke ketua.');
+                alert('Proposal berhasil dikirim ke peneliti.');
                 location.reload();
             } catch {
-                alert('Gagal mengirim ke ketua.');
+                alert('Gagal mengirim ke peneliti.');
             }
         },
     };

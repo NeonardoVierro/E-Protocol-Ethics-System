@@ -10,8 +10,10 @@ use App\Models\ReviewFeedback;
 use App\Models\TemplateProposal;
 use App\Models\Notification;
 use App\Models\User;
+use App\Models\EthicsDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class PengajuanController extends Controller
@@ -623,6 +625,112 @@ class PengajuanController extends Controller
         $proposalFiles = session('proposal_step2');
 
         return view('peneliti.pengajuan.review', compact('proposalData', 'proposalFiles'));
+    }
+
+    /**
+     * Show researcher confirmation page for admin-configured ethical clearance
+     */
+    public function showEthicalClearanceConfirmation(Proposal $proposal)
+    {
+        $access = $this->checkAccess();
+        if ($access === 'guest') {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+        if ($access === 'pending') {
+            return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+        }
+
+        if ($proposal->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if ($proposal->status !== Proposal::STATUS_WAITING_FOR_CONFIRMATION) {
+            return redirect()->route('pengajuan.riwayat-pengajuan')->with('info', 'Proposal tidak membutuhkan konfirmasi dokumen saat ini.');
+        }
+
+        $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
+            ->where('role', ProposalAssignment::ROLE_KETUA)
+            ->whereNotNull('sent_at')
+            ->latest()
+            ->first();
+
+        $ethicsDocument = $proposal->ethicsDocument;
+        $proposalFiles = $proposal->files()->where('is_active', true)->get();
+
+        return view('peneliti.pengajuan.ethical-clearance-confirm', compact('proposal', 'assignment', 'ethicsDocument', 'proposalFiles'));
+    }
+
+    public function confirmEthicalClearance(Request $request, Proposal $proposal)
+    {
+        $access = $this->checkAccess();
+        if ($access === 'guest') {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+        if ($access === 'pending') {
+            return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+        }
+
+        if ($proposal->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if ($proposal->status !== Proposal::STATUS_WAITING_FOR_CONFIRMATION) {
+            return redirect()->route('pengajuan.riwayat-pengajuan')->with('info', 'Proposal tidak membutuhkan konfirmasi dokumen saat ini.');
+        }
+
+        $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
+            ->where('role', ProposalAssignment::ROLE_KETUA)
+            ->whereNotNull('sent_at')
+            ->latest()
+            ->firstOrFail();
+
+        DB::transaction(function () use ($proposal, $assignment) {
+            $proposal->update([
+                'status'   => Proposal::STATUS_WAITING_FOR_PUBLISH,
+                'ketua_id' => $assignment->assigned_to,
+            ]);
+
+            $ethicsDocument = EthicsDocument::firstOrCreate(
+                ['proposal_id' => $proposal->id],
+                [
+                    'status'      => EthicsDocument::STATUS_DRAFT,
+                    'document_number' => $proposal->nomor_ec,
+                    'ketua_id'    => $assignment->assigned_to,
+                    'file_path'   => $proposal->ethicsDocument?->file_path ?? '',
+                    'original_name' => $proposal->ethicsDocument?->original_name ?? '',
+                    'notes'       => $proposal->ethicsDocument?->notes ?? 'Dokumen ethical clearance dikonfirmasi oleh peneliti.',
+                ]
+            );
+
+            $ethicsDocument->update([
+                'document_number' => $proposal->nomor_ec,
+                'ketua_id'        => $assignment->assigned_to,
+                'status'          => EthicsDocument::STATUS_DRAFT,
+            ]);
+
+            \App\Models\DocumentLog::create([
+                'proposal_id' => $proposal->id,
+                'ethics_document_id' => $ethicsDocument->id,
+                'user_id'     => Auth::id(),
+                'activity'    => \App\Models\DocumentLog::ACTIVITY_VERIFY,
+                'description' => 'Researcher confirmed ethical clearance documents before ketua signature.',
+                'metadata'    => ['assigned_to' => $assignment->assigned_to],
+            ]);
+
+            \App\Models\Notification::create([
+                'user_id' => $assignment->assigned_to,
+                'title'   => 'Ethical Clearance Siap Ditandatangani',
+                'message' => 'Proposal "' . $proposal->title . '" dengan nomor EC ' . ($proposal->nomor_ec ?? '-') . ' siap untuk ditandatangani oleh Anda.',
+                'type'    => \App\Models\Notification::TYPE_DOCUMENT_READY,
+                'status'  => \App\Models\Notification::STATUS_UNREAD,
+                'data'    => json_encode([
+                    'proposal_id' => $proposal->id,
+                    'ethics_document_id' => $ethicsDocument->id,
+                ]),
+            ]);
+        });
+
+        return redirect()->route('pengajuan.riwayat-pengajuan')->with('success', 'Dokumen ethical clearance berhasil dikonfirmasi. Dokumen akan segera dikirim ke ketua untuk tanda tangan.');
     }
 
     /**

@@ -94,6 +94,8 @@ Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::post('/submit-berkas', [PengajuanController::class, 'submitBerkas'])->name('submit-berkas');
     Route::get('/review', [PengajuanController::class, 'review'])->name('review');
     Route::post('/final-submit', [PengajuanController::class, 'finalSubmit'])->name('final-submit');
+    Route::get('/ethical-clearance/{proposal}/confirm', [PengajuanController::class, 'showEthicalClearanceConfirmation'])->name('ethical-clearance.confirm');
+    Route::post('/ethical-clearance/{proposal}/confirm', [PengajuanController::class, 'confirmEthicalClearance'])->name('ethical-clearance.confirm.submit');
     Route::get('/success', [PengajuanController::class, 'success'])->name('success');
     Route::get('/download-template', [PengajuanController::class, 'downloadTemplate'])->name('download-template');
     Route::get('/riwayat-pengajuan', [PengajuanController::class, 'riwayatPengajuan'])->name('riwayat-pengajuan');

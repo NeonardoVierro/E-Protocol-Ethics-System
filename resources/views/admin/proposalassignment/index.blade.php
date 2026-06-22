@@ -68,14 +68,15 @@
                     <td class="px-4 py-4">
                         @php
                         $statusConfig = [
-                            'new_proposal'        => ['bg-blue-50 text-blue-700',   'New Proposal'],
-                            'in_process'          => ['bg-cyan-50 text-cyan-700',   'In Process'],
-                            'on_review'           => ['bg-yellow-50 text-yellow-700','On Review'],
-                            'revised'             => ['bg-orange-50 text-orange-700','Revisi'],
-                            'approved'            => ['bg-green-50 text-green-700',  'Approved'],
-                            'rejected'            => ['bg-red-50 text-red-600',      'Rejected'],
-                            'waiting_for_publish' => ['bg-purple-50 text-purple-700','Waiting For Publish'],
-                            'published'           => ['bg-teal-50 text-teal-700',    'Published'],
+                            'new_proposal'                => ['bg-blue-50 text-blue-700',   'New Proposal'],
+                            'in_process'                  => ['bg-cyan-50 text-cyan-700',   'In Process'],
+                            'on_review'                   => ['bg-yellow-50 text-yellow-700','On Review'],
+                            'revised'                     => ['bg-orange-50 text-orange-700','Revisi'],
+                            'approved'                    => ['bg-green-50 text-green-700',  'Approved'],
+                            'rejected'                    => ['bg-red-50 text-red-600',      'Rejected'],
+                            'waiting_for_confirmation'    => ['bg-amber-50 text-amber-700','Waiting For Confirmation'],
+                            'waiting_for_publish'         => ['bg-purple-50 text-purple-700','Waiting For Publish'],
+                            'published'                   => ['bg-teal-50 text-teal-700',    'Published'],
                         ];
                         [$badge, $label] = $statusConfig[$proposal->status] ?? ['bg-slate-100 text-slate-600', $proposal->status];
                         @endphp

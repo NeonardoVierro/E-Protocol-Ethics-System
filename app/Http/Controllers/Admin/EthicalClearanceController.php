@@ -140,27 +140,28 @@ class EthicalClearanceController extends Controller
             $assignment->update(['sent_at' => now()]);
 
             $proposal->update([
-                'ketua_id' => $assignment->assigned_to,
-                'status'   => Proposal::STATUS_WAITING_FOR_PUBLISH,
+                'status'   => Proposal::STATUS_WAITING_FOR_CONFIRMATION,
             ]);
 
             \App\Models\DocumentLog::create([
                 'proposal_id' => $proposal->id,
                 'user_id'     => auth()->id(),
                 'activity'    => \App\Models\DocumentLog::ACTIVITY_ASSIGN,
-                'description' => 'Submission processed and assigned to ketua.',
+                'description' => 'Submission processed and sent to researcher for final confirmation.',
                 'metadata'    => ['assigned_to' => $assignment->assigned_to],
             ]);
 
-            // Notify ketua
-            \App\Models\Notification::create([
-                'user_id' => $assignment->assigned_to,
-                'title'   => 'Dokumen Ethical Clearance Menunggu Tanda Tangan',
-                'message' => 'Dokumen untuk proposal "' . $proposal->title . '" telah dikirim untuk ditandatangani. Silakan cek halaman Persetujuan & TTD.',
-                'type'    => \App\Models\Notification::TYPE_DOCUMENT_READY,
-                'status'  => \App\Models\Notification::STATUS_UNREAD,
-                'data'    => json_encode(['proposal_id' => $proposal->id, 'ethics_document_id' => $proposal->ethicsDocument->id ?? null]),
-            ]);
+            // Notify researcher to confirm the ethical clearance details
+            if ($proposal->user_id) {
+                \App\Models\Notification::create([
+                    'user_id' => $proposal->user_id,
+                    'title'   => 'Konfirmasi Dokumen Ethical Clearance',
+                    'message' => 'Proposal "' . $proposal->title . '" telah dikonfigurasi oleh admin. Silakan konfirmasi dokumen sebelum dikirim ke ketua untuk tanda tangan.',
+                    'type'    => \App\Models\Notification::TYPE_DOCUMENT_READY,
+                    'status'  => \App\Models\Notification::STATUS_UNREAD,
+                    'data'    => json_encode(['proposal_id' => $proposal->id, 'status' => Proposal::STATUS_WAITING_FOR_CONFIRMATION]),
+                ]);
+            }
         });
 
         return response()->json(['success' => true]);
