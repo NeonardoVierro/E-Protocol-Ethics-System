@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\Route;
 
 require __DIR__ . '/auth.php';
 
-
 // Auth routes
 Route::middleware('guest')->group(function () {
     Route::get('/', function () {
@@ -41,7 +40,6 @@ Route::post('/login', function () {
 })->name('login.post')->middleware('guest');
 
 Route::post('/register', function () {
-    // Simple register logic - in real app, use proper controller
     $data = request()->validate([
         'name' => 'required',
         'email' => 'required|email|unique:users',
@@ -54,10 +52,8 @@ Route::post('/register', function () {
         'password' => bcrypt($data['password']),
     ]);
 
-    // Assign default role - peneliti
     $user->assignRole('peneliti');
 
-    // Don't login immediately - wait for activation
     return redirect()->route('login')->with('success', 'Registrasi berhasil. Tunggu aktivasi dari sekretaris.');
 })->name('register.post')->middleware('guest');
 
@@ -68,25 +64,18 @@ Route::post('/logout', function () {
     return redirect('/');
 })->name('logout')->middleware('auth');
 
-// Route dashboard peneliti bisa diakses tanpa login
+// Dashboard peneliti bisa diakses tanpa login
 Route::get('/dashboard/peneliti', [ResearcherDashboardController::class, 'index'])
     ->name('peneliti.dashboard');
 
-// ============ ROUTE PANDUAN (Dapat diakses sebelum login) ============
+// ============ ROUTE PANDUAN ============
 Route::prefix('panduan')->name('panduan.')->group(function () {
     Route::get('/syarat-pendaftaran', [PanduanController::class, 'syaratPendaftaran'])->name('syarat-pendaftaran');
     Route::get('/alur-pengajuan', [PanduanController::class, 'alurPengajuan'])->name('alur-pengajuan');
     Route::get('/panduan-reviewer', [PanduanController::class, 'panduanReviewer'])->name('panduan-reviewer');
 });
 
-// ============ ROUTE PANDUAN (Dapat diakses sebelum login) ============
-Route::prefix('panduan')->name('panduan.')->group(function () {
-    Route::get('/syarat-pendaftaran', [PanduanController::class, 'syaratPendaftaran'])->name('syarat-pendaftaran');
-    Route::get('/alur-pengajuan', [PanduanController::class, 'alurPengajuan'])->name('alur-pengajuan');
-    Route::get('/panduan-reviewer', [PanduanController::class, 'panduanReviewer'])->name('panduan-reviewer');
-});
-
-// ============ ROUTE PENGAJUAN (Dapat diakses sebelum login, tapi isinya pesan login) ============
+// ============ ROUTE PENGAJUAN ============
 Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::get('/upload-proposal', [PengajuanController::class, 'uploadProposal'])->name('upload-proposal');
     Route::post('/store', [PengajuanController::class, 'store'])->name('store');
@@ -143,28 +132,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/sekretaris', [SecretaryDashboardController::class, 'index'])
         ->name('sekretaris.dashboard');
 
-    // Route untuk Reviewer
     Route::prefix('reviewer')->name('reviewer.')->group(function () {
-        // Dashboard reviewer
         Route::get('/dashboard', [ReviewerDashboardController::class, 'index'])
             ->name('dashboard');
 
-        // Proposal Masuk
         Route::get('/proposal-masuk', [ProposalMasukController::class, 'index'])
             ->name('proposal-masuk');
 
-        // Review Proposal: keep index redirect but allow opening a specific proposal review
         Route::redirect('/review-proposal', '/reviewer/proposal-masuk')->name('review-proposal');
         Route::get('/review-proposal/{id}', [ReviewProposalController::class, 'show'])->name('review-proposal.show');
         Route::post('/review-proposal', [ReviewProposalController::class, 'store'])->name('review-proposal.store');
 
-        // Reviewer proposal file access (download/preview) for inline reviewers' workspace
         Route::get('/proposal-file/{file}/download', [ReviewProposalController::class, 'downloadProposalFile'])
             ->name('proposal-file.download');
         Route::get('/proposal-file/{file}/preview', [ReviewProposalController::class, 'previewProposalFile'])
             ->name('proposal-file.preview');
 
-        // Notifikasi Reviewer
         Route::get('/notifikasi', [App\Http\Controllers\Reviewer\NotificationController::class, 'index'])->name('notifikasi.index');
         Route::get('/notifikasi/latest', [App\Http\Controllers\Reviewer\NotificationController::class, 'getLatest'])->name('notifikasi.latest');
         Route::post('/notifikasi/mark-read/{id}', [App\Http\Controllers\Reviewer\NotificationController::class, 'markAsRead'])->name('notifikasi.mark-read');
@@ -173,7 +156,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/notifikasi/clear-read', [App\Http\Controllers\Reviewer\NotificationController::class, 'clearRead'])->name('notifikasi.clear-read');
         Route::get('/notifikasi/redirect/{id}', [App\Http\Controllers\Reviewer\NotificationController::class, 'redirectFromNotification'])->name('notifikasi.redirect');
 
-        // Riwayat Review
         Route::get('/riwayat-review', [RiwayatReviewController::class, 'index'])
             ->name('riwayat-review');
         Route::get('/riwayat-review/{id}', [RiwayatReviewController::class, 'show'])
@@ -188,7 +170,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Route untuk Admin
+// ============ ROUTE ADMIN ============
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/ethical-clearance', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'index'])->name('ethicalclearance.index');
     Route::get('/publishing', [App\Http\Controllers\Admin\PublishingController::class, 'index'])->name('publishing.index');
@@ -197,14 +179,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/template-proposal', [App\Http\Controllers\Admin\TemplateProposalController::class, 'index'])->name('templateproposal.index');
     Route::get('/user-management', [App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('usermanagement.index');
 
-    // ── Template Proposal ────────────────────────
     Route::post('templates', [App\Http\Controllers\Admin\TemplateProposalController::class, 'store'])->name('templates.store');
     Route::put('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'update'])->name('templates.update');
     Route::delete('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'destroy'])->name('templates.destroy');
     Route::patch('templates/{template}/toggle', [App\Http\Controllers\Admin\TemplateProposalController::class, 'toggleActive'])->name('templates.toggle');
     Route::get('templates/{template}/download', [App\Http\Controllers\Admin\TemplateProposalController::class, 'download'])->name('templates.download');
 
-    // ── Ethical Clearance ────────────────────────
     Route::prefix('ethical-clearance')->name('ethicalclearance.')->group(function () {
         Route::get('/ketua-list', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'getKetuaList'])->name('ketua-list');
         Route::get('/get-assignment', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'getAssignment'])->name('get-assignment');
@@ -213,28 +193,24 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::post('/generate-nomor-ec', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'generateNomorEc'])->name('generate-nomor-ec');
     });
 
-    // ── Publishing ───────────────────────────────
     Route::prefix('publishing')->name('publishing.')->group(function () {
         Route::post('/{document}/publish', [App\Http\Controllers\Admin\PublishingController::class, 'publish'])->name('publish');
         Route::post('/bulk-publish', [App\Http\Controllers\Admin\PublishingController::class, 'bulkPublish'])->name('bulk-publish');
     });
 
-    // ── Proposal Assignment ──────────────────────
     Route::prefix('proposal-assignment')->name('proposal-assignment.')->group(function () {
-        Route::get   ('/',                            [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'index'])           ->name('index');
-        Route::get   ('/sekretaris-list',             [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'getSekretarisList'])->name('sekretaris-list');
-        Route::post  ('/{proposal}/pilih-sekretaris', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'pilihSekretaris'])  ->name('pilih-sekretaris');
-        Route::post  ('/{proposal}/kirim-sekretaris', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'kirimSekretaris'])  ->name('kirim-sekretaris');
+        Route::get('/', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'index'])->name('index');
+        Route::get('/sekretaris-list', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'getSekretarisList'])->name('sekretaris-list');
+        Route::post('/{proposal}/pilih-sekretaris', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'pilihSekretaris'])->name('pilih-sekretaris');
+        Route::post('/{proposal}/kirim-sekretaris', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'kirimSekretaris'])->name('kirim-sekretaris');
     });
 
-    // ── Proposal View ────────────────────────────
     Route::get('/proposal/{proposal}/preview', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'previewProposal'])->name('proposal.preview');
 });
 
-
-// Route untuk Sekretaris
+// ============ ROUTE SEKRETARIS ============
 Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name('sekretaris.')->group(function () {
-    Route::get('/  ', [SekretarisController::class, 'dashboard'])->name('dashboard');
+    Route::get('/', [SekretarisController::class, 'dashboard'])->name('dashboard');
     Route::get('/manajemen-proposal', [SekretarisController::class, 'manajemenProposal'])->name('manajemen-proposal');
     Route::get('/proposal/{proposal}', [SekretarisController::class, 'showProposal'])->name('proposal.show');
     Route::post('/proposal/{proposal}/review-type', [SekretarisController::class, 'updateReviewType'])->name('proposal.update-review-type');
@@ -243,8 +219,6 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::get('/proposal/{proposal}/activity-logs', [SekretarisController::class, 'activityLogs'])->name('proposal.activity-logs');
     Route::get('/proposal-file/{file}/view', [SekretarisController::class, 'viewProposalFile'])->name('proposal-file.view');
     Route::get('/proposal-file/{file}/download', [SekretarisController::class, 'downloadProposalFile'])->name('proposal-file.download');
-    Route::get('/review-feedback/{feedback}/view', [SekretarisController::class, 'viewReviewFeedbackFile'])->name('review-feedback.file.view');
-    Route::get('/review-feedback/{feedback}/download', [SekretarisController::class, 'downloadReviewFeedbackFile'])->name('review-feedback.file.download');
     Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
     Route::get('/hasil-review/{proposal}', [SekretarisController::class, 'hasilReviewShow'])->name('hasil-review.show');
     Route::get('/keputusan', [SekretarisController::class, 'keputusan'])->name('keputusan');
@@ -255,7 +229,6 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::post('/draf-ethical-clearance/send-to-admin', [SekretarisController::class, 'sendToAdmin'])->name('draf-ethical-clearance.sendToAdmin');
     Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
     Route::get('/arsip-dokumen', [SekretarisController::class, 'arsipDokumen'])->name('arsip-dokumen');
-    Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
     Route::get('/user-management', [SekretarisController::class, 'userManagement'])->name('user-management');
     Route::post('/user-management/activate/{id}', [SekretarisController::class, 'activateUser'])->name('user-management.activate');
 });
@@ -266,3 +239,4 @@ Route::middleware(['auth', 'role:ketua'])->prefix('ketua')->name('ketua.')->grou
     Route::get('/persetujuan-ttd', [App\Http\Controllers\Ketua\KetuaController::class, 'persetujuanTtd'])->name('persetujuan-ttd');
     Route::post('/sign-document', [App\Http\Controllers\Ketua\KetuaController::class, 'signDocument'])->name('sign-document');
 });
+

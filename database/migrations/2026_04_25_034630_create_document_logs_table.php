@@ -10,21 +10,31 @@ return new class extends Migration
     {
         Schema::create('document_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ethics_document_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('proposal_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('ethics_document_id')->nullable()->constrained('ethics_documents')->nullOnDelete();
+            $table->foreignId('proposal_id')->nullable()->constrained('proposals')->nullOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+
             $table->enum('activity', [
-                'upload', 'download', 'view', 'sign', 'publish', 
-                'archive', 'delete', 'update', 'assign', 'verify'
+                'upload',
+                'download',
+                'view',
+                'sign',
+                'publish',
+                'archive',
+                'delete',
+                'update',
+                'assign',
+                'verify',
+                'sent_to_admin',
             ]);
-            $table->string('ip_address')->nullable();
+
+            $table->string('ip_address', 45)->nullable();
             $table->text('description')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
-            
-            $table->index('user_id');
-            $table->index('activity');
-            $table->index('created_at');
+
+            $table->index(['proposal_id', 'activity']);
+            $table->index(['ethics_document_id', 'activity']);
         });
     }
 
