@@ -607,8 +607,8 @@ class SekretarisController extends Controller
         if ($request->status === 'approved') {
             // Generate nomor dokumen sementara (bisa diubah admin nanti)
             $nomorDraft = 'DRAFT-EC-' . now()->format('Ymd') . '-' . str_pad($proposal->id, 4, '0', STR_PAD_LEFT);
-    
-            \App\Models\EthicsDocument::firstOrCreate(
+
+            $ethicsDocument = \App\Models\EthicsDocument::firstOrCreate(
                 ['proposal_id' => $proposal->id],
                 [
                     'document_number' => $nomorDraft,
@@ -618,6 +618,9 @@ class SekretarisController extends Controller
                     'notes'           => 'Draft otomatis dibuat saat proposal disetujui oleh sekretaris.',
                 ]
             );
+
+            // Sinkronisasi nomor draft ke proposal.nomor_ec
+            $proposal->update(['nomor_ec' => $nomorDraft]);
         }
     
         // ── Notifikasi ke peneliti (untuk approved dan rejected saja, revised sudah dihandle di atas) ──

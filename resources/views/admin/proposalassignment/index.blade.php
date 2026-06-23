@@ -35,11 +35,9 @@
         <table class="w-full min-w-[900px]">
             <thead class="bg-slate-50 border-b border-slate-100">
                 <tr>
-                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-6 py-3 w-[28%]">Proposal</th>
-                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3 w-[14%]">Status</th>
-                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3 w-[22%]">Sekretaris</th>
-                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3 w-[22%]">Ketua</th>
-                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3 w-[14%]">Publish</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-6 py-3 w-[40%]">Proposal</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3 w-[20%]">Status</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3 w-[40%]">Sekretaris</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
@@ -47,16 +45,9 @@
                 @php
                     // Cek assignment yang sudah ada
                     $assignSekre = $proposal->assignments->where('role','sekretaris')->sortByDesc('created_at')->first();
-                    $assignKetua = $proposal->assignments->where('role','ketua')->sortByDesc('created_at')->first();
 
                     $sekreSudahDipilih = $assignSekre !== null;
                     $sekreSudahDikirim = $assignSekre && $assignSekre->sent_at;
-                    $ketuaSudahDipilih = $assignKetua !== null;
-                    $ketuaSudahDikirim = $assignKetua && $assignKetua->sent_at;
-
-                    $bolehPilihKetua = $proposal->status === \App\Models\Proposal::STATUS_APPROVED;
-                    $bolehPublish    = $proposal->status === \App\Models\Proposal::STATUS_WAITING_FOR_PUBLISH;
-                    $sudahPublished  = $proposal->status === \App\Models\Proposal::STATUS_PUBLISHED;
                 @endphp
                 <tr class="hover:bg-slate-50/60 transition-colors">
 
@@ -77,14 +68,15 @@
                     <td class="px-4 py-4">
                         @php
                         $statusConfig = [
-                            'new_proposal'        => ['bg-blue-50 text-blue-700',   'New Proposal'],
-                            'in_process'          => ['bg-cyan-50 text-cyan-700',   'In Process'],
-                            'on_review'           => ['bg-yellow-50 text-yellow-700','On Review'],
-                            'revised'             => ['bg-orange-50 text-orange-700','Revisi'],
-                            'approved'            => ['bg-green-50 text-green-700',  'Approved'],
-                            'rejected'            => ['bg-red-50 text-red-600',      'Rejected'],
-                            'waiting_for_publish' => ['bg-purple-50 text-purple-700','Waiting For Publish'],
-                            'published'           => ['bg-teal-50 text-teal-700',    'Published'],
+                            'new_proposal'                => ['bg-blue-50 text-blue-700',   'New Proposal'],
+                            'in_process'                  => ['bg-cyan-50 text-cyan-700',   'In Process'],
+                            'on_review'                   => ['bg-yellow-50 text-yellow-700','On Review'],
+                            'revised'                     => ['bg-orange-50 text-orange-700','Revisi'],
+                            'approved'                    => ['bg-green-50 text-green-700',  'Approved'],
+                            'rejected'                    => ['bg-red-50 text-red-600',      'Rejected'],
+                            'waiting_for_confirmation'    => ['bg-amber-50 text-amber-700','Waiting For Confirmation'],
+                            'waiting_for_publish'         => ['bg-purple-50 text-purple-700','Waiting For Publish'],
+                            'published'                   => ['bg-teal-50 text-teal-700',    'Published'],
                         ];
                         [$badge, $label] = $statusConfig[$proposal->status] ?? ['bg-slate-100 text-slate-600', $proposal->status];
                         @endphp
@@ -110,22 +102,17 @@
                             </div>
                         @elseif($sekreSudahDipilih)
                             {{-- Dipilih tapi belum dikirim --}}
-                            <div class="space-y-1.5">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
-                                        {{ strtoupper(substr($assignSekre->assignedTo->name ?? 'S', 0, 1)) }}
-                                    </div>
-                                    <div class="text-[12.5px] font-semibold text-slate-700">{{ $assignSekre->assignedTo->name ?? '-' }}</div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
+                                    {{ strtoupper(substr($assignSekre->assignedTo->name ?? 'S', 0, 1)) }}
                                 </div>
-                                <div class="flex items-center gap-1.5">
-                                    <button onclick="gantiSekretaris({{ $proposal->id }})"
-                                            class="text-[11px] text-slate-400 hover:text-slate-600 underline cursor-pointer">Ganti</button>
-                                    <span class="text-slate-300">·</span>
-                                    <button onclick="kirimSekretaris({{ $proposal->id }}, this)"
-                                            class="inline-flex items-center gap-1 text-[11.5px] font-semibold text-white bg-[#1e3a5f] hover:bg-[#162d4a] px-2.5 py-1 rounded-lg cursor-pointer transition-colors">
-                                        <i class="fas fa-paper-plane text-[9px]"></i> Kirim
-                                    </button>
-                                </div>
+                                <div class="text-[12.5px] font-semibold text-slate-700">{{ $assignSekre->assignedTo->name ?? '-' }}</div>
+                                <button onclick="gantiSekretaris({{ $proposal->id }})"
+                                        class="text-[11px] text-slate-400 hover:text-slate-600 underline cursor-pointer ml-auto">Ganti</button>
+                                <button onclick="kirimSekretaris({{ $proposal->id }}, this)"
+                                        class="inline-flex items-center gap-1 text-[11.5px] font-semibold text-white bg-[#1e3a5f] hover:bg-[#162d4a] px-2.5 py-1 rounded-lg cursor-pointer transition-colors">
+                                    <i class="fas fa-paper-plane text-[9px]"></i> Kirim
+                                </button>
                             </div>
                         @else
                             {{-- Belum dipilih --}}
@@ -136,75 +123,10 @@
                         @endif
                     </td>
 
-                    {{-- Kolom 4: Ketua --}}
-                    <td class="px-4 py-4">
-                        @if($ketuaSudahDikirim)
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
-                                    {{ strtoupper(substr($assignKetua->assignedTo->name ?? 'K', 0, 1)) }}
-                                </div>
-                                <div>
-                                    <div class="text-[12.5px] font-semibold text-slate-700">{{ $assignKetua->assignedTo->name ?? '-' }}</div>
-                                    @if($proposal->nomor_ec)
-                                    <div class="text-[10.5px] text-slate-400">{{ $proposal->nomor_ec }}</div>
-                                    @endif
-                                    <div class="text-[10.5px] text-emerald-600 flex items-center gap-1">
-                                        <i class="fas fa-check text-[9px]"></i> Terkirim
-                                    </div>
-                                </div>
-                            </div>
-                        @elseif($ketuaSudahDipilih)
-                            <div class="space-y-1.5">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
-                                        {{ strtoupper(substr($assignKetua->assignedTo->name ?? 'K', 0, 1)) }}
-                                    </div>
-                                    <div>
-                                        <div class="text-[12.5px] font-semibold text-slate-700">{{ $assignKetua->assignedTo->name ?? '-' }}</div>
-                                        @if($proposal->nomor_ec)
-                                        <div class="text-[10.5px] text-slate-400">{{ $proposal->nomor_ec }}</div>
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <button onclick="gantiKetua({{ $proposal->id }})"
-                                            class="text-[11px] text-slate-400 hover:text-slate-600 underline cursor-pointer">Ganti</button>
-                                    <span class="text-slate-300">·</span>
-                                    <button onclick="kirimKetua({{ $proposal->id }}, this)"
-                                            class="inline-flex items-center gap-1 text-[11.5px] font-semibold text-white bg-purple-600 hover:bg-purple-700 px-2.5 py-1 rounded-lg cursor-pointer transition-colors">
-                                        <i class="fas fa-paper-plane text-[9px]"></i> Kirim
-                                    </button>
-                                </div>
-                            </div>
-                        @elseif($bolehPilihKetua)
-                            <button @click="openKetuaModal({{ $proposal->id }}, '{{ addslashes($proposal->title) }}')"
-                                    class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-purple-700 border border-purple-300 hover:bg-purple-600 hover:text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
-                                <i class="fas fa-user-tie text-[10px]"></i> Pilih Ketua
-                            </button>
-                        @else
-                            <span class="text-[12px] text-slate-300 italic">Menunggu approved</span>
-                        @endif
-                    </td>
-
-                    {{-- Kolom 5: Publish --}}
-                    <td class="px-4 py-4">
-                        @if($sudahPublished)
-                            <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-teal-600">
-                                <i class="fas fa-circle-check text-[10px]"></i> Published
-                            </span>
-                        @elseif($bolehPublish)
-                            <button onclick="publishProposal({{ $proposal->id }}, this)"
-                                    class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white bg-teal-600 hover:bg-teal-700 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
-                                <i class="fas fa-globe text-[10px]"></i> Publish
-                            </button>
-                        @else
-                            <span class="text-[12px] text-slate-300 italic">—</span>
-                        @endif
-                    </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="px-6 py-16 text-center">
+                    <td colspan="3" class="px-6 py-16 text-center">
                         <i class="fas fa-inbox text-slate-300 text-4xl mb-3 block"></i>
                         <p class="text-[14px] text-slate-400 font-medium">Belum ada proposal masuk</p>
                     </td>
@@ -315,90 +237,6 @@
         </div>
     </div>
 
-    {{-- ══════════════════════════════════════
-         MODAL: Pilih Ketua + Nomor EC
-    ══════════════════════════════════════ --}}
-    <div x-show="ketuaModalOpen" x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center"
-         @keydown.escape.window="ketuaModalOpen = false">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="ketuaModalOpen = false"></div>
-
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100 scale-100"
-             x-transition:leave-end="opacity-0 scale-95">
-
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                <div>
-                    <h3 class="text-[16px] font-bold text-slate-900">Pilih Ketua & Penomoran</h3>
-                    <p class="text-[12px] text-slate-400 mt-0.5 truncate max-w-xs" x-text="ketuaProposalTitle"></p>
-                </div>
-                <button @click="ketuaModalOpen = false" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 cursor-pointer">
-                    <i class="fas fa-xmark text-sm"></i>
-                </button>
-            </div>
-
-            <div class="px-6 py-4">
-                {{-- Nomor EC --}}
-                <div class="mb-4">
-                    <label class="block text-[11.5px] font-semibold text-slate-500 mb-1.5">
-                        Nomor Ethical Clearance <span class="text-red-400">*</span>
-                    </label>
-                    <input type="text" x-model="nomorEC"
-                           placeholder="Contoh: EC/2026/VII/001"
-                           class="w-full px-3.5 py-2.5 text-[13.5px] border border-slate-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 placeholder-slate-400">
-                </div>
-
-                {{-- Daftar Ketua --}}
-                <div class="max-h-[40vh] overflow-y-auto space-y-2">
-                    <div x-show="loadingKetua" class="py-6 text-center">
-                        <i class="fas fa-spinner fa-spin text-slate-400 text-2xl"></i>
-                        <p class="text-[13px] text-slate-400 mt-2">Memuat daftar ketua...</p>
-                    </div>
-
-                    <template x-for="k in ketuaList" :key="k.id">
-                        <div @click="selectedKetua = k.id"
-                             class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all"
-                             :class="selectedKetua === k.id ? 'border-purple-500 bg-purple-50' : 'border-slate-200 hover:border-slate-300'">
-                            <div class="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                                 x-text="k.name.charAt(0).toUpperCase()"></div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-[13.5px] font-semibold text-slate-800" x-text="k.name"></div>
-                                <div class="text-[11.5px] text-slate-400" x-text="k.email"></div>
-                            </div>
-                            <div class="text-right flex-shrink-0">
-                                <div class="text-[11px] font-bold text-slate-500" x-text="k.active_proposals_count + ' proposal'"></div>
-                                <div class="text-[10px] text-slate-400">aktif</div>
-                            </div>
-                            <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                                 :class="selectedKetua === k.id ? 'border-purple-500 bg-purple-500' : 'border-slate-300'">
-                                <div class="w-1.5 h-1.5 rounded-full bg-white" x-show="selectedKetua === k.id"></div>
-                            </div>
-                        </div>
-                    </template>
-                    <p x-show="ketuaList.length === 0 && !loadingKetua" class="text-[13px] text-slate-400 text-center py-6">
-                        Tidak ada ketua aktif tersedia.
-                    </p>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/60">
-                <button @click="ketuaModalOpen = false"
-                        class="px-5 py-2.5 text-[13.5px] font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer">
-                    Batal
-                </button>
-                <button @click="simpanKetua()"
-                        :disabled="!selectedKetua || !nomorEC.trim()"
-                        class="inline-flex items-center gap-2 text-[13.5px] font-semibold px-6 py-2.5 rounded-xl transition-colors"
-                        :class="(selectedKetua && nomorEC.trim()) ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer' : 'bg-slate-100 text-slate-400 cursor-not-allowed'">
-                    <i class="fas fa-user-tie text-xs"></i> Pilih Ketua
-                </button>
-            </div>
-        </div>
-    </div>
 
     {{-- Toast --}}
     <div x-show="toast" x-cloak
@@ -427,15 +265,6 @@ function proposalAssignment() {
         selectedSekretaris:  null,
         loadingSekre:        false,
         activePropId:        null,
-
-        // ── Modal Ketua ───────────────────────────
-        ketuaModalOpen:      false,
-        ketuaList:           [],
-        selectedKetua:       null,
-        loadingKetua:        false,
-        nomorEC:             '',
-        ketuaProposalTitle:  '',
-        activeKetuaPropId:   null,
 
         // ── Toast ─────────────────────────────────
         toast:    false,
@@ -480,49 +309,6 @@ function proposalAssignment() {
                 setTimeout(() => location.reload(), 1500);
             } catch {
                 this.showToast('Gagal memilih sekretaris', 'error');
-            }
-        },
-
-        // ── Open modal ketua ──────────────────────
-        async openKetuaModal(proposalId, title) {
-            this.activeKetuaPropId  = proposalId;
-            this.ketuaProposalTitle = title;
-            this.selectedKetua      = null;
-            this.nomorEC            = '';
-            this.ketuaModalOpen     = true;
-            this.loadingKetua       = true;
-
-            try {
-                const res = await fetch('{{ route("admin.proposal-assignment.ketua-list") }}', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    credentials: 'same-origin',
-                });                
-                this.ketuaList = await res.json();
-            } catch (e) {
-                this.showToast('Gagal memuat daftar ketua', 'error');
-            } finally {
-                this.loadingKetua = false;
-            }
-        },
-
-        // ── Simpan pilihan ketua ──────────────────
-        async simpanKetua() {
-            if (!this.selectedKetua || !this.nomorEC.trim()) return;
-            try {
-                const res = await fetch(`/admin/proposal-assignment/${this.activeKetuaPropId}/pilih-ketua`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                    body: JSON.stringify({ ketua_id: this.selectedKetua, nomor_ec: this.nomorEC }),
-                });
-                if (!res.ok) throw new Error();
-                this.ketuaModalOpen = false;
-                this.showToast('Ketua berhasil dipilih. Klik "Kirim" untuk mengirim.', 'success');
-                setTimeout(() => location.reload(), 1500);
-            } catch {
-                this.showToast('Gagal memilih ketua', 'error');
             }
         },
 
@@ -606,63 +392,10 @@ async function kirimSekretaris(proposalId, btn) {
     );
 }
 
-// ── Kirim Ketua ───────────────────────────────────────────────────
-async function kirimKetua(proposalId, btn) {
-    showKonfirmasiModal(
-        'Proposal beserta nomor EC akan dikirim ke ketua yang dipilih. Tindakan ini akan mengubah status menjadi <strong>Waiting For Publish</strong>.',
-        async () => {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[9px]"></i> Mengirim...';
-            try {
-                const res = await fetch(`/admin/proposal-assignment/${proposalId}/kirim-ketua`, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                });
-                if (!res.ok) throw new Error();
-                location.reload();
-            } catch {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-paper-plane text-[9px]"></i> Kirim';
-                alert('Gagal mengirim ke ketua.');
-            }
-        }
-    );
-}
-
-// ── Publish ───────────────────────────────────────────────────────
-async function publishProposal(proposalId, btn) {
-    showKonfirmasiModal(
-        'Proposal ini akan dipublish ke publik. Tindakan ini <strong>tidak dapat dibatalkan</strong>.',
-        async () => {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[9px]"></i> Publishing...';
-            try {
-                const res = await fetch(`/admin/proposal-assignment/${proposalId}/publish`, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
-                });
-                if (!res.ok) throw new Error();
-                location.reload();
-            } catch {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-globe text-[10px]"></i> Publish';
-                alert('Gagal mempublish proposal.');
-            }
-        }
-    );
-}
-
 // ── Ganti (re-open modal) ─────────────────────────────────────────
 function gantiSekretaris(proposalId) {
     Alpine.$data(document.querySelector('[x-data]')).openSekretarisModal(proposalId);
 }
-
-function gantiKetua(proposalId) {
-    // Cari title dari baris yang diklik
-    const title = '';
-    Alpine.$data(document.querySelector('[x-data]')).openKetuaModal(proposalId, title);
-}
-</script>
 </script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 @endpush

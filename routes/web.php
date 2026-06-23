@@ -94,6 +94,8 @@ Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::post('/submit-berkas', [PengajuanController::class, 'submitBerkas'])->name('submit-berkas');
     Route::get('/review', [PengajuanController::class, 'review'])->name('review');
     Route::post('/final-submit', [PengajuanController::class, 'finalSubmit'])->name('final-submit');
+    Route::get('/ethical-clearance/{proposal}/confirm', [PengajuanController::class, 'showEthicalClearanceConfirmation'])->name('ethical-clearance.confirm');
+    Route::post('/ethical-clearance/{proposal}/confirm', [PengajuanController::class, 'confirmEthicalClearance'])->name('ethical-clearance.confirm.submit');
     Route::get('/success', [PengajuanController::class, 'success'])->name('success');
     Route::get('/download-template', [PengajuanController::class, 'downloadTemplate'])->name('download-template');
     Route::get('/riwayat-pengajuan', [PengajuanController::class, 'riwayatPengajuan'])->name('riwayat-pengajuan');
@@ -102,6 +104,7 @@ Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::get('/riwayat-pengajuan/{proposal}/revisi', [PengajuanController::class, 'showRevisionForm'])->name('riwayat-pengajuan.revision');
     Route::get('/riwayat-pengajuan/{proposal}/revisi/{file}/view', [PengajuanController::class, 'viewRevisionFile'])->name('riwayat-pengajuan.revision-file.view');
     Route::get('/riwayat-pengajuan/{proposal}/revisi/{file}/download', [PengajuanController::class, 'downloadRevisionFile'])->name('riwayat-pengajuan.revision-file.download');
+    Route::get('/riwayat-pengajuan/{proposal}/download-ethics-document', [PengajuanController::class, 'downloadEthicsDocument'])->name('riwayat-pengajuan.download-ethics-document');
     Route::get('/download-template/{template}', [PengajuanController::class, 'downloadFile'])->name('download-template.file');
 });
 
@@ -200,18 +203,32 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'destroy'])->name('templates.destroy');
     Route::patch('templates/{template}/toggle', [App\Http\Controllers\Admin\TemplateProposalController::class, 'toggleActive'])->name('templates.toggle');
     Route::get('templates/{template}/download', [App\Http\Controllers\Admin\TemplateProposalController::class, 'download'])->name('templates.download');
-    
+
+    // ── Ethical Clearance ────────────────────────
+    Route::prefix('ethical-clearance')->name('ethicalclearance.')->group(function () {
+        Route::get('/ketua-list', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'getKetuaList'])->name('ketua-list');
+        Route::get('/get-assignment', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'getAssignment'])->name('get-assignment');
+        Route::post('/pilih-ketua', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'pilihKetua'])->name('pilih-ketua');
+        Route::post('/kirim-ketua', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'kirimKetua'])->name('kirim-ketua');
+        Route::post('/generate-nomor-ec', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'generateNomorEc'])->name('generate-nomor-ec');
+    });
+
+    // ── Publishing ───────────────────────────────
+    Route::prefix('publishing')->name('publishing.')->group(function () {
+        Route::post('/{document}/publish', [App\Http\Controllers\Admin\PublishingController::class, 'publish'])->name('publish');
+        Route::post('/bulk-publish', [App\Http\Controllers\Admin\PublishingController::class, 'bulkPublish'])->name('bulk-publish');
+    });
+
     // ── Proposal Assignment ──────────────────────
     Route::prefix('proposal-assignment')->name('proposal-assignment.')->group(function () {
         Route::get   ('/',                            [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'index'])           ->name('index');
         Route::get   ('/sekretaris-list',             [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'getSekretarisList'])->name('sekretaris-list');
-        Route::get   ('/ketua-list',                  [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'getKetuaList'])     ->name('ketua-list');
         Route::post  ('/{proposal}/pilih-sekretaris', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'pilihSekretaris'])  ->name('pilih-sekretaris');
         Route::post  ('/{proposal}/kirim-sekretaris', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'kirimSekretaris'])  ->name('kirim-sekretaris');
-        Route::post  ('/{proposal}/pilih-ketua',      [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'pilihKetua'])       ->name('pilih-ketua');
-        Route::post  ('/{proposal}/kirim-ketua',      [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'kirimKetua'])       ->name('kirim-ketua');
-        Route::post  ('/{proposal}/publish',          [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'publish'])          ->name('publish');
     });
+
+    // ── Proposal View ────────────────────────────
+    Route::get('/proposal/{proposal}/preview', [App\Http\Controllers\Admin\ProposalAssignmentController::class, 'previewProposal'])->name('proposal.preview');
 });
 
 
@@ -238,8 +255,14 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::post('/draf-ethical-clearance/send-to-admin', [SekretarisController::class, 'sendToAdmin'])->name('draf-ethical-clearance.sendToAdmin');
     Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
     Route::get('/arsip-dokumen', [SekretarisController::class, 'arsipDokumen'])->name('arsip-dokumen');
-    Route::get('/persetujuan-ttd', [SekretarisController::class, 'persetujuanTtd'])->name('persetujuan-ttd');
     Route::get('/arsip', [SekretarisController::class, 'arsip'])->name('arsip');
     Route::get('/user-management', [SekretarisController::class, 'userManagement'])->name('user-management');
     Route::post('/user-management/activate/{id}', [SekretarisController::class, 'activateUser'])->name('user-management.activate');
+});
+
+// ============ ROUTE KETUA ============
+Route::middleware(['auth', 'role:ketua'])->prefix('ketua')->name('ketua.')->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\Ketua\KetuaController::class, 'dashboard'])->name('dashboard');
+    Route::get('/persetujuan-ttd', [App\Http\Controllers\Ketua\KetuaController::class, 'persetujuanTtd'])->name('persetujuan-ttd');
+    Route::post('/sign-document', [App\Http\Controllers\Ketua\KetuaController::class, 'signDocument'])->name('sign-document');
 });
