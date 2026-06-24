@@ -85,6 +85,8 @@ Route::prefix('pengajuan')->name('pengajuan.')->group(function () {
     Route::post('/final-submit', [PengajuanController::class, 'finalSubmit'])->name('final-submit');
     Route::get('/ethical-clearance', [PengajuanController::class, 'ethicalClearance'])->name('ethical-clearance');
     Route::get('/ethical-clearance/{proposal}/confirm', [PengajuanController::class, 'showEthicalClearanceConfirmation'])->name('ethical-clearance.confirm');
+    Route::get('/ethical-clearance/{proposal}/preview', [PengajuanController::class, 'previewEthicalClearance'])->name('ethical-clearance.preview');
+    Route::post('/ethical-clearance/{proposal}/save-preview-data', [PengajuanController::class, 'saveEthicalClearancePreviewData'])->name('ethical-clearance.save-preview-data');
     Route::post('/ethical-clearance/{proposal}/confirm', [PengajuanController::class, 'confirmEthicalClearance'])->name('ethical-clearance.confirm.submit');
     Route::get('/success', [PengajuanController::class, 'success'])->name('success');
     Route::get('/download-template', [PengajuanController::class, 'downloadTemplate'])->name('download-template');
@@ -117,7 +119,11 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('peneliti.dashboard');
         }
 
-        if ($user->hasRole('sekretaris') || $user->hasRole('ketua')) {
+        if ($user->hasRole('ketua')) {
+            return redirect()->route('ketua.dashboard');
+        }
+
+        if ($user->hasRole('sekretaris')) {
             return redirect()->route('sekretaris.dashboard');
         }
 
@@ -190,6 +196,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/ketua-list', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'getKetuaList'])->name('ketua-list');
         Route::get('/get-assignment', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'getAssignment'])->name('get-assignment');
         Route::post('/pilih-ketua', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'pilihKetua'])->name('pilih-ketua');
+        Route::post('/{proposal}/save-preview-data', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'savePreviewData'])->name('save-preview-data');
         Route::post('/kirim-ketua', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'kirimKetua'])->name('kirim-ketua');
         Route::post('/generate-nomor-ec', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'generateNomorEc'])->name('generate-nomor-ec');
     });
@@ -238,6 +245,6 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
 Route::middleware(['auth', 'role:ketua'])->prefix('ketua')->name('ketua.')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\Ketua\KetuaController::class, 'dashboard'])->name('dashboard');
     Route::get('/persetujuan-ttd', [App\Http\Controllers\Ketua\KetuaController::class, 'persetujuanTtd'])->name('persetujuan-ttd');
+    Route::get('/ethics-preview/{document}/download', [App\Http\Controllers\Ketua\KetuaController::class, 'downloadPreviewPdf'])->name('ethics-preview-download');
     Route::post('/sign-document', [App\Http\Controllers\Ketua\KetuaController::class, 'signDocument'])->name('sign-document');
 });
-

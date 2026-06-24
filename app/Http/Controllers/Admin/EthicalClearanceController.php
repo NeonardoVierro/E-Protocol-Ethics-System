@@ -9,11 +9,78 @@ use App\Models\ProposalAssignment;
 use App\Models\User;
 use App\Models\DocumentLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class EthicalClearanceController extends Controller
 {
+    private function decodeNotes($notes): array
+    {
+        $decoded = json_decode($notes ?? '{}', true);
+
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        return ['notes' => (string) ($notes ?? '')];
+    }
+
+    private function resolvePreviewValue(array $data, string $field, array $notes, Proposal $proposal, string $fallback = ''): string
+    {
+        $incoming = $data[$field] ?? null;
+
+        if (is_string($incoming)) {
+            $incoming = trim($incoming);
+        }
+
+        if ($incoming !== null && $incoming !== '') {
+            return $incoming;
+        }
+
+        return $notes[$field] ?? $fallback;
+    }
+
+    private function syncPreviewData(Proposal $proposal, array $data): EthicsDocument
+    {
+        $ethicsDocument = EthicsDocument::where('proposal_id', $proposal->id)->first();
+
+        if (!$ethicsDocument) {
+            $ethicsDocument = EthicsDocument::create([
+                'proposal_id' => $proposal->id,
+                'document_number' => $proposal->nomor_ec ?? '',
+                'status' => EthicsDocument::STATUS_DRAFT,
+                'file_path' => '',
+                'original_name' => $proposal->title ?? 'Ethical-Clearance',
+                'notes' => '{}',
+            ]);
+        }
+
+        $notes = $this->decodeNotes($ethicsDocument->notes);
+        $updated = array_merge($notes, [
+            'title' => $this->resolvePreviewValue($data, 'title', $notes, $proposal, $proposal->title ?? ''),
+            'principal_investigator' => $this->resolvePreviewValue($data, 'principal_investigator', $notes, $proposal, $proposal->researcher?->name ?? $proposal->nama_peneliti ?? ''),
+            'members' => $this->resolvePreviewValue($data, 'members', $notes, $proposal),
+            'institution' => $this->resolvePreviewValue($data, 'institution', $notes, $proposal, optional($proposal->researcher)->institution ?? $proposal->asal_instansi ?? ''),
+            'research_place' => $this->resolvePreviewValue($data, 'research_place', $notes, $proposal),
+        ]);
+
+        if (!isset($updated['assigned_admin_id']) && Auth::check()) {
+            $updated['assigned_admin_id'] = Auth::id();
+        }
+
+        if (!isset($updated['assigned_at'])) {
+            $updated['assigned_at'] = now()->toDateTimeString();
+        }
+
+        $ethicsDocument->update([
+            'notes' => json_encode($updated),
+            'document_number' => $proposal->nomor_ec ?? $ethicsDocument->document_number,
+        ]);
+
+        return $ethicsDocument;
+    }
+
     public function index()
     {
         $docs = EthicsDocument::with('proposal', 'ketua')
@@ -99,6 +166,11 @@ class EthicalClearanceController extends Controller
                 'regex:/^EC-\d{4}-\d{2}-\d{4}$/',
                 Rule::unique('proposals', 'nomor_ec')->ignore($request->proposal_id),
             ],
+            'title' => 'nullable|string|max:255',
+            'principal_investigator' => 'nullable|string|max:255',
+            'members' => 'nullable|string',
+            'institution' => 'nullable|string|max:255',
+            'research_place' => 'nullable|string|max:255',
         ], [
             'proposal_id.required' => 'Proposal belum dipilih.',
             'proposal_id.exists' => 'Proposal tidak valid.',
@@ -130,15 +202,17 @@ class EthicalClearanceController extends Controller
 
         ProposalAssignment::create([
             'proposal_id' => $proposal->id,
-            'assigned_by' => auth()->id(),
+            'assigned_by' => Auth::id(),
             'assigned_to' => $validated['ketua_id'],
             'role'        => ProposalAssignment::ROLE_KETUA,
             'sent_at'     => null,
         ]);
 
+        $this->syncPreviewData($proposal, $validated);
+
         DocumentLog::create([
             'proposal_id' => $proposal->id,
-            'user_id'     => auth()->id(),
+            'user_id'     => Auth::id(),
             'activity'    => DocumentLog::ACTIVITY_ASSIGN,
             'description' => 'Ketua dipilih dan proposal menunggu validasi peneliti.',
             'metadata'    => [
@@ -162,6 +236,21 @@ class EthicalClearanceController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Assignment berhasil disimpan.']);
+    }
+
+    public function savePreviewData(Request $request, Proposal $proposal)
+    {
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:255',
+            'principal_investigator' => 'nullable|string|max:255',
+            'members' => 'nullable|string',
+            'institution' => 'nullable|string|max:255',
+            'research_place' => 'nullable|string|max:255',
+        ]);
+
+        $this->syncPreviewData($proposal, $validated);
+
+        return response()->json(['success' => true]);
     }
 
     public function confirmEthicalClearance(Request $request)
@@ -195,7 +284,7 @@ class EthicalClearanceController extends Controller
 
             DocumentLog::create([
                 'proposal_id' => $proposal->id,
-                'user_id'     => auth()->id(),
+                'user_id'     => Auth::id(),
                 'activity'    => DocumentLog::ACTIVITY_SIGN,
                 'description' => 'Dokumen dikirim ke ketua untuk tanda tangan.',
                 'metadata'    => [

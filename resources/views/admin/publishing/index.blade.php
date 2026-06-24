@@ -139,10 +139,20 @@
                 </td>
                 <td class="px-6 py-4">
                     <div class="flex items-center justify-end gap-2">
+                        @php
+                            $previewUrl = $doc->file_path ? Storage::disk('public')->url($doc->file_path) : null;
+                        @endphp
+                        @if($previewUrl)
+                        <a href="{{ $previewUrl }}" target="_blank" rel="noopener noreferrer"
+                           class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="Preview">
+                            <i class="fas fa-eye text-xs"></i>
+                        </a>
+                        @else
                         <button onclick="featureInDevelopment('Preview Sertifikat')"
                                 class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="Preview">
                             <i class="fas fa-eye text-xs"></i>
                         </button>
+                        @endif
                         <button onclick="featureInDevelopment('Export')"
                                 class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="Export">
                             <i class="fas fa-arrow-up-right-from-square text-xs"></i>
@@ -166,26 +176,26 @@
     </table>
 
     {{-- Pagination --}}
-    @if($proposals->hasPages())
+    @if($docs->hasPages())
     <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100">
         <span class="text-[12.5px] text-slate-400">
-            Showing {{ $proposals->firstItem() }}–{{ $proposals->lastItem() }} of {{ $proposals->total() }}
+            Showing {{ $docs->firstItem() }}–{{ $docs->lastItem() }} of {{ $docs->total() }}
         </span>
         <div class="flex items-center gap-1">
-            @if($proposals->onFirstPage())
+            @if($docs->onFirstPage())
                 <span class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-300 cursor-not-allowed"><i class="fas fa-chevron-left text-xs"></i></span>
             @else
-                <a href="{{ $proposals->previousPageUrl() }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><i class="fas fa-chevron-left text-xs"></i></a>
+                <a href="{{ $docs->previousPageUrl() }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><i class="fas fa-chevron-left text-xs"></i></a>
             @endif
-            @foreach($proposals->getUrlRange(1, $proposals->lastPage()) as $page => $url)
-                @if($page == $proposals->currentPage())
+            @foreach($docs->getUrlRange(1, $docs->lastPage()) as $page => $url)
+                @if($page == $docs->currentPage())
                     <span class="w-8 h-8 flex items-center justify-center bg-[#1e3a5f] text-white text-[13px] font-semibold rounded-lg">{{ $page }}</span>
                 @else
                     <a href="{{ $url }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-[13px] text-slate-600 hover:bg-slate-50 transition-colors">{{ $page }}</a>
                 @endif
             @endforeach
-            @if($proposals->hasMorePages())
-                <a href="{{ $proposals->nextPageUrl() }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><i class="fas fa-chevron-right text-xs"></i></a>
+            @if($docs->hasMorePages())
+                <a href="{{ $docs->nextPageUrl() }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><i class="fas fa-chevron-right text-xs"></i></a>
             @else
                 <span class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-300 cursor-not-allowed"><i class="fas fa-chevron-right text-xs"></i></span>
             @endif

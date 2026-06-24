@@ -27,11 +27,11 @@ class PengajuanController extends Controller
         if (!Auth::check()) {
             return 'guest';
         }
-        
+
         if (Auth::user()->status !== 'active') {
             return 'pending';
         }
-        
+
         return null; // aktif, bisa akses
     }
 
@@ -41,7 +41,7 @@ class PengajuanController extends Controller
     public function uploadProposal()
     {
         $access = $this->checkAccess();
-        
+
         if ($access === 'guest') {
             return view('peneliti.pengajuan.guest-message', [
                 'title' => 'Upload Proposal',
@@ -49,7 +49,7 @@ class PengajuanController extends Controller
                 'icon' => 'upload_file'
             ]);
         }
-        
+
         if ($access === 'pending') {
             return view('peneliti.pengajuan.pending-message', [
                 'title' => 'Upload Proposal',
@@ -57,7 +57,7 @@ class PengajuanController extends Controller
                 'icon' => 'pending'
             ]);
         }
-        
+
         // User aktif - tampilkan konten sebenarnya
         $templates = TemplateProposal::where('is_active', true)
             ->orderBy('kategori')
@@ -65,7 +65,7 @@ class PengajuanController extends Controller
             ->get();
 
         $proposalData = session('proposal_step1', []);
-        
+
         return view('peneliti.pengajuan.upload-proposal', compact('templates', 'proposalData'));
     }
 
@@ -75,7 +75,7 @@ class PengajuanController extends Controller
     public function downloadTemplate()
     {
         $access = $this->checkAccess();
-        
+
         if ($access === 'guest') {
             return view('peneliti.pengajuan.guest-message', [
                 'title' => 'Download Template',
@@ -83,7 +83,7 @@ class PengajuanController extends Controller
                 'icon' => 'download'
             ]);
         }
-        
+
         if ($access === 'pending') {
             return view('peneliti.pengajuan.pending-message', [
                 'title' => 'Download Template',
@@ -91,7 +91,7 @@ class PengajuanController extends Controller
                 'icon' => 'pending'
             ]);
         }
-        
+
         // User aktif - tampilkan konten sebenarnya
         $templates = TemplateProposal::where('is_active', true)
             ->orderBy('kategori')
@@ -108,7 +108,7 @@ class PengajuanController extends Controller
     public function riwayatPengajuan()
     {
         $access = $this->checkAccess();
-        
+
         if ($access === 'guest') {
             return view('peneliti.pengajuan.guest-message', [
                 'title' => 'Riwayat Pengajuan',
@@ -116,7 +116,7 @@ class PengajuanController extends Controller
                 'icon' => 'history'
             ]);
         }
-        
+
         if ($access === 'pending') {
             return view('peneliti.pengajuan.pending-message', [
                 'title' => 'Riwayat Pengajuan',
@@ -124,12 +124,12 @@ class PengajuanController extends Controller
                 'icon' => 'pending'
             ]);
         }
-        
+
         // User aktif - tampilkan konten sebenarnya
         $proposals = Proposal::with(['reviewFeedbacks' => function ($query) {
-                $query->where('is_submitted', true)
-                      ->with(['review.reviewer']);
-            }])
+            $query->where('is_submitted', true)
+                ->with(['review.reviewer']);
+        }])
             ->where('user_id', Auth::id())
             ->orderByDesc('submission_date')
             ->orderByDesc('created_at')
@@ -270,15 +270,15 @@ class PengajuanController extends Controller
         // Load ALL proposal document versions (including all revisions submitted so far)
         // This allows researcher to see previous revision versions when uploading new revisions
         $files = \App\Models\ProposalFile::where('proposal_id', $proposal->id)
-                    ->orderByDesc('version')
-                    ->get()
-                    ->groupBy(function ($f) {
-                        // Prefer group_name if exists (new revisions), fallback to original_name
-                        return $f->group_name ?? $f->original_name; // group by persistent identity
-                    });
+            ->orderByDesc('version')
+            ->get()
+            ->groupBy(function ($f) {
+                // Prefer group_name if exists (new revisions), fallback to original_name
+                return $f->group_name ?? $f->original_name; // group by persistent identity
+            });
 
         $revisions = $proposal->revisions()->with('file')->orderByDesc('submitted_date')->get();
-        
+
         // Check if there's a pending revision request (researcher can upload if status is 'requested')
         $canUploadRevision = $proposal->revisions()
             ->where('status', \App\Models\ProposalRevision::STATUS_REQUESTED)
@@ -361,7 +361,7 @@ class PengajuanController extends Controller
                 $groupKey = $target->group_name ?? $target->original_name;
                 $displayName = $file->getClientOriginalName();
                 $maxVersion = \App\Models\ProposalFile::where('proposal_id', $proposal->id)
-                    ->where(function($q) use ($groupKey) {
+                    ->where(function ($q) use ($groupKey) {
                         $q->where('group_name', $groupKey)->orWhere('original_name', $groupKey);
                     })
                     ->max('version');
@@ -418,14 +418,14 @@ class PengajuanController extends Controller
         // Pastikan proposal revisi kembali berada di tab "In Process" untuk sekretaris yang bertanggung jawab.
         $sekretarisId = $proposal->sekretaris_id
             ?? ProposalAssignment::where('proposal_id', $proposal->id)
-                ->where('role', ProposalAssignment::ROLE_SEKRETARIS)
-                ->value('assigned_to');
+            ->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+            ->value('assigned_to');
 
         // Jika belum ada sekretaris yang pernah ditetapkan, pilih satu sekretaris aktif secara default
         if (! $sekretarisId) {
             $candidate = User::whereHas('roles', function ($q) {
-                    $q->where('name', 'sekretaris');
-                })->where('status', 'active')->first();
+                $q->where('name', 'sekretaris');
+            })->where('status', 'active')->first();
 
             if ($candidate) {
                 $sekretarisId = $candidate->id;
@@ -475,7 +475,7 @@ class PengajuanController extends Controller
     public function store(Request $request)
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu untuk mengajukan proposal.');
@@ -506,7 +506,7 @@ class PengajuanController extends Controller
     public function uploadBerkas()
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -536,7 +536,7 @@ class PengajuanController extends Controller
     public function submitBerkas(Request $request)
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -607,7 +607,7 @@ class PengajuanController extends Controller
     public function review()
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -643,14 +643,248 @@ class PengajuanController extends Controller
         $documents = EthicsDocument::with('proposal')
             ->whereHas('proposal', function ($query) {
                 $query->where('user_id', Auth::id())
-                      ->whereIn('status', [Proposal::STATUS_WAITING_FOR_CONFIRMATION, Proposal::STATUS_WITH_CHAIR]);
+                    ->whereIn('status', [Proposal::STATUS_WAITING_FOR_CONFIRMATION, Proposal::STATUS_WITH_CHAIR, Proposal::STATUS_PUBLISHED]);
             })
-            ->where('status', EthicsDocument::STATUS_DRAFT)
-            ->whereRaw("JSON_VALID(notes) = 1 AND JSON_EXTRACT(notes, '$.assigned_admin_id') IS NOT NULL")
+            ->whereIn('status', [EthicsDocument::STATUS_DRAFT, EthicsDocument::STATUS_PUBLISHED])
+            ->where(function ($query) {
+                $query->whereRaw("JSON_VALID(notes) = 1 AND JSON_EXTRACT(notes, '$.assigned_admin_id') IS NOT NULL")
+                    ->orWhere('status', EthicsDocument::STATUS_PUBLISHED);
+            })
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            ->groupBy('proposal_id')
+            ->map(fn($group) => $group->first())
+            ->values();
 
         return view('peneliti.pengajuan.ethical-clearance', compact('documents'));
+    }
+
+    private function resolvePreviewValue(array $data, string $field, array $notes, Proposal $proposal, string $fallback = ''): string
+    {
+        $incoming = $data[$field] ?? null;
+
+        if (is_string($incoming)) {
+            $incoming = trim($incoming);
+        }
+
+        if ($incoming !== null && $incoming !== '') {
+            return (string) $incoming;
+        }
+
+        $noteValue = $notes[$field] ?? null;
+        if (is_string($noteValue)) {
+            $noteValue = trim($noteValue);
+        }
+
+        if ($noteValue !== null && $noteValue !== '') {
+            return (string) $noteValue;
+        }
+
+        return $fallback;
+    }
+
+    private function getLatestDraftDocument(Proposal $proposal): ?EthicsDocument
+    {
+        return EthicsDocument::where('proposal_id', $proposal->id)
+            ->where('status', EthicsDocument::STATUS_DRAFT)
+            ->latest('created_at')
+            ->first();
+    }
+
+    private function resolveRevisionDocumentNumber(?EthicsDocument $sourceDocument, Proposal $proposal, ?int $currentDocumentId = null): string
+    {
+        $baseNumber = trim((string) ($proposal->nomor_ec ?? $sourceDocument?->document_number ?? ''));
+
+        if ($baseNumber === '') {
+            $baseNumber = 'EC-' . now()->format('Y-m-d');
+        }
+
+        $candidate = $baseNumber;
+        $counter = 1;
+
+        while (
+            EthicsDocument::where('document_number', $candidate)
+            ->when($currentDocumentId !== null, fn($query) => $query->where('id', '!=', $currentDocumentId))
+            ->exists()
+        ) {
+            $candidate = $baseNumber . '-rev-' . $counter++;
+        }
+
+        return $candidate;
+    }
+
+    private function buildCertificatePreviewData(Proposal $proposal, ?EthicsDocument $ethicsDocument = null, ?ProposalAssignment $assignment = null): array
+    {
+        $notes = [];
+
+        if ($ethicsDocument) {
+            $decoded = json_decode($ethicsDocument->notes ?: '{}', true);
+            if (is_array($decoded)) {
+                $notes = $decoded;
+            } else {
+                $notes = ['notes' => (string) $ethicsDocument->notes];
+            }
+        }
+
+        if (!$assignment) {
+            $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
+                ->where('role', ProposalAssignment::ROLE_KETUA)
+                ->latest('created_at')
+                ->first();
+        }
+
+        return [
+            'title' => $this->resolvePreviewValue([], 'title', $notes, $proposal, $proposal->title ?? ''),
+            'principal_investigator' => $this->resolvePreviewValue([], 'principal_investigator', $notes, $proposal, $proposal->researcher?->name ?? $proposal->nama_peneliti ?? ''),
+            'members' => $this->resolvePreviewValue([], 'members', $notes, $proposal),
+            'institution' => $this->resolvePreviewValue([], 'institution', $notes, $proposal, optional($proposal->researcher)->institution ?? $proposal->asal_instansi ?? ''),
+            'research_place' => $this->resolvePreviewValue([], 'research_place', $notes, $proposal),
+            'nomor_ec' => $this->resolvePreviewValue([], 'nomor_ec', $notes, $proposal, $proposal->nomor_ec ?? $ethicsDocument?->document_number ?? ''),
+            'chair_name' => $this->resolvePreviewValue([], 'chair_name', $notes, $proposal, $assignment?->assignedTo?->name ?? ''),
+            'assigned_admin_id' => $notes['assigned_admin_id'] ?? null,
+            'assigned_at' => $notes['assigned_at'] ?? null,
+        ];
+    }
+
+    private function buildCertificatePdf(EthicsDocument $ethicsDocument, Proposal $proposal): array
+    {
+        $notes = [];
+        if (!empty($ethicsDocument->notes)) {
+            $decoded = json_decode($ethicsDocument->notes, true);
+            if (is_array($decoded)) {
+                $notes = $decoded;
+            } else {
+                $notes = ['notes' => (string) $ethicsDocument->notes];
+            }
+        }
+
+        $certificatePreviewData = [
+            'title' => $this->resolvePreviewValue([], 'title', $notes, $proposal, $proposal->title ?? '-'),
+            'principal_investigator' => $this->resolvePreviewValue([], 'principal_investigator', $notes, $proposal, $proposal->researcher?->name ?? $proposal->nama_peneliti ?? '-'),
+            'members' => $this->resolvePreviewValue([], 'members', $notes, $proposal, '-'),
+            'institution' => $this->resolvePreviewValue([], 'institution', $notes, $proposal, optional($proposal->researcher)->institution ?? $proposal->asal_instansi ?? '-'),
+            'research_place' => $this->resolvePreviewValue([], 'research_place', $notes, $proposal, '-'),
+            'nomor_ec' => $ethicsDocument->document_number ?: $proposal->nomor_ec ?: '-',
+            'chair_name' => $this->resolvePreviewValue([], 'chair_name', $notes, $proposal, 'Ketua Komite Etik'),
+        ];
+
+        $view = view('peneliti.pengajuan.partials.ethical-clearance-document', [
+            'certificatePreviewData' => $certificatePreviewData,
+            'issuedAt' => now()->locale('id')->isoFormat('D MMMM Y'),
+            'pdfMode' => true,
+        ])->render();
+
+        $fileName = 'ethical-clearance-' . $proposal->id . '-' . $ethicsDocument->id . '-' . now()->format('YmdHis') . '.pdf';
+        $path = 'ethics-documents/' . $fileName;
+
+        $pdfContent = $this->renderHtmlToPdf($view);
+        Storage::disk('public')->put($path, $pdfContent);
+
+        return ['path' => $path, 'file_name' => $fileName];
+    }
+
+    private function buildSimplePdf(array $lines): string
+    {
+        $escapedLines = array_map(function ($line) {
+            return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], (string) $line);
+        }, $lines);
+
+        $content = '';
+        $y = 760;
+        foreach ($escapedLines as $line) {
+            $content .= "BT /F1 12 Tf 50 {$y} Td ({$line}) Tj ET\n";
+            $y -= 16;
+        }
+
+        $objects = [];
+        $objects[] = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj";
+        $objects[] = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj";
+        $objects[] = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj";
+        $objects[] = "4 0 obj\n<< /Length 0 >>\nstream\n{$content}endstream\nendobj";
+        $objects[] = "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj";
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [];
+        $offset = strlen($pdf);
+
+        foreach ($objects as $object) {
+            $offsets[] = $offset;
+            $pdf .= $object . "\n";
+            $offset = strlen($pdf);
+        }
+
+        $xrefPosition = strlen($pdf);
+        $pdf .= "xref\n0 6\n0000000000 65535 f \n";
+        foreach ($offsets as $offsetValue) {
+            $pdf .= sprintf("%010d 00000 n \n", $offsetValue);
+        }
+
+        $pdf .= "trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{$xrefPosition}\n%%EOF";
+
+        return $pdf;
+    }
+
+    private function renderHtmlToPdf(string $html): string
+    {
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+            $pdf->setPaper('a4', 'portrait');
+            return $pdf->output();
+        }
+
+        return $this->buildSimplePdf([
+            'DOMPDF not available',
+            'Please install barryvdh/laravel-dompdf',
+        ]);
+    }
+
+    private function ensurePreviewData(Proposal $proposal): EthicsDocument
+    {
+        $ethicsDocument = $this->getLatestDraftDocument($proposal) ?? $proposal->ethicsDocument;
+
+        if (!$ethicsDocument) {
+            $ethicsDocument = EthicsDocument::create([
+                'proposal_id' => $proposal->id,
+                'document_number' => $proposal->nomor_ec ?? '',
+                'status' => EthicsDocument::STATUS_DRAFT,
+                'file_path' => '',
+                'original_name' => $proposal->title ?? 'Ethical-Clearance',
+                'notes' => '{}',
+            ]);
+        }
+
+        $notes = json_decode($ethicsDocument->notes ?: '{}', true);
+        if (!is_array($notes)) {
+            $notes = ['notes' => (string) $ethicsDocument->notes];
+        }
+
+        $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
+            ->where('role', ProposalAssignment::ROLE_KETUA)
+            ->latest('created_at')
+            ->first();
+
+        $defaults = [
+            'title' => $this->resolvePreviewValue([], 'title', $notes, $proposal, $proposal->title ?? ''),
+            'principal_investigator' => $this->resolvePreviewValue([], 'principal_investigator', $notes, $proposal, $proposal->researcher?->name ?? $proposal->nama_peneliti ?? ''),
+            'members' => $this->resolvePreviewValue([], 'members', $notes, $proposal),
+            'institution' => $this->resolvePreviewValue([], 'institution', $notes, $proposal, optional($proposal->researcher)->institution ?? $proposal->asal_instansi ?? ''),
+            'research_place' => $this->resolvePreviewValue([], 'research_place', $notes, $proposal),
+            'nomor_ec' => $this->resolvePreviewValue([], 'nomor_ec', $notes, $proposal, $proposal->nomor_ec ?? $ethicsDocument->document_number ?? ''),
+            'chair_name' => $assignment?->assignedTo?->name ?? $notes['chair_name'] ?? '',
+        ];
+
+        $updatedNotes = array_merge($notes, $defaults);
+        $updatedPayload = json_encode($updatedNotes);
+        $documentNumber = $this->resolveRevisionDocumentNumber($ethicsDocument, $proposal, $ethicsDocument->id);
+
+        if ($ethicsDocument->notes !== $updatedPayload || $ethicsDocument->document_number !== $documentNumber) {
+            $ethicsDocument->update([
+                'notes' => $updatedPayload,
+                'document_number' => $documentNumber,
+            ]);
+        }
+
+        return $ethicsDocument;
     }
 
     /**
@@ -676,14 +910,87 @@ class PengajuanController extends Controller
 
         $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
             ->where('role', ProposalAssignment::ROLE_KETUA)
-            ->whereNotNull('sent_at')
-            ->latest()
+            ->latest('created_at')
             ->first();
 
-        $ethicsDocument = $proposal->ethicsDocument;
+        $ethicsDocument = $this->ensurePreviewData($proposal);
+        $certificatePreviewData = $this->buildCertificatePreviewData($proposal, $ethicsDocument, $assignment);
         $proposalFiles = $proposal->files()->where('is_active', true)->get();
 
-        return view('peneliti.pengajuan.ethical-clearance-confirm', compact('proposal', 'assignment', 'ethicsDocument', 'proposalFiles'));
+        return view('peneliti.pengajuan.ethical-clearance-confirm', compact('proposal', 'assignment', 'ethicsDocument', 'proposalFiles', 'certificatePreviewData'));
+    }
+
+    public function saveEthicalClearancePreviewData(Request $request, Proposal $proposal)
+    {
+        $access = $this->checkAccess();
+        if ($access === 'guest') {
+            return response()->json(['success' => false, 'message' => 'Silakan login terlebih dahulu.'], 401);
+        }
+        if ($access === 'pending') {
+            return response()->json(['success' => false, 'message' => 'Akun Anda belum diaktivasi.'], 403);
+        }
+
+        if ($proposal->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if (!in_array($proposal->status, [Proposal::STATUS_WAITING_FOR_CONFIRMATION, Proposal::STATUS_WITH_CHAIR], true)) {
+            return response()->json(['success' => false, 'message' => 'Proposal tidak membutuhkan konfirmasi dokumen saat ini.'], 422);
+        }
+
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:255',
+            'principal_investigator' => 'nullable|string|max:255',
+            'members' => 'nullable|string',
+            'institution' => 'nullable|string|max:255',
+            'research_place' => 'nullable|string|max:255',
+        ]);
+
+        $sourceDocument = $this->getLatestDraftDocument($proposal) ?? $proposal->ethicsDocument;
+
+        if (!$sourceDocument) {
+            $sourceDocument = EthicsDocument::create([
+                'proposal_id' => $proposal->id,
+                'document_number' => $proposal->nomor_ec ?? '',
+                'status' => EthicsDocument::STATUS_DRAFT,
+                'file_path' => '',
+                'original_name' => $proposal->title ?? 'Ethical-Clearance',
+                'notes' => '{}',
+            ]);
+        }
+
+        $notes = json_decode($sourceDocument->notes ?: '{}', true);
+        if (!is_array($notes)) {
+            $notes = ['notes' => (string) $sourceDocument->notes];
+        }
+
+        $updatedNotes = array_merge($notes, [
+            'title' => $this->resolvePreviewValue($validated, 'title', $notes, $proposal, $proposal->title ?? ''),
+            'principal_investigator' => $this->resolvePreviewValue($validated, 'principal_investigator', $notes, $proposal, $proposal->researcher?->name ?? $proposal->nama_peneliti ?? ''),
+            'members' => $this->resolvePreviewValue($validated, 'members', $notes, $proposal),
+            'institution' => $this->resolvePreviewValue($validated, 'institution', $notes, $proposal, optional($proposal->researcher)->institution ?? $proposal->asal_instansi ?? ''),
+            'research_place' => $this->resolvePreviewValue($validated, 'research_place', $notes, $proposal),
+        ]);
+
+        $ethicsDocument = $sourceDocument;
+        $newPayload = json_encode($updatedNotes);
+
+        if ($sourceDocument->notes !== $newPayload) {
+            $ethicsDocument = EthicsDocument::create([
+                'proposal_id' => $proposal->id,
+                'document_number' => $this->resolveRevisionDocumentNumber($sourceDocument, $proposal),
+                'ketua_id' => $sourceDocument->ketua_id,
+                'status' => EthicsDocument::STATUS_DRAFT,
+                'file_path' => $sourceDocument->file_path ?? '',
+                'original_name' => $sourceDocument->original_name ?? $proposal->title ?? 'Ethical-Clearance',
+                'notes' => $newPayload,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->buildCertificatePreviewData($proposal, $ethicsDocument),
+        ]);
     }
 
     public function confirmEthicalClearance(Request $request, Proposal $proposal)
@@ -716,22 +1023,32 @@ class PengajuanController extends Controller
                 'ketua_id' => $assignment->assigned_to,
             ]);
 
-            $ethicsDocument = EthicsDocument::firstOrCreate(
-                ['proposal_id' => $proposal->id],
-                [
+            $ethicsDocument = $this->getLatestDraftDocument($proposal);
+            $documentNumber = $proposal->nomor_ec ?: ($ethicsDocument?->document_number ?: 'EC-' . now()->format('Y-m-d'));
+            $resolvedDocumentNumber = $this->resolveRevisionDocumentNumber($ethicsDocument, $proposal, $ethicsDocument?->id);
+
+            if (!$ethicsDocument) {
+                $ethicsDocument = EthicsDocument::create([
+                    'proposal_id' => $proposal->id,
                     'status' => EthicsDocument::STATUS_DRAFT,
-                    'document_number' => $proposal->nomor_ec,
+                    'document_number' => $resolvedDocumentNumber,
                     'ketua_id' => $assignment->assigned_to,
                     'file_path' => $proposal->ethicsDocument?->file_path ?? '',
                     'original_name' => $proposal->ethicsDocument?->original_name ?? '',
                     'notes' => $proposal->ethicsDocument?->notes ?? 'Dokumen ethical clearance dikonfirmasi oleh peneliti.',
-                ]
-            );
+                ]);
+            } else {
+                $ethicsDocument->update([
+                    'document_number' => $resolvedDocumentNumber,
+                    'ketua_id' => $assignment->assigned_to,
+                    'status' => EthicsDocument::STATUS_DRAFT,
+                ]);
+            }
 
+            $pdfData = $this->buildCertificatePdf($ethicsDocument, $proposal);
             $ethicsDocument->update([
-                'document_number' => $proposal->nomor_ec,
-                'ketua_id' => $assignment->assigned_to,
-                'status' => EthicsDocument::STATUS_DRAFT,
+                'file_path' => $pdfData['path'],
+                'original_name' => $pdfData['file_name'],
             ]);
 
             $assignment->update(['sent_at' => now()]);
@@ -771,7 +1088,7 @@ class PengajuanController extends Controller
     public function finalSubmit(Request $request)
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -831,18 +1148,18 @@ class PengajuanController extends Controller
     public function success()
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             return redirect()->route('peneliti.dashboard');
         }
-        
+
         return view('peneliti.pengajuan.success');
     }
 
     public function downloadFile(TemplateProposal $template)
     {
         $access = $this->checkAccess();
-        
+
         if ($access !== null) {
             if ($access === 'guest') {
                 return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
@@ -904,6 +1221,30 @@ class PengajuanController extends Controller
         return response()->download(Storage::disk('public')->path($file->file_path), $file->original_name);
     }
 
+    public function previewEthicalClearance(Proposal $proposal)
+    {
+        $access = $this->checkAccess();
+        if ($access === 'guest') {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+        if ($access === 'pending') {
+            return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+        }
+
+        if ($proposal->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $ethicsDocument = $this->ensurePreviewData($proposal);
+        $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
+            ->where('role', ProposalAssignment::ROLE_KETUA)
+            ->latest('created_at')
+            ->first();
+        $certificatePreviewData = $this->buildCertificatePreviewData($proposal, $ethicsDocument, $assignment);
+
+        return view('peneliti.pengajuan.ethical-clearance-preview', compact('proposal', 'certificatePreviewData'));
+    }
+
     public function downloadEthicsDocument(Proposal $proposal)
     {
         $access = $this->checkAccess();
@@ -919,8 +1260,12 @@ class PengajuanController extends Controller
             abort(403);
         }
 
-        $ethicsDocument = $proposal->ethicsDocument;
-        if (!$ethicsDocument || $ethicsDocument->status !== \App\Models\EthicsDocument::STATUS_PUBLISHED) {
+        $ethicsDocument = EthicsDocument::where('proposal_id', $proposal->id)
+            ->where('status', \App\Models\EthicsDocument::STATUS_PUBLISHED)
+            ->latest('created_at')
+            ->first();
+
+        if (!$ethicsDocument) {
             abort(404, 'Dokumen Ethical Clearance belum tersedia.');
         }
 
