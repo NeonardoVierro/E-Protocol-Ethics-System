@@ -45,8 +45,11 @@ class Proposal extends Model
     const STATUS_APPROVED           = 'approved';
     const STATUS_REJECTED           = 'rejected';
     const STATUS_WAITING_FOR_CONFIRMATION = 'waiting_for_confirmation';
+    const STATUS_READY_FOR_CHAIR    = 'ready_for_chair';
+    const STATUS_WITH_CHAIR      = 'with_chair';
     const STATUS_WAITING_FOR_PUBLISH      = 'waiting_for_publish';
     const STATUS_PUBLISHED                = 'published';
+    
 
     // ── Review type constants ─────────────────────
     const REVIEW_EXEMPTED   = 'exempted';
@@ -236,6 +239,8 @@ class Proposal extends Model
             self::STATUS_APPROVED                 => 'Approved',
             self::STATUS_REJECTED                 => 'Rejected',
             self::STATUS_WAITING_FOR_CONFIRMATION => 'Waiting For Confirmation',
+            self::STATUS_READY_FOR_CHAIR => 'Ready For Chair',
+            self::STATUS_WITH_CHAIR      => 'With Chair',
             self::STATUS_WAITING_FOR_PUBLISH      => 'Waiting For Publish',
             self::STATUS_PUBLISHED                => 'Published',
         ][$this->status] ?? $this->status;
@@ -251,6 +256,8 @@ class Proposal extends Model
             self::STATUS_APPROVED            => 'bg-green-100 text-green-800',
             self::STATUS_REJECTED            => 'bg-red-100 text-red-800',
             self::STATUS_WAITING_FOR_CONFIRMATION => 'bg-amber-100 text-amber-800',
+            self::STATUS_READY_FOR_CHAIR => 'bg-sky-100 text-sky-800',
+            self::STATUS_WITH_CHAIR      => 'bg-indigo-100 text-indigo-800',
             self::STATUS_WAITING_FOR_PUBLISH => 'bg-purple-100 text-purple-800',
             self::STATUS_PUBLISHED           => 'bg-teal-100 text-teal-800',
         ][$this->status] ?? 'bg-gray-100 text-gray-800';

@@ -7,23 +7,22 @@ use App\Models\EthicsDocument;
 use App\Models\Proposal;
 use App\Models\ProposalAssignment;
 use App\Models\User;
+use App\Models\DocumentLog;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class EthicalClearanceController extends Controller
 {
     public function index()
     {
-        // Show draft ethics documents to admin
-        // Filter: status DRAFT, proposal status APPROVED, and already sent from sekretaris (has DocumentLog activity sent_to_admin)
         $docs = EthicsDocument::with('proposal', 'ketua')
             ->where('status', EthicsDocument::STATUS_DRAFT)
-            ->whereHas('proposal', function($q) {
+            ->whereHas('proposal', function ($q) {
                 $q->where('status', Proposal::STATUS_APPROVED);
             })
-            ->whereHas('documentLogs', function($q) {
-                $q->where('activity', \App\Models\DocumentLog::ACTIVITY_SENT_TO_ADMIN);
+            ->whereHas('documentLogs', function ($q) {
+                $q->where('activity', DocumentLog::ACTIVITY_SENT_TO_ADMIN);
             })
             ->orderByDesc('created_at')
             ->get();
@@ -33,20 +32,21 @@ class EthicalClearanceController extends Controller
 
     public function getKetuaList()
     {
-        $list = User::whereHas('roles', function($q) {
+        $list = User::whereHas('roles', function ($q) {
                 $q->where('name', 'ketua');
             })
             ->where('status', 'active')
-            ->get(['id','name','email'])
-            ->map(function($user) {
+            ->get(['id', 'name', 'email'])
+            ->map(function ($user) {
                 $user->active_proposals_count = ProposalAssignment::where('assigned_to', $user->id)
                     ->where('role', ProposalAssignment::ROLE_KETUA)
                     ->whereNotNull('sent_at')
-                    ->whereHas('proposal', fn($q) => $q->whereNotIn('status', [
+                    ->whereHas('proposal', fn ($q) => $q->whereNotIn('status', [
                         Proposal::STATUS_PUBLISHED,
                         Proposal::STATUS_REJECTED,
                     ]))
                     ->count();
+
                 return $user;
             })
             ->sortBy('active_proposals_count')
@@ -58,7 +58,7 @@ class EthicalClearanceController extends Controller
     public function getAssignment(Request $request)
     {
         $proposalId = $request->query('proposal_id');
-        
+
         if (!$proposalId) {
             return response()->json(['success' => false]);
         }
@@ -83,25 +83,39 @@ class EthicalClearanceController extends Controller
             'assignment' => [
                 'ketua_id' => $assignment->assigned_to,
                 'nomor_ec' => $proposal->nomor_ec,
-            ]
+            ],
         ]);
     }
 
     public function pilihKetua(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'proposal_id' => 'required|exists:proposals,id',
-            'ketua_id'   => 'required|exists:users,id',
-            'nomor_ec'   => 'required|string|max:100|regex:/^EC-\d{4}-\d{2}-\d{4}$/|unique:proposals,nomor_ec,' . $request->proposal_id,
+            'ketua_id'    => 'required|exists:users,id',
+            'nomor_ec'    => [
+                'required',
+                'string',
+                'max:100',
+                'regex:/^EC-\d{4}-\d{2}-\d{4}$/',
+                Rule::unique('proposals', 'nomor_ec')->ignore($request->proposal_id),
+            ],
         ], [
-            'nomor_ec.regex' => 'Format nomor EC harus: EC-YYYY-MM-XXXX (contoh: EC-2024-06-0001)',
+            'proposal_id.required' => 'Proposal belum dipilih.',
+            'proposal_id.exists' => 'Proposal tidak valid.',
+            'ketua_id.required' => 'Ketua belum dipilih.',
+            'ketua_id.exists' => 'Ketua tidak valid.',
+            'nomor_ec.regex' => 'Format nomor EC harus: EC-YYYY-MM-XXXX (contoh: EC-2026-06-0001)',
             'nomor_ec.unique' => 'Nomor EC sudah digunakan untuk proposal lain.',
         ]);
 
-        $proposal = Proposal::findOrFail($request->proposal_id);
+        $proposal = Proposal::find($request->proposal_id);
+
+        if (! $proposal) {
+            return response()->json(['success' => false, 'error' => 'Proposal tidak ditemukan.'], 404);
+        }
 
         if ($proposal->status !== Proposal::STATUS_APPROVED) {
-            return response()->json(['error' => 'Proposal belum disetujui.'], 422);
+            return response()->json(['success' => false, 'error' => 'Proposal belum disetujui.'], 422);
         }
 
         ProposalAssignment::where('proposal_id', $proposal->id)
@@ -109,26 +123,62 @@ class EthicalClearanceController extends Controller
             ->whereNull('sent_at')
             ->delete();
 
-        $proposal->update(['nomor_ec' => $request->nomor_ec]);
+        $proposal->update([
+            'nomor_ec' => $validated['nomor_ec'],
+            'status'   => Proposal::STATUS_WAITING_FOR_CONFIRMATION,
+        ]);
 
         ProposalAssignment::create([
             'proposal_id' => $proposal->id,
             'assigned_by' => auth()->id(),
-            'assigned_to' => $request->ketua_id,
+            'assigned_to' => $validated['ketua_id'],
             'role'        => ProposalAssignment::ROLE_KETUA,
             'sent_at'     => null,
         ]);
 
-        return response()->json(['success' => true]);
+        DocumentLog::create([
+            'proposal_id' => $proposal->id,
+            'user_id'     => auth()->id(),
+            'activity'    => DocumentLog::ACTIVITY_ASSIGN,
+            'description' => 'Ketua dipilih dan proposal menunggu validasi peneliti.',
+            'metadata'    => [
+                'ketua_id' => $validated['ketua_id'],
+                'nomor_ec'  => $validated['nomor_ec'],
+            ],
+        ]);
+
+        if ($proposal->user_id) {
+            \App\Models\Notification::create([
+                'user_id' => $proposal->user_id,
+                'title'   => 'Validasi Ethical Clearance',
+                'message' => 'Anda perlu memvalidasi draft ethical clearance untuk proposal "' . $proposal->title . '" sebelum dikirim ke ketua.',
+                'type'    => \App\Models\Notification::TYPE_DOCUMENT_READY,
+                'status'  => \App\Models\Notification::STATUS_UNREAD,
+                'data'    => json_encode([
+                    'proposal_id' => $proposal->id,
+                    'status'      => Proposal::STATUS_WAITING_FOR_CONFIRMATION,
+                ]),
+            ]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Assignment berhasil disimpan.']);
     }
 
-    public function kirimKetua(Request $request)
+    public function confirmEthicalClearance(Request $request)
     {
         $request->validate([
             'proposal_id' => 'required|exists:proposals,id',
         ]);
 
         $proposal = Proposal::findOrFail($request->proposal_id);
+
+        if ($proposal->status !== Proposal::STATUS_WAITING_FOR_CONFIRMATION) {
+            return response()->json(['error' => 'Proposal belum dalam tahap konfirmasi.'], 422);
+        }
+
+        $proposal->update([
+            'status' => Proposal::STATUS_READY_FOR_CHAIR,
+        ]);
 
         $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
             ->where('role', ProposalAssignment::ROLE_KETUA)
@@ -140,26 +190,30 @@ class EthicalClearanceController extends Controller
             $assignment->update(['sent_at' => now()]);
 
             $proposal->update([
-                'status'   => Proposal::STATUS_WAITING_FOR_CONFIRMATION,
+                'status' => Proposal::STATUS_WITH_CHAIR,
             ]);
 
-            \App\Models\DocumentLog::create([
+            DocumentLog::create([
                 'proposal_id' => $proposal->id,
                 'user_id'     => auth()->id(),
-                'activity'    => \App\Models\DocumentLog::ACTIVITY_ASSIGN,
-                'description' => 'Submission processed and sent to researcher for final confirmation.',
-                'metadata'    => ['assigned_to' => $assignment->assigned_to],
+                'activity'    => DocumentLog::ACTIVITY_SIGN,
+                'description' => 'Dokumen dikirim ke ketua untuk tanda tangan.',
+                'metadata'    => [
+                    'assigned_to' => $assignment->assigned_to,
+                ],
             ]);
 
-            // Notify researcher to confirm the ethical clearance details
             if ($proposal->user_id) {
                 \App\Models\Notification::create([
                     'user_id' => $proposal->user_id,
-                    'title'   => 'Konfirmasi Dokumen Ethical Clearance',
-                    'message' => 'Proposal "' . $proposal->title . '" telah dikonfigurasi oleh admin. Silakan konfirmasi dokumen sebelum dikirim ke ketua untuk tanda tangan.',
+                    'title'   => 'Dokumen Dikirim ke Ketua',
+                    'message' => 'Proposal "' . $proposal->title . '" sudah divalidasi dan dikirim ke ketua untuk tanda tangan.',
                     'type'    => \App\Models\Notification::TYPE_DOCUMENT_READY,
                     'status'  => \App\Models\Notification::STATUS_UNREAD,
-                    'data'    => json_encode(['proposal_id' => $proposal->id, 'status' => Proposal::STATUS_WAITING_FOR_CONFIRMATION]),
+                    'data'    => json_encode([
+                        'proposal_id' => $proposal->id,
+                        'status'      => Proposal::STATUS_WITH_CHAIR,
+                    ]),
                 ]);
             }
         });
@@ -174,24 +228,24 @@ class EthicalClearanceController extends Controller
         ]);
 
         $proposal = Proposal::findOrFail($request->proposal_id);
-
-        // Generate format: EC-YYYY-MM-XXXX
         $year = now()->format('Y');
         $month = now()->format('m');
 
-        // Get the last EC number for this month
-        $lastProposal = Proposal::where('nomor_ec', 'like', "EC-{$year}-{$month}-%")
-            ->orderBy('nomor_ec', 'desc')
-            ->first();
+        $lastNomor = Proposal::where('nomor_ec', 'like', "EC-{$year}-{$month}-%")
+            ->orderByDesc('nomor_ec')
+            ->value('nomor_ec');
 
-        $sequence = 1;
-        if ($lastProposal) {
-            // Extract sequence from last number (e.g., EC-2024-06-0001 -> 0001)
-            $lastSequence = (int) substr($lastProposal->nomor_ec, -4);
-            $sequence = $lastSequence + 1;
+        $nextSequence = 1;
+
+        if ($lastNomor) {
+            $parts = explode('-', $lastNomor);
+            $lastSeq = end($parts);
+            if (is_numeric($lastSeq)) {
+                $nextSequence = ((int) $lastSeq) + 1;
+            }
         }
 
-        $nomorEc = "EC-{$year}-{$month}-" . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        $nomorEc = 'EC-' . $year . '-' . $month . '-' . str_pad($nextSequence, 4, '0', STR_PAD_LEFT);
 
         return response()->json([
             'success' => true,

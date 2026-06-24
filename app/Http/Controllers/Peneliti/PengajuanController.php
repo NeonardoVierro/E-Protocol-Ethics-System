@@ -680,50 +680,56 @@ class PengajuanController extends Controller
 
         $assignment = ProposalAssignment::where('proposal_id', $proposal->id)
             ->where('role', ProposalAssignment::ROLE_KETUA)
-            ->whereNotNull('sent_at')
+            ->whereNull('sent_at')
             ->latest()
             ->firstOrFail();
 
         DB::transaction(function () use ($proposal, $assignment) {
             $proposal->update([
-                'status'   => Proposal::STATUS_WAITING_FOR_PUBLISH,
+                'status' => Proposal::STATUS_READY_FOR_CHAIR,
                 'ketua_id' => $assignment->assigned_to,
             ]);
 
             $ethicsDocument = EthicsDocument::firstOrCreate(
                 ['proposal_id' => $proposal->id],
                 [
-                    'status'      => EthicsDocument::STATUS_DRAFT,
+                    'status' => EthicsDocument::STATUS_DRAFT,
                     'document_number' => $proposal->nomor_ec,
-                    'ketua_id'    => $assignment->assigned_to,
-                    'file_path'   => $proposal->ethicsDocument?->file_path ?? '',
+                    'ketua_id' => $assignment->assigned_to,
+                    'file_path' => $proposal->ethicsDocument?->file_path ?? '',
                     'original_name' => $proposal->ethicsDocument?->original_name ?? '',
-                    'notes'       => $proposal->ethicsDocument?->notes ?? 'Dokumen ethical clearance dikonfirmasi oleh peneliti.',
+                    'notes' => $proposal->ethicsDocument?->notes ?? 'Dokumen ethical clearance dikonfirmasi oleh peneliti.',
                 ]
             );
 
             $ethicsDocument->update([
                 'document_number' => $proposal->nomor_ec,
-                'ketua_id'        => $assignment->assigned_to,
-                'status'          => EthicsDocument::STATUS_DRAFT,
+                'ketua_id' => $assignment->assigned_to,
+                'status' => EthicsDocument::STATUS_DRAFT,
+            ]);
+
+            $assignment->update(['sent_at' => now()]);
+
+            $proposal->update([
+                'status' => Proposal::STATUS_WITH_CHAIR,
             ]);
 
             \App\Models\DocumentLog::create([
                 'proposal_id' => $proposal->id,
                 'ethics_document_id' => $ethicsDocument->id,
-                'user_id'     => Auth::id(),
-                'activity'    => \App\Models\DocumentLog::ACTIVITY_VERIFY,
-                'description' => 'Researcher confirmed ethical clearance documents before ketua signature.',
-                'metadata'    => ['assigned_to' => $assignment->assigned_to],
+                'user_id' => Auth::id(),
+                'activity' => \App\Models\DocumentLog::ACTIVITY_VERIFY,
+                'description' => 'Researcher confirmed ethical clearance documents and sent to ketua.',
+                'metadata' => ['assigned_to' => $assignment->assigned_to],
             ]);
 
             \App\Models\Notification::create([
                 'user_id' => $assignment->assigned_to,
-                'title'   => 'Ethical Clearance Siap Ditandatangani',
+                'title' => 'Ethical Clearance Siap Ditandatangani',
                 'message' => 'Proposal "' . $proposal->title . '" dengan nomor EC ' . ($proposal->nomor_ec ?? '-') . ' siap untuk ditandatangani oleh Anda.',
-                'type'    => \App\Models\Notification::TYPE_DOCUMENT_READY,
-                'status'  => \App\Models\Notification::STATUS_UNREAD,
-                'data'    => json_encode([
+                'type' => \App\Models\Notification::TYPE_DOCUMENT_READY,
+                'status' => \App\Models\Notification::STATUS_UNREAD,
+                'data' => json_encode([
                     'proposal_id' => $proposal->id,
                     'ethics_document_id' => $ethicsDocument->id,
                 ]),

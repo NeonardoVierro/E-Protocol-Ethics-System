@@ -5,28 +5,17 @@
 @section('breadcrumb', 'Kelola ethical clearance')
 
 @section('content')
-
-{{-- ═══════════════════════════════════════════
-     2 Kolom: Queue (kiri) + Process Panel (kanan)
-═══════════════════════════════════════════ --}}
 <div class="grid grid-cols-12 gap-5" x-data="ethicalClearance()">
-
-    {{-- ── KIRI: Pending Queue + Stat Cards ── --}}
     <div class="col-span-7 flex flex-col gap-5">
-
-        {{-- Pending Clearance Queue --}}
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-
-            {{-- Header --}}
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                 <h2 class="text-[16px] font-bold text-slate-900 tracking-tight">Pending Clearance Queue</h2>
                 <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-600 bg-amber-50 rounded-full px-3 py-1">
                     <i class="fas fa-bolt text-[10px]"></i>
-                    12 Ready
+                    {{ $docs->count() }} Ready
                 </span>
             </div>
 
-            {{-- Table --}}
             <table class="w-full">
                 <thead class="bg-slate-50 border-b border-slate-100">
                     <tr>
@@ -37,8 +26,9 @@
                         <th class="text-center text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3 w-[12%]">Action</th>
                     </tr>
                 </thead>
+
                 <tbody class="divide-y divide-slate-50">
-                        @foreach($docs as $d)
+                    @forelse($docs as $d)
                         @php
                             $docId = $d->document_number ?: 'EC-' . $d->id;
                             $proposalId = $d->proposal?->id ?? $d->id;
@@ -46,12 +36,17 @@
                             $title = $d->proposal?->title ?? ($d->original_name ?? 'Untitled');
                             $date = $d->created_at?->format('M d, Y') ?? '-';
                         @endphp
-                        <tr class="hover:bg-slate-50/60 transition-colors"
-                            :class="selectedId === '{{ $docId }}' ? 'bg-blue-50/60' : ''"
-                            @click="selectProposal('{{ $docId }}', {{ $proposalId }}, '{{ addslashes($researcher) }}', '{{ addslashes($title) }}')">
+                        <tr
+                            data-doc-id="{{ $docId }}"
+                            data-proposal-id="{{ $proposalId }}"
+                            data-researcher="{{ e($researcher) }}"
+                            data-title="{{ e($title) }}"
+                            class="hover:bg-slate-50/60 transition-all cursor-pointer border-l-4 border-transparent"
+                            :class="selectedId === '{{ $docId }}' ? 'bg-blue-50/70 border-l-4 border-blue-500 shadow-sm' : ''"
+                            @click="selectProposal('{{ $docId }}', {{ $proposalId }}, @js($researcher), @js($title))"
+                        >
                             <td class="px-4 py-4">
-                                <span class="text-[13.5px] font-bold leading-snug"
-                                      :class="selectedId === '{{ $docId }}' ? 'text-[#1e3a5f]' : 'text-slate-800'">
+                                <span class="text-[13.5px] font-bold leading-snug" :class="selectedId === '{{ $docId }}' ? 'text-[#1e3a5f]' : 'text-slate-800'">
                                     {{ $docId }}
                                 </span>
                             </td>
@@ -59,19 +54,23 @@
                             <td class="px-4 py-4 text-[13px] text-slate-500 leading-relaxed">{{ $title }}</td>
                             <td class="px-4 py-4 text-[13px] text-slate-500">{{ $date }}</td>
                             <td class="px-4 py-4 text-center">
-                                <button @click.stop="showPreview({{ $proposalId }})"
+                                <button type="button"
+                                        @click.stop="showPreview({{ $proposalId }})"
                                         class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10 transition-colors"
                                         title="Lihat Preview">
                                     <i class="fas fa-eye text-sm"></i>
                                 </button>
                             </td>
                         </tr>
-                        @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-4 py-10 text-center text-slate-400">Belum ada dokumen pending.</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
 
-        {{-- Stat Cards (3 kolom) --}}
         <div class="grid grid-cols-3 gap-4">
             @php
             $stats = [
@@ -92,27 +91,19 @@
             </div>
             @endforeach
         </div>
-
     </div>
 
-    {{-- ── KANAN: Process Clearance Panel + Preview ── --}}
     <div class="col-span-5 flex flex-col gap-5">
-
-        {{-- Process Clearance Panel --}}
         <div class="bg-slate-50 border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-
-            {{-- Panel Header --}}
             <div class="px-6 pt-5 pb-4 border-b border-slate-200">
                 <h3 class="text-[15px] font-bold text-[#1e3a5f] mb-1">Process Clearance</h3>
                 <p class="text-[12.5px] text-slate-500 leading-snug">
                     Configuring ethical certificate for
-                    <button @click="" class="font-bold text-[#1e3a5f] underline underline-offset-2 cursor-pointer" x-text="selectedId">EC-2023-0902</button>.
+                    <button type="button" class="font-bold text-[#1e3a5f] underline underline-offset-2 cursor-pointer" x-text="selectedId">EC-2023-0902</button>.
                 </p>
             </div>
 
             <div class="px-6 py-5 space-y-5">
-
-                {{-- Nomor Ethical Clearance --}}
                 <div>
                     <label class="block text-[10.5px] font-bold tracking-widest uppercase text-slate-400 mb-2">Nomor Ethical Clearance</label>
                     <div class="flex gap-2">
@@ -120,16 +111,16 @@
                                x-model="clearanceNumber"
                                placeholder="Format: EC-YYYY-MM-XXXX"
                                class="flex-1 px-3.5 py-2.5 text-[13.5px] border border-slate-200 rounded-xl bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 font-medium">
-                        <button @click="generateNomorEc()"
+                        <button type="button"
+                                @click="generateNomorEc()"
                                 :disabled="!activePropId || generatingNomor"
                                 class="w-10 h-10 bg-[#1e3a5f] rounded-xl flex items-center justify-center text-white hover:bg-[#162d4a] transition-colors cursor-pointer flex-shrink-0 disabled:bg-slate-300 disabled:cursor-not-allowed">
                             <i class="fas fa-rotate text-sm" :class="{'animate-spin': generatingNomor}"></i>
                         </button>
                     </div>
-                    <p class="text-[10.5px] text-slate-400 mt-1">Format: EC-YYYY-MM-XXXX (contoh: EC-2024-06-0001)</p>
+                    <p class="text-[10.5px] text-slate-400 mt-1">Bisa diketik manual atau klik tombol generate.</p>
                 </div>
 
-                {{-- Assign Ketua Board --}}
                 <div>
                     <label class="block text-[10.5px] font-bold tracking-widest uppercase text-slate-400 mb-2">Assign Ketua Board</label>
                     <div class="relative">
@@ -147,44 +138,32 @@
                     </div>
                 </div>
 
-
-                {{-- Action Buttons --}}
                 <div class="space-y-2">
-                    <button @click="simpanAssignment()"
+                    <button type="button"
+                            @click="simpanAssignment()"
                             :disabled="!selectedKetua || !clearanceNumber.trim()"
                             class="w-full py-3 rounded-xl text-[13.5px] font-bold text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
                             :class="(selectedKetua && clearanceNumber.trim()) ? 'bg-[#1e3a5f] hover:bg-[#162d4a]' : 'bg-slate-300 cursor-not-allowed'">
                         <i class="fas fa-save text-sm"></i>
                         Simpan Assignment
                     </button>
-                    <button @click="kirimAssignment()"
-                            :disabled="!isSaved"
-                            class="w-full py-3 rounded-xl text-[13.5px] font-bold text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                            :class="isSaved ? 'bg-purple-600 hover:bg-purple-700' : 'bg-slate-300 cursor-not-allowed'">
-                        <i class="fas fa-paper-plane text-sm"></i>
-                        Kirim ke Peneliti
-                    </button>
                 </div>
-                <p class="text-[11px] text-slate-400 text-center leading-snug -mt-2">
-                    Dengan mengirim ke peneliti, proposal akan melewati tahap konfirmasi akhir sebelum dikirim ke ketua untuk tanda tangan.
-                </p>
 
+                <p class="text-[11px] text-slate-400 text-center leading-snug -mt-2">
+                    Setelah assignment disimpan, baris proposal ini akan hilang dari queue karena sudah diproses.
+                </p>
             </div>
         </div>
 
-        {{-- Preview Template --}}
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                 <h3 class="text-[14px] font-bold text-slate-900">Preview Dokumen</h3>
-                <button x-show="previewUrl" @click="closePreview()"
-                        class="text-[11px] text-slate-400 hover:text-slate-600 transition-colors">
+                <button x-show="previewUrl" @click="closePreview()" class="text-[11px] text-slate-400 hover:text-slate-600 transition-colors">
                     <i class="fas fa-xmark"></i> Tutup
                 </button>
             </div>
             <div x-show="previewUrl" class="p-0" style="height: 500px;">
-                <iframe :src="previewUrl" 
-                        class="w-full h-full border-0"
-                        frameborder="0"></iframe>
+                <iframe :src="previewUrl" class="w-full h-full border-0" frameborder="0"></iframe>
             </div>
             <div x-show="!previewUrl" class="flex flex-col items-center justify-center py-10 px-6 text-center">
                 <div class="w-16 h-16 mb-4 flex items-center justify-center">
@@ -193,30 +172,36 @@
                 <p class="text-[12.5px] text-slate-400">Klik ikon mata di kolom Action untuk melihat preview PDF</p>
             </div>
         </div>
-
     </div>
 </div>
-
 @endsection
 
 @push('scripts')
 <script>
 function ethicalClearance() {
     return {
-        selectedId:         '{{ $docs->first() ? ($docs->first()->document_number ?: "EC-".$docs->first()->id) : "" }}',
-        clearanceNumber:    '{{ $docs->first() ? ($docs->first()->document_number ?: "") : "" }}',
-        selectedKetua:      null,
-        ketuaList:          [],
-        loadingKetua:       false,
-        isSaved:            false,
-        activePropId:       null,
-        selectedTitle:      null,
+        selectedId: '{{ $docs->first() ? ($docs->first()->document_number ?: "EC-".$docs->first()->id) : "" }}',
+        clearanceNumber: '{{ $docs->first() ? ($docs->first()->document_number ?: "") : "" }}',
+        selectedKetua: null,
+        ketuaList: [],
+        loadingKetua: false,
+        isSaved: false,
+        activePropId: null,
+        selectedTitle: null,
         selectedResearcher: null,
-        previewUrl:         null,
-        generatingNomor:   false,
+        previewUrl: null,
+        generatingNomor: false,
 
         init() {
             this.loadKetuaList();
+            @if($docs->first())
+                this.selectProposal(
+                    '{{ $docs->first()->document_number ?: "EC-".$docs->first()->id }}',
+                    {{ $docs->first()->proposal?->id ?? $docs->first()->id }},
+                    @js($docs->first()->proposal?->researcher?->name ?? $docs->first()->proposal?->nama_peneliti ?? ($docs->first()->ketua?->name ?? '-')),
+                    @js($docs->first()->proposal?->title ?? ($docs->first()->original_name ?? 'Untitled'))
+                );
+            @endif
         },
 
         async loadKetuaList() {
@@ -230,7 +215,6 @@ function ethicalClearance() {
                     credentials: 'same-origin',
                 });
                 const data = await res.json();
-                console.log('Ketua list loaded:', data);
                 this.ketuaList = data;
             } catch (e) {
                 console.error('Failed to load ketua list:', e);
@@ -248,9 +232,6 @@ function ethicalClearance() {
             this.selectedResearcher = researcher;
             this.isSaved = false;
             this.selectedKetua = null;
-            console.log('Proposal selected:', { docId, proposalId, researcher, title });
-            
-            // Load existing assignment if any
             this.loadExistingAssignment(proposalId);
         },
 
@@ -283,6 +264,7 @@ function ethicalClearance() {
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                        'Accept': 'application/json',
                     },
                     body: JSON.stringify({ proposal_id: this.activePropId }),
                 });
@@ -309,47 +291,44 @@ function ethicalClearance() {
         },
 
         async simpanAssignment() {
-            if (!this.selectedKetua || !this.clearanceNumber.trim()) return;
+            if (!this.selectedKetua || !this.clearanceNumber.trim() || !this.activePropId) return;
+
             try {
                 const res = await fetch('/admin/ethical-clearance/pilih-ketua', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                        'Accept': 'application/json',
                     },
                     body: JSON.stringify({
                         proposal_id: this.activePropId,
                         ketua_id: this.selectedKetua,
-                        nomor_ec: this.clearanceNumber,
+                        nomor_ec: this.clearanceNumber.trim(),
                     }),
                 });
-                if (!res.ok) throw new Error();
-                this.isSaved = true;
-                alert('Assignment berhasil disimpan. Klik "Kirim ke Peneliti" untuk mengirim.');
-            } catch {
-                alert('Gagal menyimpan assignment.');
-            }
-        },
 
-        async kirimAssignment() {
-            if (!this.isSaved) return;
-            try {
-                const res = await fetch('/admin/ethical-clearance/kirim-ketua', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                    },
-                    body: JSON.stringify({ proposal_id: this.activePropId }),
-                });
-                if (!res.ok) throw new Error();
-                alert('Proposal berhasil dikirim ke peneliti.');
-                location.reload();
-            } catch {
-                alert('Gagal mengirim ke peneliti.');
+                const data = await res.json();
+
+                if (!res.ok) {
+                    console.log(data);
+                    const msg =
+                        data?.message ||
+                        data?.error ||
+                        (data?.errors ? Object.values(data.errors).flat().join('\n') : 'Gagal menyimpan assignment.');
+                    throw new Error(msg);
+                }
+
+                const row = document.querySelector(`tr[data-proposal-id="${this.activePropId}"]`);
+                if (row) row.remove();
+
+                alert('Assignment berhasil disimpan.');
+            } catch (err) {
+                alert(err.message || 'Gagal menyimpan assignment.');
             }
         },
     };
 }
 </script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 @endpush
