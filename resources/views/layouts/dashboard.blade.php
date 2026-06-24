@@ -313,6 +313,10 @@
                         <span class="material-symbols-outlined text-primary text-lg">history</span>
                         <span>Riwayat Pengajuan</span>
                     </a>
+                    <a href="{{ route('pengajuan.ethical-clearance') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                        <span class="material-symbols-outlined text-primary text-lg">badge</span>
+                        <span>Ethical Clearance</span>
+                    </a>
                 </div>
             @elseif(auth()->user()->hasRole('admin'))
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors">Dashboard</a>
@@ -425,9 +429,13 @@
                                     <span class="material-symbols-outlined text-primary text-lg">download</span>
                                     <span>Download Template</span>
                                 </a>
-                                <a href="{{ route('pengajuan.riwayat-pengajuan') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-b-xl transition-colors">
+                                <a href="{{ route('pengajuan.riwayat-pengajuan') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
                                     <span class="material-symbols-outlined text-primary text-lg">history</span>
                                     <span>Riwayat Pengajuan</span>
+                                </a>
+                                <a href="{{ route('pengajuan.ethical-clearance') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-b-xl transition-colors">
+                                    <span class="material-symbols-outlined text-primary text-lg">badge</span>
+                                    <span>Ethical Clearance</span>
                                 </a>
                             </div>
                         </div>
@@ -486,9 +494,13 @@
                                 <span class="material-symbols-outlined text-primary text-lg">download</span>
                                 <span>Download Template</span>
                             </a>
-                            <a href="{{ route('pengajuan.riwayat-pengajuan') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-b-xl transition-colors">
+                            <a href="{{ route('pengajuan.riwayat-pengajuan') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
                                 <span class="material-symbols-outlined text-primary text-lg">history</span>
                                 <span>Riwayat Pengajuan</span>
+                            </a>
+                            <a href="{{ route('pengajuan.ethical-clearance') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low rounded-b-xl transition-colors">
+                                <span class="material-symbols-outlined text-primary text-lg">badge</span>
+                                <span>Ethical Clearance</span>
                             </a>
                         </div>
                     </div>

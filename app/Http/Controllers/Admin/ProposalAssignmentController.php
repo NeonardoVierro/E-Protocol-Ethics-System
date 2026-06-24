@@ -8,6 +8,7 @@ use App\Models\ProposalAssignment;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ProposalAssignmentController extends Controller
 {
@@ -201,5 +202,43 @@ class ProposalAssignmentController extends Controller
         $proposal->update(['status' => Proposal::STATUS_PUBLISHED]);
 
         return response()->json(['success' => true]);
+    }
+
+    // Render preview for a proposal's ethical clearance (used in admin iframe).
+    public function previewProposal(Proposal $proposal)
+    {
+        $ethicsDocument = \App\Models\EthicsDocument::where('proposal_id', $proposal->id)->first();
+
+        // If a generated file exists, return it directly
+        if ($ethicsDocument && $ethicsDocument->file_path && Storage::disk('public')->exists($ethicsDocument->file_path)) {
+            return response()->file(Storage::disk('public')->path($ethicsDocument->file_path));
+        }
+
+        // Fallback: render an HTML preview populated from the draft notes or proposal
+        $notes = [];
+        if ($ethicsDocument) {
+            try {
+                $decoded = json_decode($ethicsDocument->notes ?: '{}', true);
+                if (is_array($decoded)) {
+                    $notes = $decoded;
+                } else {
+                    $notes = ['notes' => (string) $ethicsDocument->notes];
+                }
+            } catch (\Throwable $e) {
+                $notes = ['notes' => (string) $ethicsDocument->notes];
+            }
+        }
+
+        $data = [
+            'document_number' => $ethicsDocument->document_number ?? $proposal->nomor_ec ?? '',
+            'title' => $proposal->title ?? ($notes['title'] ?? ($ethicsDocument->original_name ?? '')),
+            'principal_investigator' => $notes['principal_investigator'] ?? $proposal->researcher?->name ?? $proposal->nama_peneliti ?? '-',
+            'members' => $notes['members'] ?? '-',
+            'institution' => $notes['institution'] ?? $proposal->institution ?? '-',
+            'research_place' => $notes['research_place'] ?? '-',
+            'previewDate' => now()->format('d F Y'),
+        ];
+
+        return view('admin.ethicalclearance.preview', $data);
     }
 }

@@ -628,6 +628,32 @@ class PengajuanController extends Controller
     }
 
     /**
+     * Show researcher page for admin-issued draft ethical clearances
+     */
+    public function ethicalClearance()
+    {
+        $access = $this->checkAccess();
+        if ($access === 'guest') {
+            return redirect()->route('login')->with('error', 'Silakan login terlebih dahulu.');
+        }
+        if ($access === 'pending') {
+            return redirect()->route('peneliti.dashboard')->with('error', 'Akun Anda belum diaktivasi.');
+        }
+
+        $documents = EthicsDocument::with('proposal')
+            ->whereHas('proposal', function ($query) {
+                $query->where('user_id', Auth::id())
+                      ->whereIn('status', [Proposal::STATUS_WAITING_FOR_CONFIRMATION, Proposal::STATUS_WITH_CHAIR]);
+            })
+            ->where('status', EthicsDocument::STATUS_DRAFT)
+            ->whereRaw("JSON_VALID(notes) = 1 AND JSON_EXTRACT(notes, '$.assigned_admin_id') IS NOT NULL")
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('peneliti.pengajuan.ethical-clearance', compact('documents'));
+    }
+
+    /**
      * Show researcher confirmation page for admin-configured ethical clearance
      */
     public function showEthicalClearanceConfirmation(Proposal $proposal)

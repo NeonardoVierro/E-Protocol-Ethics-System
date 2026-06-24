@@ -298,7 +298,15 @@
           'X-Requested-With': 'XMLHttpRequest',
           'X-CSRF-TOKEN': token,
         },
-        body: JSON.stringify({ proposal_id: proposalIdInput.value, admin_id: adminSelect.value }),
+        body: JSON.stringify({
+          proposal_id: proposalIdInput.value,
+          admin_id: adminSelect.value,
+          title: titleInput.value,
+          principal_investigator: piInput.value,
+          members: membersInput.value,
+          institution: institutionInput.value,
+          research_place: placeInput.value,
+        }),
       }).then(async function(response) {
         const text = await response.text();
         let data = null;
