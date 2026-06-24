@@ -710,21 +710,30 @@ class SekretarisController extends Controller
         $request->validate([
             'proposal_id' => 'required|exists:proposals,id',
             'admin_id' => 'required|exists:users,id',
+            'title' => 'nullable|string|max:1024',
+            'principal_investigator' => 'nullable|string|max:255',
+            'members' => 'nullable|string|max:2000',
+            'institution' => 'nullable|string|max:255',
+            'research_place' => 'nullable|string|max:255',
         ]);
 
         $proposal = Proposal::findOrFail($request->proposal_id);
 
-        $document = EthicsDocument::firstOrCreate(
-            ['proposal_id' => $proposal->id],
-            [
+        // Get existing document to preserve biodata from storeDraft()
+        $document = EthicsDocument::where('proposal_id', $proposal->id)->first();
+        
+        if (!$document) {
+            // If no document exists, create one
+            $document = EthicsDocument::create([
+                'proposal_id' => $proposal->id,
                 'document_number' => '',
                 'ketua_id' => null,
                 'status' => EthicsDocument::STATUS_DRAFT,
                 'file_path' => '',
                 'original_name' => '',
-                'notes' => 'Draft created by sekretariat and sent to admin.',
-            ]
-        );
+                'notes' => json_encode([]),
+            ]);
+        }
 
         $document->ketua_id = $request->admin_id;
         $document->status = EthicsDocument::STATUS_DRAFT;
@@ -739,6 +748,12 @@ class SekretarisController extends Controller
             }
         } catch (\Throwable $e) {
             $notes = ['notes' => (string) $document->notes];
+        }
+
+        foreach (['title', 'principal_investigator', 'members', 'institution', 'research_place'] as $field) {
+            if ($request->filled($field)) {
+                $notes[$field] = $request->input($field);
+            }
         }
 
         $notes['assigned_admin_id'] = $request->admin_id;

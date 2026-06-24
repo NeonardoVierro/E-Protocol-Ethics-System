@@ -32,18 +32,30 @@
                         @php
                             $docId = $d->document_number ?: 'EC-' . $d->id;
                             $proposalId = $d->proposal?->id ?? $d->id;
-                            $researcher = $d->proposal?->researcher?->name ?? $d->proposal?->nama_peneliti ?? ($d->ketua?->name ?? '-');
-                            $title = $d->proposal?->title ?? ($d->original_name ?? 'Untitled');
                             $date = $d->created_at?->format('M d, Y') ?? '-';
+                            // Extract sekretaris biodata from notes JSON first
+                            $notes = json_decode($d->notes ?? '{}', true);
+                            if (!is_array($notes)) {
+                                $notes = ['notes' => (string) ($d->notes ?? '')];
+                            }
+                            // Prioritize sekretaris draft data from notes
+                            $researcher = $notes['principal_investigator'] ?? ($d->proposal?->researcher?->name ?? $d->proposal?->nama_peneliti ?? ($d->ketua?->name ?? '-'));
+                            $title = $notes['title'] ?? ($d->proposal?->title ?? ($d->original_name ?? 'Untitled'));
+                            $members = $notes['members'] ?? '-';
+                            $institution = $notes['institution'] ?? ($d->proposal?->institution ?? '-');
+                            $place = $notes['research_place'] ?? '-';
                         @endphp
                         <tr
                             data-doc-id="{{ $docId }}"
                             data-proposal-id="{{ $proposalId }}"
                             data-researcher="{{ e($researcher) }}"
                             data-title="{{ e($title) }}"
+                            data-members="{{ e($members) }}"
+                            data-institution="{{ e($institution) }}"
+                            data-place="{{ e($place) }}"
                             class="hover:bg-slate-50/60 transition-all cursor-pointer border-l-4 border-transparent"
                             :class="selectedId === '{{ $docId }}' ? 'bg-blue-50/70 border-l-4 border-blue-500 shadow-sm' : ''"
-                            @click="selectProposal('{{ $docId }}', {{ $proposalId }}, @js($researcher), @js($title))"
+                            @click="selectProposal('{{ $docId }}', {{ $proposalId }}, @js($researcher), @js($title), @js($members), @js($institution), @js($place))"
                         >
                             <td class="px-4 py-4">
                                 <span class="text-[13.5px] font-bold leading-snug" :class="selectedId === '{{ $docId }}' ? 'text-[#1e3a5f]' : 'text-slate-800'">
@@ -55,7 +67,7 @@
                             <td class="px-4 py-4 text-[13px] text-slate-500">{{ $date }}</td>
                             <td class="px-4 py-4 text-center">
                                 <button type="button"
-                                        @click.stop="showPreview({{ $proposalId }})"
+                                        @click.stop="selectProposal('{{ $docId }}', {{ $proposalId }}, @js($researcher), @js($title), @js($members), @js($institution), @js($place))"
                                         class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10 transition-colors"
                                         title="Lihat Preview">
                                     <i class="fas fa-eye text-sm"></i>
@@ -158,18 +170,77 @@
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                 <h3 class="text-[14px] font-bold text-slate-900">Preview Dokumen</h3>
-                <button x-show="previewUrl" @click="closePreview()" class="text-[11px] text-slate-400 hover:text-slate-600 transition-colors">
-                    <i class="fas fa-xmark"></i> Tutup
-                </button>
             </div>
-            <div x-show="previewUrl" class="p-0" style="height: 500px;">
-                <iframe :src="previewUrl" class="w-full h-full border-0" frameborder="0"></iframe>
-            </div>
-            <div x-show="!previewUrl" class="flex flex-col items-center justify-center py-10 px-6 text-center">
-                <div class="w-16 h-16 mb-4 flex items-center justify-center">
-                    <i class="fas fa-shield-check text-slate-200 text-5xl"></i>
-                </div>
-                <p class="text-[12.5px] text-slate-400">Klik ikon mata di kolom Action untuk melihat preview PDF</p>
+            <div class="p-6 bg-slate-50">
+                <template x-if="activePropId">
+                    <div class="p-xl flex justify-center bg-slate-200/50">
+                        <div class="w-[595px] bg-white shadow-2xl p-xl border border-slate-200 relative min-h-[842px] font-serif text-[12px] leading-relaxed text-[#1a1a1a]">
+                            <div class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
+                                <span class="material-symbols-outlined text-[400px]">verified</span>
+                            </div>
+
+                            <div class="text-center mb-xl border-b-2 border-double border-black pb-4">
+                                <h4 class="font-bold text-[16px] uppercase leading-tight">KOMITE ETIK PENELITIAN KESEHATAN</h4>
+                                <h4 class="font-bold text-[18px] uppercase mb-1">UNIVERSITAS DIGITAL INDONESIA</h4>
+                                <p class="text-[10px] leading-tight italic">Jl. Kampus Merdeka No. 123, Jakarta Selatan, 12345. Telp: (021) 555-0123</p>
+                                <p class="text-[10px] leading-tight font-sans">Email: ethics-committee@udi.ac.id | Web: ethics.udi.ac.id</p>
+                            </div>
+
+                            <div class="text-center mb-xl">
+                                <h5 class="font-bold text-[14px] underline uppercase">KETERANGAN KELAIKAN ETIK</h5>
+                                <p class="font-sans font-medium text-[11px] mt-1">(ETHICAL CLEARANCE)</p>
+                                <p class="text-[12px] mt-2" x-text="'Nomor: ' + (clearanceNumber || '-')">Nomor: -</p>
+                            </div>
+
+                            <div class="space-y-4 px-8 text-justify">
+                                <p>Komite Etik Penelitian Kesehatan Universitas Digital Indonesia setelah mempelajari protokol penelitian yang diajukan, dengan ini menyatakan bahwa penelitian dengan judul:</p>
+                                <p class="font-bold text-center py-2 px-4 italic" x-text="selectedTitle ? '"' + selectedTitle + '"' : '-'">"-"</p>
+                                <div class="grid grid-cols-12 gap-y-2 mt-4">
+                                    <div class="col-span-4 font-bold">Peneliti Utama</div>
+                                    <div class="col-span-8" x-text="': ' + (selectedResearcher || '-')">: -</div>
+
+                                    <div class="col-span-4 font-bold">Anggota Peneliti</div>
+                                    <div class="col-span-8" x-html="selectedMembers ? ': ' + selectedMembers.replace(/\n/g, '<br/>') : ': -'">: -</div>
+
+                                    <div class="col-span-4 font-bold">Institusi</div>
+                                    <div class="col-span-8" x-text="': ' + (selectedInstitution || '-')">: -</div>
+
+                                    <div class="col-span-4 font-bold">Tempat Penelitian</div>
+                                    <div class="col-span-8" x-text="': ' + (selectedPlace || '-')">: -</div>
+                                </div>
+
+                                <p class="mt-6">Dinyatakan <strong>LAIK ETIK</strong> untuk dilaksanakan. Sertifikat ini berlaku selama 1 (satu) tahun terhitung sejak tanggal diterbitkan.</p>
+                            </div>
+
+                            <div class="mt-xl grid grid-cols-2">
+                                <div class="col-start-2 text-center">
+                                    <p x-text="'Jakarta, ' + previewDate">Jakarta, ____________</p>
+                                    <p class="mb-16">Ketua Komite Etik,</p>
+                                    <div class="relative inline-block">
+                                        <p class="font-bold underline">Prof. Dr. Ir. Budi Santoso, M.Eng</p>
+                                        <p>NIP. 197503122001121002</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="absolute bottom-10 left-10 right-10 flex justify-between items-end border-t border-slate-100 pt-2 opacity-40">
+                                <div class="flex items-center gap-2">
+                                    <img alt="QR Code" class="w-12 h-12 rounded-none" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'><rect width='48' height='48' fill='%23ffffff' stroke='%23e5e7eb'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='10' fill='%23666'>QR</text></svg>"/>
+                                    <p class="text-[8px] leading-tight">Scan untuk verifikasi keaslian<br/>dokumen secara online.</p>
+                                </div>
+                                <p class="text-[8px]" id="previewMeta">Halaman 1 dari 1 | Cetakan Sistem: -</p>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="!activePropId">
+                    <div class="flex flex-col items-center justify-center py-10 px-6 text-center">
+                        <div class="w-16 h-16 mb-4 flex items-center justify-center">
+                            <i class="fas fa-shield-check text-slate-200 text-5xl"></i>
+                        </div>
+                        <p class="text-[12.5px] text-slate-400">Pilih dokumen di sebelah kiri untuk melihat preview langsung.</p>
+                    </div>
+                </template>
             </div>
         </div>
     </div>
@@ -189,17 +260,29 @@ function ethicalClearance() {
         activePropId: null,
         selectedTitle: null,
         selectedResearcher: null,
-        previewUrl: null,
+        selectedMembers: '-',
+        selectedInstitution: '-',
+        selectedPlace: '-',
+        previewDate: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }),
         generatingNomor: false,
 
         init() {
             this.loadKetuaList();
             @if($docs->first())
+                @php
+                    $firstNotes = json_decode($docs->first()->notes ?? '{}', true);
+                    if (!is_array($firstNotes)) {
+                        $firstNotes = ['notes' => (string) ($docs->first()->notes ?? '')];
+                    }
+                @endphp
                 this.selectProposal(
                     '{{ $docs->first()->document_number ?: "EC-".$docs->first()->id }}',
                     {{ $docs->first()->proposal?->id ?? $docs->first()->id }},
-                    @js($docs->first()->proposal?->researcher?->name ?? $docs->first()->proposal?->nama_peneliti ?? ($docs->first()->ketua?->name ?? '-')),
-                    @js($docs->first()->proposal?->title ?? ($docs->first()->original_name ?? 'Untitled'))
+                    @js($firstNotes['principal_investigator'] ?? $docs->first()->proposal?->researcher?->name ?? $docs->first()->proposal?->nama_peneliti ?? ($docs->first()->ketua?->name ?? '-')),
+                    @js($firstNotes['title'] ?? $docs->first()->proposal?->title ?? ($docs->first()->original_name ?? 'Untitled')),
+                    @js($firstNotes['members'] ?? '-'),
+                    @js($firstNotes['institution'] ?? ($docs->first()->proposal?->institution ?? '-')),
+                    @js($firstNotes['research_place'] ?? '-')
                 );
             @endif
         },
@@ -222,17 +305,6 @@ function ethicalClearance() {
             } finally {
                 this.loadingKetua = false;
             }
-        },
-
-        selectProposal(docId, proposalId, researcher, title) {
-            this.selectedId = docId;
-            this.clearanceNumber = docId;
-            this.activePropId = proposalId;
-            this.selectedTitle = title;
-            this.selectedResearcher = researcher;
-            this.isSaved = false;
-            this.selectedKetua = null;
-            this.loadExistingAssignment(proposalId);
         },
 
         async loadExistingAssignment(proposalId) {
@@ -282,12 +354,18 @@ function ethicalClearance() {
             }
         },
 
-        showPreview(proposalId) {
-            this.previewUrl = `/admin/proposal/${proposalId}/preview`;
-        },
-
-        closePreview() {
-            this.previewUrl = null;
+        selectProposal(docId, proposalId, researcher, title, members, institution, place) {
+            this.selectedId = docId;
+            this.clearanceNumber = docId;
+            this.activePropId = proposalId;
+            this.selectedTitle = title || '';
+            this.selectedResearcher = researcher || '';
+            this.selectedMembers = members || '-';
+            this.selectedInstitution = institution || '-';
+            this.selectedPlace = place || '-';
+            this.isSaved = false;
+            this.selectedKetua = null;
+            this.loadExistingAssignment(proposalId);
         },
 
         async simpanAssignment() {
