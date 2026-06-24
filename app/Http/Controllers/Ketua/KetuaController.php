@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\EthicsDocument;
 use App\Models\Notification;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class KetuaController extends Controller
 {
@@ -35,15 +37,38 @@ class KetuaController extends Controller
      */
     public function persetujuanTtd()
     {
-        // show documents that need persetujuan / tanda tangan
-        // Filter: status DRAFT, has ketua_id (assigned to this ketua), and ketua_id matches current user
         $docs = EthicsDocument::with('proposal', 'ketua')
             ->where('status', EthicsDocument::STATUS_DRAFT)
             ->where('ketua_id', Auth::id())
             ->orderByDesc('created_at')
             ->get();
 
+        $docs->each(function (EthicsDocument $document) {
+            $document->preview_data = $this->buildPreviewData($document);
+        });
+
         return view('ketua.persetujuan-ttd.index', compact('docs'));
+    }
+
+    public function downloadPreviewPdf(EthicsDocument $document)
+    {
+        if (Auth::id() !== $document->ketua_id) {
+            abort(403);
+        }
+
+        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
+            return response()->download(
+                Storage::disk('public')->path($document->file_path),
+                $document->original_name ?: 'ethical-clearance.pdf'
+            );
+        }
+
+        $pdfPath = $this->storePreviewPdf($document);
+
+        return response()->download(
+            Storage::disk('public')->path($pdfPath),
+            ($document->proposal?->title ?? 'ethical-clearance') . '-preview.pdf'
+        );
     }
 
     /**
@@ -55,9 +80,16 @@ class KetuaController extends Controller
             'document_id' => 'required|exists:ethics_documents,id',
         ]);
 
+        if (!$request->hasFile('signed_file')) {
+            return response()->json(['error' => 'Silakan unggah file PDF hasil tanda tangan terlebih dahulu.'], 422);
+        }
+
+        $request->validate([
+            'signed_file' => 'file|mimes:pdf|max:10240',
+        ]);
+
         $document = EthicsDocument::findOrFail($request->document_id);
 
-        // Only the assigned ketua can sign
         if (Auth::id() !== $document->ketua_id) {
             return response()->json(['error' => 'Anda tidak memiliki izin untuk menandatangani dokumen ini.'], 403);
         }
@@ -66,13 +98,18 @@ class KetuaController extends Controller
             return response()->json(['error' => 'Dokumen tidak dalam status draft.'], 422);
         }
 
-        DB::transaction(function () use ($document) {
+        $uploadedFile = $request->file('signed_file');
+        $fileName = $uploadedFile->getClientOriginalName();
+        $filePath = $uploadedFile->storeAs('ethics-signed', $this->buildSignedFilename($document, $uploadedFile->getClientOriginalExtension()), 'public');
+
+        DB::transaction(function () use ($document, $filePath, $fileName) {
             $document->update([
                 'status'      => EthicsDocument::STATUS_SIGNED,
                 'signed_date' => now(),
+                'file_path'   => $filePath,
+                'original_name' => $fileName ?: ($document->original_name ?: 'ethical-clearance-signed.pdf'),
             ]);
 
-            // Log activity
             \App\Models\DocumentLog::create([
                 'ethics_document_id' => $document->id,
                 'proposal_id'        => $document->proposal_id,
@@ -81,8 +118,7 @@ class KetuaController extends Controller
                 'description'        => 'Dokumen ditandatangani oleh ketua.',
             ]);
 
-            // Notify admin that document is signed
-            $admin = User::whereHas('roles', function($q) {
+            $admin = User::whereHas('roles', function ($q) {
                 $q->where('name', 'admin');
             })->first();
 
@@ -98,6 +134,135 @@ class KetuaController extends Controller
             }
         });
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'document_id' => $document->id]);
+    }
+
+    private function buildPreviewData(EthicsDocument $document): array
+    {
+        $notes = [];
+        if (!empty($document->notes)) {
+            $decoded = json_decode($document->notes, true);
+            if (is_array($decoded)) {
+                $notes = $decoded;
+            } else {
+                $notes = ['notes' => (string) $document->notes];
+            }
+        }
+
+        $proposal = $document->proposal;
+
+        return [
+            'title' => $this->resolvePreviewValue($notes, 'title', $proposal?->title ?? ''),
+            'principal_investigator' => $this->resolvePreviewValue($notes, 'principal_investigator', $proposal?->researcher?->name ?? $proposal?->nama_peneliti ?? ''),
+            'members' => $this->resolvePreviewValue($notes, 'members', ''),
+            'institution' => $this->resolvePreviewValue($notes, 'institution', optional($proposal?->researcher)->institution ?? $proposal?->asal_instansi ?? ''),
+            'research_place' => $this->resolvePreviewValue($notes, 'research_place', ''),
+            'notes' => $this->resolvePreviewValue($notes, 'notes', ''),
+            'nomor_ec' => $document->document_number ?: $proposal?->nomor_ec ?? '-',
+            'chair_name' => $document->ketua?->name ?? 'Ketua Komite Etik',
+        ];
+    }
+
+    private function resolvePreviewValue(array $notes, string $field, string $fallback = ''): string
+    {
+        $value = $notes[$field] ?? null;
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function storePreviewPdf(EthicsDocument $document): string
+    {
+        $previewData = $this->buildPreviewData($document);
+        $html = view('peneliti.pengajuan.partials.ethical-clearance-document', [
+            'certificatePreviewData' => [
+                'title' => $previewData['title'] ?? '-',
+                'principal_investigator' => $previewData['principal_investigator'] ?? '-',
+                'members' => $previewData['members'] ?? '-',
+                'institution' => $previewData['institution'] ?? '-',
+                'research_place' => $previewData['research_place'] ?? '-',
+                'nomor_ec' => $previewData['nomor_ec'] ?? ($document->document_number ?: '-'),
+                'chair_name' => $previewData['chair_name'] ?? 'Ketua Komite Etik',
+            ],
+            'issuedAt' => now()->locale('id')->isoFormat('D MMMM Y'),
+            'pdfMode' => true,
+        ])->render();
+
+        $pdfContent = $this->renderHtmlToPdf($html);
+        $fileName = 'ethical-clearance-preview-' . $document->id . '-' . now()->format('YmdHis') . '.pdf';
+        $path = 'ethics-preview/' . $fileName;
+        Storage::disk('public')->put($path, $pdfContent);
+
+        return $path;
+    }
+
+    private function renderHtmlToPdf(string $html): string
+    {
+        if (class_exists(Pdf::class)) {
+            $pdf = Pdf::loadHTML($html);
+            $pdf->setPaper('a4', 'portrait');
+
+            return $pdf->output();
+        }
+
+        return $this->buildSimplePdf([
+            'DOMPDF not available',
+            'Please install barryvdh/laravel-dompdf',
+        ]);
+    }
+
+    private function buildSimplePdf(array $lines): string
+    {
+        $escapedLines = array_map(function ($line) {
+            return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], (string) $line);
+        }, $lines);
+
+        $content = '';
+        $y = 760;
+        foreach ($escapedLines as $line) {
+            $content .= "BT /F1 12 Tf 50 {$y} Td ({$line}) Tj ET\n";
+            $y -= 14;
+        }
+
+        $objects = [];
+        $objects[] = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj";
+        $objects[] = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj";
+        $objects[] = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj";
+        $objects[] = "4 0 obj\n<< /Length 0 >>\nstream\n{$content}endstream\nendobj";
+        $objects[] = "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj";
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [];
+        $offset = strlen($pdf);
+
+        foreach ($objects as $object) {
+            $offsets[] = $offset;
+            $pdf .= $object . "\n";
+            $offset = strlen($pdf);
+        }
+
+        $xrefPosition = strlen($pdf);
+        $pdf .= "xref\n0 6\n0000000000 65535 f \n";
+        foreach ($offsets as $offsetValue) {
+            $pdf .= sprintf("%010d 00000 n \n", $offsetValue);
+        }
+
+        $pdf .= "trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{$xrefPosition}\n%%EOF";
+
+        return $pdf;
+    }
+
+    private function buildSignedFilename(EthicsDocument $document, string $extension = 'pdf'): string
+    {
+        $baseName = $document->proposal?->title ?? 'ethical-clearance';
+        $baseName = preg_replace('/[^A-Za-z0-9._-]+/', '-', strtolower($baseName));
+        $baseName = trim($baseName, '-');
+
+        return ($baseName ?: 'ethical-clearance') . '-' . $document->id . '-' . now()->format('YmdHis') . '.' . $extension;
     }
 }

@@ -194,19 +194,19 @@
 
                             <div class="space-y-4 px-8 text-justify">
                                 <p>Komite Etik Penelitian Kesehatan Universitas Digital Indonesia setelah mempelajari protokol penelitian yang diajukan, dengan ini menyatakan bahwa penelitian dengan judul:</p>
-                                <p class="font-bold text-center py-2 px-4 italic" x-text="selectedTitle ? '"' + selectedTitle + '"' : '-'">"-"</p>
+                                <p class="font-bold text-center py-2 px-4 italic" x-text="certificateTitle ? '"' + certificateTitle + '"' : '-'">"-"</p>
                                 <div class="grid grid-cols-12 gap-y-2 mt-4">
                                     <div class="col-span-4 font-bold">Peneliti Utama</div>
-                                    <div class="col-span-8" x-text="': ' + (selectedResearcher || '-')">: -</div>
+                                    <div class="col-span-8" x-text="': ' + (principalInvestigator || '-')">: -</div>
 
                                     <div class="col-span-4 font-bold">Anggota Peneliti</div>
-                                    <div class="col-span-8" x-html="selectedMembers ? ': ' + selectedMembers.replace(/\n/g, '<br/>') : ': -'">: -</div>
+                                    <div class="col-span-8" x-html="members ? ': ' + members.replace(/\n/g, '<br/>') : ': -'">: -</div>
 
                                     <div class="col-span-4 font-bold">Institusi</div>
-                                    <div class="col-span-8" x-text="': ' + (selectedInstitution || '-')">: -</div>
+                                    <div class="col-span-8" x-text="': ' + (institution || '-')">: -</div>
 
                                     <div class="col-span-4 font-bold">Tempat Penelitian</div>
-                                    <div class="col-span-8" x-text="': ' + (selectedPlace || '-')">: -</div>
+                                    <div class="col-span-8" x-text="': ' + (researchPlace || '-')">: -</div>
                                 </div>
 
                                 <p class="mt-6">Dinyatakan <strong>LAIK ETIK</strong> untuk dilaksanakan. Sertifikat ini berlaku selama 1 (satu) tahun terhitung sejak tanggal diterbitkan.</p>
@@ -263,6 +263,11 @@ function ethicalClearance() {
         selectedMembers: '-',
         selectedInstitution: '-',
         selectedPlace: '-',
+        certificateTitle: '',
+        principalInvestigator: '',
+        members: '',
+        institution: '',
+        researchPlace: '',
         previewDate: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }),
         generatingNomor: false,
 
@@ -363,6 +368,11 @@ function ethicalClearance() {
             this.selectedMembers = members || '-';
             this.selectedInstitution = institution || '-';
             this.selectedPlace = place || '-';
+            this.certificateTitle = title || '';
+            this.principalInvestigator = researcher || '';
+            this.members = members || '';
+            this.institution = institution || '';
+            this.researchPlace = place || '';
             this.isSaved = false;
             this.selectedKetua = null;
             this.loadExistingAssignment(proposalId);
@@ -383,6 +393,11 @@ function ethicalClearance() {
                         proposal_id: this.activePropId,
                         ketua_id: this.selectedKetua,
                         nomor_ec: this.clearanceNumber.trim(),
+                        title: this.certificateTitle,
+                        principal_investigator: this.principalInvestigator,
+                        members: this.members,
+                        institution: this.institution,
+                        research_place: this.researchPlace,
                     }),
                 });
 

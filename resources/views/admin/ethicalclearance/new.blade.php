@@ -34,15 +34,21 @@
                             $researcher = $d->proposal?->researcher?->name ?? $d->proposal?->nama_peneliti ?? ($d->ketua?->name ?? '-');
                             $title = $d->proposal?->title ?? ($d->original_name ?? 'Untitled');
                             $date = $d->created_at?->format('M d, Y') ?? '-';
+                            $members = $d->notes ? (json_decode($d->notes, true)['members'] ?? ($d->proposal?->anggota_peneliti ?? '-')) : ($d->proposal?->anggota_peneliti ?? '-');
+                            $institution = $d->proposal?->asal_instansi ?? ($d->notes ? (json_decode($d->notes, true)['institution'] ?? '-') : '-');
+                            $place = $d->notes ? (json_decode($d->notes, true)['research_place'] ?? ($d->proposal?->lokasi_penelitian ?? '-')) : ($d->proposal?->lokasi_penelitian ?? '-');
                         @endphp
                         <tr
                             data-doc-id="{{ $docId }}"
                             data-proposal-id="{{ $proposalId }}"
                             data-researcher="{{ e($researcher) }}"
                             data-title="{{ e($title) }}"
+                            data-members="{{ e($members) }}"
+                            data-institution="{{ e($institution) }}"
+                            data-place="{{ e($place) }}"
                             class="hover:bg-slate-50/60 transition-all cursor-pointer border-l-4 border-transparent"
                             :class="selectedId === '{{ $docId }}' ? 'bg-blue-50/70 border-l-4 border-blue-500 shadow-sm' : ''"
-                            @click="selectProposal('{{ $docId }}', {{ $proposalId }}, @js($researcher), @js($title))"
+                            @click="selectProposal('{{ $docId }}', {{ $proposalId }}, @js($researcher), @js($title), @js($members), @js($institution), @js($place))"
                         >
                             <td class="px-4 py-4">
                                 <span class="text-[13.5px] font-bold leading-snug" :class="selectedId === '{{ $docId }}' ? 'text-[#1e3a5f]' : 'text-slate-800'">{{ $docId }}</span>
@@ -51,7 +57,7 @@
                             <td class="px-4 py-4 text-[13px] text-slate-500 leading-relaxed">{{ $title }}</td>
                             <td class="px-4 py-4 text-[13px] text-slate-500">{{ $date }}</td>
                             <td class="px-4 py-4 text-center">
-                                <button type="button" @click.stop="selectProposal('{{ $docId }}', {{ $proposalId }}, @js($researcher), @js($title))" class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10 transition-colors" title="Pilih">
+                                <button type="button" @click.stop="selectProposal('{{ $docId }}', {{ $proposalId }}, @js($researcher), @js($title), @js($members), @js($institution), @js($place))" class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-[#1e3a5f] hover:bg-[#1e3a5f]/10 transition-colors" title="Pilih">
                                     <i class="fas fa-arrow-right text-sm"></i>
                                 </button>
                             </td>
@@ -237,17 +243,16 @@ function ethicalClearanceNew() {
             }
         },
 
-        selectProposal(docId, proposalId, researcher, title) {
+        selectProposal(docId, proposalId, researcher, title, members, institution, place) {
             this.selectedId = docId;
             this.clearanceNumber = docId;
             this.activePropId = proposalId;
 
-            const row = document.querySelector(`tr[data-proposal-id="${proposalId}"]`);
             this.selectedResearcher = researcher || '';
             this.selectedTitle = title || '';
-            this.selectedMembers = row?.dataset.members || '-';
-            this.selectedInstitution = row?.dataset.institution || '-';
-            this.selectedPlace = row?.dataset.place || '-';
+            this.selectedMembers = members || '-';
+            this.selectedInstitution = institution || '-';
+            this.selectedPlace = place || '-';
             this.selectedKetua = '';
         },
 
@@ -289,6 +294,11 @@ function ethicalClearanceNew() {
                         proposal_id: this.activePropId,
                         ketua_id: this.selectedKetua,
                         nomor_ec: this.clearanceNumber.trim(),
+                        title: this.selectedTitle,
+                        principal_investigator: this.selectedResearcher,
+                        members: this.selectedMembers,
+                        institution: this.selectedInstitution,
+                        research_place: this.selectedPlace,
                     }),
                 });
                 const data = await res.json();
