@@ -25,9 +25,9 @@
 </div>
 
 {{-- ═══════════════════════════════════════════
-     Stat Cards (3 kolom)
+    Stat Cards (3 kolom)
 ═══════════════════════════════════════════ --}}
-<div class="grid grid-cols-3 gap-5 mb-5">
+<div class="grid grid-cols-3 gap-6 mb-6">
     @php
     $stats = [
         ['icon'=>'fas fa-circle-check',  'iconBg'=>'bg-blue-50',   'iconColor'=>'text-blue-500',   'label'=>'TOTAL READY TO PUBLISH', 'value'=>'42'],
@@ -97,21 +97,23 @@
     </div>
 
     {{-- Table --}}
-    <table class="w-full">
-        <thead class="bg-slate-50 border-b border-slate-100">
-            <tr>
-                <th class="px-6 py-3 w-10">
-                    <input type="checkbox" @change="toggleAll($event)"
-                           class="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] cursor-pointer accent-[#1e3a5f]">
-                </th>
-                <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Proposal ID</th>
-                <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Researcher</th>
-                <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Clearance Number</th>
-                <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Decision Date</th>
-                <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Public Status</th>
-                <th class="text-right text-[10px] font-bold tracking-wider uppercase text-slate-400 px-6 py-3">Actions</th>
-            </tr>
-        </thead>
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[900px]">
+            <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                    <th class="px-6 py-3 w-10">
+                        <input type="checkbox" @change="toggleAll($event)"
+                               class="w-4 h-4 rounded border-slate-300 text-[#1e3a5f] cursor-pointer accent-[#1e3a5f]">
+                    </th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Proposal ID</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Research Title</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Researcher</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Clearance Number</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Decision Date</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Public Status</th>
+                    <th class="text-right text-[10px] font-bold tracking-wider uppercase text-slate-400 px-6 py-3">Actions</th>
+                </tr>
+            </thead>
         <tbody class="divide-y divide-slate-50">
             @forelse($docs as $i => $doc)
             @php
@@ -127,6 +129,9 @@
                     <span class="text-[13.5px] font-bold text-[#1e3a5f]">{{ $doc->document_number ?: ('EC-'.$doc->id) }}</span>
                 </td>
                 <td class="px-4 py-4">
+                    <div class="max-w-xl text-[13px] text-slate-700 font-medium line-clamp-2">{{ $doc->proposal?->title ?? '-' }}</div>
+                </td>
+                <td class="px-4 py-4">
                     <div class="flex items-center gap-2.5">
                         <div class="w-7 h-7 rounded-full bg-slate-400 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">{{ $initials }}</div>
                         <span class="text-[13px] font-medium text-slate-700">{{ $doc->proposal?->researcher?->name ?? '-' }}</span>
@@ -139,11 +144,8 @@
                 </td>
                 <td class="px-6 py-4">
                     <div class="flex items-center justify-end gap-2">
-                        @php
-                            $previewUrl = $doc->file_path ? Storage::disk('public')->url($doc->file_path) : null;
-                        @endphp
-                        @if($previewUrl)
-                        <a href="{{ $previewUrl }}" target="_blank" rel="noopener noreferrer"
+                        @if($doc->file_path && Storage::disk('public')->exists($doc->file_path))
+                        <a href="{{ route('admin.publishing.preview', $doc) }}" target="_blank" rel="noopener noreferrer"
                            class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="Preview">
                             <i class="fas fa-eye text-xs"></i>
                         </a>
@@ -166,7 +168,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" class="px-6 py-16 text-center">
+                <td colspan="8" class="px-6 py-16 text-center">
                     <i class="fas fa-inbox text-slate-300 text-4xl mb-3 block"></i>
                     <p class="text-[14px] text-slate-400 font-medium">Belum ada proposal siap dipublish</p>
                 </td>
@@ -205,52 +207,110 @@
 </div>
 
 {{-- ═══════════════════════════════════════════
-     ROW BAWAH: Publishing Guidelines (kiri) + Security Verified (kanan)
+    Published Certificates
 ═══════════════════════════════════════════ --}}
-<div class="grid grid-cols-2 gap-5">
+<div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mb-6">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-book-open text-slate-700 text-base"></i>
+            <span class="text-[15px] font-bold text-slate-900">Published Certificates</span>
+        </div>
+        <span class="text-[12px] text-slate-500">Latest published documents available for admin download</span>
+    </div>
 
-    {{-- Publishing Guidelines --}}
-    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-        <h3 class="text-[15px] font-bold text-slate-900 mb-3">Publishing Guidelines</h3>
-        <p class="text-[13px] text-slate-500 leading-relaxed mb-5">
-            Review all metadata before confirming publication. Once a certificate is published to the public registry, it can only be modified through an official ethical amendment process.
-        </p>
-        <ul class="space-y-2.5 mb-5">
-            @foreach(['Verify researcher\'s credentials and institutional affiliation.','Ensure the PDF document contains the valid university seal and chair signature.'] as $item)
-            <li class="flex items-start gap-2.5 text-[13px] text-slate-600">
-                <i class="fas fa-circle-check text-emerald-500 text-sm mt-0.5 flex-shrink-0"></i>
-                {{ $item }}
-            </li>
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[900px]">
+            <thead class="bg-slate-50 border-b border-slate-100">
+                <tr>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Proposal ID</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Research Title</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Researcher</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Clearance Number</th>
+                    <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Published Date</th>
+                    <th class="text-right text-[10px] font-bold tracking-wider uppercase text-slate-400 px-6 py-3">Actions</th>
+                </tr>
+            </thead>
+        <tbody class="divide-y divide-slate-50">
+            @forelse($publishedDocs as $doc)
+            @php
+                $initials = strtoupper(substr($doc->proposal?->researcher?->name ?? 'U', 0, 2));
+                $publishedDate = $doc->published_date?->format('M d, Y') ?? '-';
+                $previewUrl = $doc->file_path ? Storage::disk('public')->url($doc->file_path) : null;
+            @endphp
+            <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="px-4 py-4">
+                    <span class="text-[13.5px] font-bold text-[#1e3a5f]">{{ $doc->document_number ?: ('EC-'.$doc->id) }}</span>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="max-w-xl text-[13px] text-slate-700 font-medium line-clamp-2">{{ $doc->proposal?->title ?? '-' }}</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-full bg-slate-400 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">{{ $initials }}</div>
+                        <span class="text-[13px] font-medium text-slate-700">{{ $doc->proposal?->researcher?->name ?? '-' }}</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4 text-[13px] text-slate-600 font-medium">{{ $doc->proposal?->nomor_ec ?? '-' }}</span></td>
+                <td class="px-4 py-4 text-[13px] text-slate-500">{{ $publishedDate }}</td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center justify-end gap-2">
+                        @if($doc->file_path && Storage::disk('public')->exists($doc->file_path))
+                        <a href="{{ route('admin.publishing.preview', $doc) }}" target="_blank" rel="noopener noreferrer"
+                            class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                            title="Preview">
+                            <i class="fas fa-eye text-[11px]"></i>
+                        </a>
+                        @endif
+                        <a href="{{ route('admin.publishing.download', $doc) }}"
+                            class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+                            title="Download PDF">
+                            <i class="fas fa-download text-xs"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="6" class="px-6 py-16 text-center">
+                    <i class="fas fa-inbox text-slate-300 text-4xl mb-3 block"></i>
+                    <p class="text-[14px] text-slate-400 font-medium">Belum ada dokumen yang dipublikasi.</p>
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+    </div>
+
+    {{-- Pagination for Published Certificates --}}
+    @if(isset($publishedDocs) && $publishedDocs->hasPages())
+    <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100">
+        <span class="text-[12.5px] text-slate-400">
+            Showing {{ $publishedDocs->firstItem() }}–{{ $publishedDocs->lastItem() }} of {{ $publishedDocs->total() }}
+        </span>
+        <div class="flex items-center gap-1">
+            @if($publishedDocs->onFirstPage())
+                <span class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-300 cursor-not-allowed"><i class="fas fa-chevron-left text-xs"></i></span>
+            @else
+                <a href="{{ $publishedDocs->previousPageUrl() }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><i class="fas fa-chevron-left text-xs"></i></a>
+            @endif
+            @foreach($publishedDocs->getUrlRange(1, $publishedDocs->lastPage()) as $page => $url)
+                @if($page == $publishedDocs->currentPage())
+                    <span class="w-8 h-8 flex items-center justify-center bg-[#1e3a5f] text-white text-[13px] font-semibold rounded-lg">{{ $page }}</span>
+                @else
+                    <a href="{{ $url }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-[13px] text-slate-600 hover:bg-slate-50 transition-colors">{{ $page }}</a>
+                @endif
             @endforeach
-        </ul>
-        <button onclick="featureInDevelopment('Download Policy Handbook')"
-                class="inline-flex items-center gap-2 text-[13px] font-bold text-[#1e3a5f] hover:text-[#162d4a] transition-colors cursor-pointer">
-            Download Policy Handbook (PDF)
-            <i class="fas fa-arrow-up-right-from-square text-xs"></i>
-        </button>
-    </div>
-
-    {{-- Security Verified --}}
-    <div class="rounded-2xl p-6 flex flex-col items-start justify-between" style="background:#1e3a5f;">
-        <div>
-            <h3 class="text-[15px] font-bold text-white mb-2">Security Verified</h3>
-            <p class="text-[13px] text-blue-200/80 leading-relaxed">
-                All pending certificates have passed the automated compliance verification for data privacy and PI protection.
-            </p>
-        </div>
-        <div class="mt-6 w-full">
-            <div class="inline-flex items-center gap-2.5 bg-white/10 border border-white/20 rounded-xl px-4 py-2.5">
-                <i class="fas fa-shield-halved text-blue-300 text-base"></i>
-                <span class="text-[12px] font-bold tracking-widest uppercase text-blue-200">System Encrypted</span>
-            </div>
-        </div>
-        {{-- Decorative shield --}}
-        <div class="absolute opacity-5 right-8 bottom-4 pointer-events-none select-none" aria-hidden="true">
-            <i class="fas fa-shield-halved text-white" style="font-size:100px;"></i>
+            @if($publishedDocs->hasMorePages())
+                <a href="{{ $publishedDocs->nextPageUrl() }}" class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><i class="fas fa-chevron-right text-xs"></i></a>
+            @else
+                <span class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-300 cursor-not-allowed"><i class="fas fa-chevron-right text-xs"></i></span>
+            @endif
         </div>
     </div>
-
+    @endif
 </div>
+
+{{-- Row removed: Publishing Guidelines and Security Verified cards were deleted --}}
 
 @endsection
 

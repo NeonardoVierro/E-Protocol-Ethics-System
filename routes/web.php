@@ -202,6 +202,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     });
 
     Route::prefix('publishing')->name('publishing.')->group(function () {
+        Route::get('/{document}/preview', [App\Http\Controllers\Admin\PublishingController::class, 'preview'])->name('preview');
+        Route::get('/{document}/download', [App\Http\Controllers\Admin\PublishingController::class, 'download'])->name('download');
         Route::post('/{document}/publish', [App\Http\Controllers\Admin\PublishingController::class, 'publish'])->name('publish');
         Route::post('/bulk-publish', [App\Http\Controllers\Admin\PublishingController::class, 'bulkPublish'])->name('bulk-publish');
     });

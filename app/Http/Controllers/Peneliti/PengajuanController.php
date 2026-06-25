@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Peneliti;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\GenerateStyledPdfTrait;
 use App\Models\Proposal;
 use App\Models\ProposalAssignment;
 use App\Models\ProposalFile;
@@ -18,6 +19,8 @@ use Illuminate\Support\Facades\Storage;
 
 class PengajuanController extends Controller
 {
+    use GenerateStyledPdfTrait;
+
     /**
      * Helper untuk cek akses menu pengajuan
      * @return string|null - 'guest', 'pending', atau null untuk aktif
@@ -783,61 +786,6 @@ class PengajuanController extends Controller
         return ['path' => $path, 'file_name' => $fileName];
     }
 
-    private function buildSimplePdf(array $lines): string
-    {
-        $escapedLines = array_map(function ($line) {
-            return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], (string) $line);
-        }, $lines);
-
-        $content = '';
-        $y = 760;
-        foreach ($escapedLines as $line) {
-            $content .= "BT /F1 12 Tf 50 {$y} Td ({$line}) Tj ET\n";
-            $y -= 16;
-        }
-
-        $objects = [];
-        $objects[] = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj";
-        $objects[] = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj";
-        $objects[] = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj";
-        $objects[] = "4 0 obj\n<< /Length 0 >>\nstream\n{$content}endstream\nendobj";
-        $objects[] = "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj";
-
-        $pdf = "%PDF-1.4\n";
-        $offsets = [];
-        $offset = strlen($pdf);
-
-        foreach ($objects as $object) {
-            $offsets[] = $offset;
-            $pdf .= $object . "\n";
-            $offset = strlen($pdf);
-        }
-
-        $xrefPosition = strlen($pdf);
-        $pdf .= "xref\n0 6\n0000000000 65535 f \n";
-        foreach ($offsets as $offsetValue) {
-            $pdf .= sprintf("%010d 00000 n \n", $offsetValue);
-        }
-
-        $pdf .= "trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{$xrefPosition}\n%%EOF";
-
-        return $pdf;
-    }
-
-    private function renderHtmlToPdf(string $html): string
-    {
-        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
-            $pdf->setPaper('a4', 'portrait');
-            return $pdf->output();
-        }
-
-        return $this->buildSimplePdf([
-            'DOMPDF not available',
-            'Please install barryvdh/laravel-dompdf',
-        ]);
-    }
-
     private function ensurePreviewData(Proposal $proposal): EthicsDocument
     {
         $ethicsDocument = $this->getLatestDraftDocument($proposal) ?? $proposal->ethicsDocument;
@@ -1269,13 +1217,17 @@ class PengajuanController extends Controller
             abort(404, 'Dokumen Ethical Clearance belum tersedia.');
         }
 
-        if (!$ethicsDocument->file_path || !Storage::disk('public')->exists($ethicsDocument->file_path)) {
-            abort(404, 'File dokumen tidak ditemukan.');
-        }
+        // Generate styled PDF directly to ensure proper formatting
+        $fileName = 'Ethical-Clearance-' . $proposal->nomor_ec . '-' . now()->format('YmdHis') . '.pdf';
+        $pdfContent = $this->generateStyledEthicsDocumentPdf($ethicsDocument, $proposal);
 
-        return response()->download(
-            Storage::disk('public')->path($ethicsDocument->file_path),
-            $ethicsDocument->original_name ?: 'Ethical-Clearance-' . $proposal->nomor_ec . '.pdf'
+        return response()->streamDownload(
+            fn() => print($pdfContent),
+            $fileName,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"'
+            ]
         );
     }
 }
