@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Traits\GenerateStyledPdfTrait;
 use App\Models\Proposal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PublishingController extends Controller
 {
+    use GenerateStyledPdfTrait;
     public function index()
     {
         // Show ethics documents that are signed and ready to publish
@@ -17,7 +20,12 @@ class PublishingController extends Controller
             ->orderByDesc('signed_date')
             ->paginate(15);
 
-        return view('admin.publishing.index', compact('docs'));
+        $publishedDocs = \App\Models\EthicsDocument::with(['proposal', 'ketua'])
+            ->where('status', \App\Models\EthicsDocument::STATUS_PUBLISHED)
+            ->orderByDesc('published_date')
+            ->paginate(10);
+
+        return view('admin.publishing.index', compact('docs', 'publishedDocs'));
     }
 
     public function publish(\App\Models\EthicsDocument $document)
@@ -60,6 +68,41 @@ class PublishingController extends Controller
         });
 
         return response()->json(['success' => true]);
+    }
+
+    public function preview(\App\Models\EthicsDocument $document)
+    {
+        if (!in_array($document->status, [\App\Models\EthicsDocument::STATUS_SIGNED, \App\Models\EthicsDocument::STATUS_PUBLISHED])) {
+            abort(404);
+        }
+
+        // Generate styled PDF directly to ensure proper formatting
+        $pdfContent = $this->generateStyledEthicsDocumentPdf($document, $document->proposal);
+
+        return response()->make($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="ethical-clearance-preview.pdf"'
+        ]);
+    }
+
+    public function download(\App\Models\EthicsDocument $document)
+    {
+        if ($document->status !== \App\Models\EthicsDocument::STATUS_PUBLISHED) {
+            abort(404);
+        }
+
+        // Generate styled PDF directly to ensure proper formatting
+        $fileName = 'Ethical-Clearance-' . $document->proposal?->nomor_ec . '-' . now()->format('YmdHis') . '.pdf';
+        $pdfContent = $this->generateStyledEthicsDocumentPdf($document, $document->proposal);
+
+        return response()->streamDownload(
+            fn() => print($pdfContent),
+            $fileName,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"'
+            ]
+        );
     }
 
     public function bulkPublish(Request $request)

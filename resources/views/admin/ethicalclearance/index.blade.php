@@ -194,7 +194,7 @@
 
                             <div class="space-y-4 px-8 text-justify">
                                 <p>Komite Etik Penelitian Kesehatan Universitas Digital Indonesia setelah mempelajari protokol penelitian yang diajukan, dengan ini menyatakan bahwa penelitian dengan judul:</p>
-                                <p class="font-bold text-center py-2 px-4 italic" x-text="certificateTitle ? '"' + certificateTitle + '"' : '-'">"-"</p>
+                                <p class="font-bold text-center py-2 px-4 italic" x-text="certificateTitle ? '&quot;' + certificateTitle + '&quot;' : '-'">"-"</p>
                                 <div class="grid grid-cols-12 gap-y-2 mt-4">
                                     <div class="col-span-4 font-bold">Peneliti Utama</div>
                                     <div class="col-span-8" x-text="': ' + (principalInvestigator || '-')">: -</div>
