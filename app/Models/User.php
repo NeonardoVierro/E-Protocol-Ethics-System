@@ -109,4 +109,20 @@ class User extends Authenticatable
     {
         return $this->roles->first()->name ?? 'tidak ada role';
     }
+
+    // Mendapatkan label role untuk ditampilkan di UI
+    public function getRoleLabel()
+    {
+        $roleName = $this->roles->first()->name ?? null;
+        
+        $roleLabels = [
+            'admin' => 'Admin',
+            'sekretaris' => 'Sekre',
+            'peneliti' => 'Peneliti',
+            'reviewer' => 'Reviewer',
+            'ketua' => 'Ketua',
+        ];
+        
+        return $roleLabels[$roleName] ?? ucfirst($roleName);
+    }
 }

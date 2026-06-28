@@ -77,18 +77,10 @@
         {{-- Header --}}
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
             <span class="text-[15px] font-bold text-slate-900">User Management</span>
-            <div class="flex items-center gap-2">
-                <div class="relative">
-                    <i class="fas fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[11px] pointer-events-none"></i>
-                    <input type="text" placeholder="Search users..."
-                           id="user-search"
-                           class="pl-7 pr-3 py-1.5 text-[12.5px] bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all w-full sm:w-44 text-slate-700 placeholder-slate-400">
-                </div>
-                <button type="button"
-                        class="w-8 h-8 border border-slate-200 rounded-lg bg-slate-50 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors">
-                    <i class="fas fa-sliders text-xs"></i>
-                </button>
-            </div>
+            <a href="{{ route('admin.usermanagement.index') }}"
+               class="inline-flex items-center py-2 px-4 border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors bg-white">
+                View All
+            </a>
         </div>
 
         {{-- Table --}}
@@ -232,7 +224,7 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
     @php
     $quickCards = [
-        ['icon'=>'fas fa-key',           'title'=>'Role Matrix',      'sub'=>'Edit permissions',   'route'=>route('admin.role&permission.index')],
+        ['icon'=>'fas fa-clipboard-list','title'=>'EC Assignments',   'sub'=>'Bulk assign chairs', 'route'=>route('admin.proposal-assignment.index')],
         ['icon'=>'fas fa-clipboard-list','title'=>'EC Assignments',   'sub'=>'Bulk assign chairs', 'route'=>route('admin.proposal-assignment.index')],
         ['icon'=>'fas fa-pen-to-square', 'title'=>'Template Editor',  'sub'=>'Manage forms',       'route'=>route('admin.templateproposal.index')],
         ['icon'=>'fas fa-rotate',        'title'=>'Publication Sync', 'sub'=>'Global repo sync',   'route'=>route('admin.publishing.index')],
@@ -325,17 +317,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                 },
             },
-        });
-    }
-
-    // ── Live search tabel ──────────────────────────
-    const searchInput = document.getElementById('user-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', function () {
-            const q = this.value.toLowerCase().trim();
-            document.querySelectorAll('#user-table tbody tr').forEach(row => {
-                row.style.display = !q || row.textContent.toLowerCase().includes(q) ? '' : 'none';
-            });
         });
     }
 

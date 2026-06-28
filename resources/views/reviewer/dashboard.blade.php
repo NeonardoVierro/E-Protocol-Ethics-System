@@ -153,7 +153,7 @@
         <div class="priority-card">
             <div class="priority-badge">⚠ Priority Action</div>
             <div class="priority-title">{{ $priorityReview->proposal->title }}</div>
-            <div class="priority-sub">Deadline: {{ $priorityReview->due_date->format('M d, Y') }}</div>
+            <div class="priority-sub">Deadline: {{ optional($priorityReview->due_date) ? \Carbon\Carbon::createFromFormat('Y-m-d', optional($priorityReview->due_date)->toDateString())->format('M d, Y') : '-' }}</div>
             <a href="{{ route('reviewer.review-proposal.show', $priorityReview->proposal->id) }}" class="btn-review-now">
                 Review Now
             </a>
@@ -200,7 +200,7 @@
                         <div class="date-main">{{ $review->assigned_date?->format('M d, Y') ?? '-' }}</div>
                     </td>
                     <td>
-                        <div class="date-main">{{ $review->due_date?->format('M d, Y') ?? '-' }}</div>
+                        <div class="date-main">{{ $review->due_date ? \Carbon\Carbon::createFromFormat('Y-m-d', $review->due_date->toDateString())->format('M d, Y') : '-' }}</div>
                         @php
                             $daysLeft = $review->due_date ? $review->due_date->diffInDays(now(), false) : null;
                             $daysClass = 'days-ok';

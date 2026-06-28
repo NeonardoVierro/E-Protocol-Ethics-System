@@ -87,9 +87,18 @@
                   </div>
                   <div class="min-w-0">
                     <div class="text-xs text-slate-500 font-medium">REVIEW DEADLINE</div>
-                    <div class="text-sm font-semibold text-slate-900 mt-1">
-                      {{ optional($proposal->review_deadline)->format('d M Y') ?? optional($proposal->created_at)->addDays(7)->format('d M Y') ?? '—' }}
-                    </div>
+                                        <div class="text-sm font-semibold text-slate-900 mt-1">
+                                            @php
+                                                $deadline = null;
+                                                if(isset($proposal->assignments)) {
+                                                        $deadline = $proposal->assignments->where('role', \App\Models\ProposalAssignment::ROLE_REVIEWER)->pluck('due_date')->filter()->min();
+                                                }
+                                                if(!$deadline) {
+                                                        $deadline = optional($proposal->review_deadline) ? optional($proposal->review_deadline)->toDateString() : null;
+                                                }
+                                            @endphp
+                                            {{ $deadline ? \Carbon\Carbon::createFromFormat('Y-m-d', \Carbon\Carbon::parse($deadline)->toDateString())->format('d M Y') : (optional($proposal->created_at)->addDays(7)->format('d M Y') ?? '—') }}
+                                        </div>
                   </div>
                 </div>
               </div>
@@ -372,9 +381,6 @@
 
 <div class="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 px-4 py-4 shadow-xl backdrop-blur-sm">
     <div class="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <button type="button" onclick="submitReviewForm('draft')" class="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto">
-            Save Draft
-        </button>
         <button type="button" onclick="submitReviewForm('submit')" class="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 sm:w-auto">
             Submit Review
         </button>

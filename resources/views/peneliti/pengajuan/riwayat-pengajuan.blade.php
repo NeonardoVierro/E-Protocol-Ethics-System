@@ -60,21 +60,36 @@
                                         <td colspan="5" class="p-6">
                                             <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                                                 <div class="mb-4">
-                                                    <p class="text-sm font-semibold text-slate-900">Detail Feedback Reviewer</p>
+                                                    @if($proposal->status === \App\Models\Proposal::STATUS_REJECTED)
+                                                        <p class="text-sm font-semibold text-slate-900">Detail Rejected</p>
+                                                    @else
+                                                        <p class="text-sm font-semibold text-slate-900">Detail Feedback Reviewer</p>
+                                                    @endif
                                                 </div>
-                                                @if(isset($proposal->pendingRevisionRequest) && $proposal->pendingRevisionRequest)
-                                                    <div class="flex gap-2 items-center mb-4">
-                                                        <a href="{{ route('pengajuan.riwayat-pengajuan.revision', $proposal->id) }}" class="bg-amber-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-amber-700">Revisi</a>
-                                                        <p class="text-sm text-slate-500">Klik untuk membuka halaman unggah revisi.</p>
-                                                    </div>
-                                                @endif
-
-                                                @if($proposal->reviewFeedbacks->isEmpty())
-                                                    <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-slate-600">
-                                                        Belum ada feedback reviewer yang dikirim untuk proposal ini.
+                                                @if($proposal->status === \App\Models\Proposal::STATUS_REJECTED)
+                                                    <div class="flex flex-col gap-2 mb-4">
+                                                        <div class="inline-flex items-center gap-2">
+                                                            <span class="bg-red-100 text-red-800 px-3 py-1.5 rounded-md text-sm">Ditolak</span>
+                                                            <span class="text-sm text-slate-500">Tanggal: {{ optional($proposal->decision_date)->format('d M Y') ?? '-' }}</span>
+                                                        </div>
+                                                        <div class="mt-2 text-sm text-slate-700 bg-white rounded-2xl border border-slate-200 p-3">
+                                                            {{ $proposal->rejection_reason ?? 'Alasan tidak tersedia.' }}
+                                                        </div>
                                                     </div>
                                                 @else
-                                                    <div class="space-y-6">
+                                                    @if($proposal->status === \App\Models\Proposal::STATUS_REVISED)
+                                                        <div class="flex gap-2 items-center mb-4">
+                                                            <a href="{{ route('pengajuan.riwayat-pengajuan.revision', $proposal->id) }}" class="bg-amber-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-amber-700">Revisi</a>
+                                                            <p class="text-sm text-slate-500">Klik untuk melihat status revisi Anda.</p>
+                                                        </div>
+                                                    @endif
+
+                                                    @if($proposal->reviewFeedbacks->isEmpty())
+                                                        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-slate-600">
+                                                            Belum ada feedback reviewer yang dikirim untuk proposal ini.
+                                                        </div>
+                                                    @else
+                                                        <div class="space-y-6">
                                                         @foreach($proposal->reviewFeedbacks as $fb)
                                                             <div class="rounded-3xl border border-slate-200 bg-surface-container-low p-5">
                                                                 <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -132,6 +147,7 @@
                                                             </div>
                                                         @endforeach
                                                     </div>
+                                                    @endif
                                                 @endif
                                             </div>
                                         </td>

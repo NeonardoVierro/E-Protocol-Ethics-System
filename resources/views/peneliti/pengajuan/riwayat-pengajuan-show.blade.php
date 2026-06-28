@@ -11,8 +11,22 @@
         </a>
 
         <div class="mb-8">
-            <h1 class="text-2xl font-semibold text-slate-900">Detail Feedback Reviewer</h1>
-            <p class="text-slate-500 mt-1">Lihat komentar reviewer dan rekomendasi revisi untuk proposal Anda.</p>
+            @if($proposal->status === \App\Models\Proposal::STATUS_REJECTED)
+                <h1 class="text-2xl font-semibold text-slate-900">Detail Rejected</h1>
+                <p class="text-slate-500 mt-1">Ringkasan alasan penolakan untuk proposal Anda.</p>
+                <div class="mt-4">
+                    <div class="inline-flex items-center gap-2">
+                        <span class="bg-red-100 text-red-800 px-3 py-1.5 rounded-md text-sm">Ditolak</span>
+                        <span class="text-sm text-slate-500">Tanggal: {{ optional($proposal->decision_date)->format('d M Y') ?? '-' }}</span>
+                    </div>
+                    <div class="mt-3 bg-white rounded-2xl border border-slate-200 p-4 text-sm text-slate-700">
+                        {{ $proposal->rejection_reason ?? 'Alasan penolakan tidak tersedia.' }}
+                    </div>
+                </div>
+            @else
+                <h1 class="text-2xl font-semibold text-slate-900">Detail Feedback Reviewer</h1>
+                <p class="text-slate-500 mt-1">Lihat komentar reviewer dan rekomendasi revisi untuk proposal Anda.</p>
+            @endif
         </div>
 
         @if(isset($proposal->pendingRevisionRequest) && $proposal->pendingRevisionRequest)
@@ -86,11 +100,13 @@
             </div>
         @endif
 
-        @if($feedbacks->isEmpty())
-            <div class="rounded-2xl border border-slate-200 bg-surface-container-low p-10 text-center">
-                <p class="text-slate-600">Belum ada feedback reviewer yang tersedia untuk proposal ini.</p>
-            </div>
-        @else
+        @if($proposal->status !== \App\Models\Proposal::STATUS_REJECTED)
+            @if($feedbacks->isEmpty())
+                <div class="rounded-2xl border border-slate-200 bg-surface-container-low p-10 text-center">
+                    <p class="text-slate-600">Belum ada feedback reviewer yang tersedia untuk proposal ini.</p>
+                </div>
+            @else
+        @endif
             <div class="space-y-6">
                 @foreach($feedbacks as $fb)
                     <div class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">

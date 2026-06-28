@@ -38,38 +38,43 @@
                     </p>
                 </div>
             @endif
-            @if($canUpload)
+
+            @if($originalFiles->isNotEmpty())
                 <form action="{{ route('pengajuan.riwayat-pengajuan.submit-revision', $proposal->id) }}" method="POST" enctype="multipart/form-data">
                     @csrf
-                    <div class="rounded-2xl border border-slate-200 bg-white p-5">
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <p class="font-medium text-slate-900">{{ $originalName }}</p>
-                                <p class="text-xs text-slate-500 mt-1">v{{ $latest->version }}
-                                    @if($latest->file_type === 'revision')
-                                        <span class="ml-2 inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-semibold">Revisi</span>
-                                    @else
-                                        <span class="ml-2 inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold">Original</span>
-                                    @endif
-                                </p>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.view', ['proposal' => $proposal->id, 'file' => $latest->id]) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
-                                    <span class="material-symbols-outlined text-base">visibility</span>
-                                    Lihat
-                                </a>
-                                <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.download', ['proposal' => $proposal->id, 'file' => $latest->id]) }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
-                                    <span class="material-symbols-outlined text-base">download</span>
-                                    Download
-                                </a>
-                                @if($canUpload)
-                                    <input type="file" name="revision_files[{{ $latest->id }}]" accept="application/pdf" class="text-sm border border-slate-300 rounded px-2 py-1" />
-                                @endif
-                            </div>
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                        <h3 class="text-sm font-semibold text-slate-700 mb-4">File Proposal Awal</h3>
+                        <div class="space-y-3">
+                            @foreach($originalFiles as $target)
+                                <div class="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <div>
+                                        <p class="font-medium text-slate-900">{{ $target->group_name ?? $target->original_name }}</p>
+                                        <p class="text-xs text-slate-500">v{{ $target->version }} @if($target->file_type === \App\Models\ProposalFile::TYPE_PROPOSAL)<span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-[10px] font-semibold ml-2">Original</span>@endif</p>
+                                    </div>
+                                    <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.view', ['proposal' => $proposal->id, 'file' => $target->id]) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
+                                                <span class="material-symbols-outlined text-base">visibility</span>
+                                                Lihat
+                                            </a>
+                                            <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.download', ['proposal' => $proposal->id, 'file' => $target->id]) }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
+                                                <span class="material-symbols-outlined text-base">download</span>
+                                                Download
+                                            </a>
+                                        </div>
+                                        @if($canUpload)
+                                            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Unggah Revisi</label>
+                                            <input type="file" name="revision_files[{{ $target->id }}]" accept="application/pdf" class="text-sm border border-slate-300 rounded px-2 py-1" />
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
-                    </div>
-                    <div class="mt-6 flex justify-end">
-                        <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-md text-sm font-medium hover:bg-amber-700 transition">Upload Revisi</button>
+                        @if($canUpload)
+                            <div class="mt-6 flex justify-end">
+                                <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-md text-sm font-medium hover:bg-amber-700 transition">Upload Revisi</button>
+                            </div>
+                        @endif
                     </div>
                 </form>
             @elseif(!$statusMessage)
@@ -78,42 +83,36 @@
                 </div>
             @endif
 
-            <div class="rounded-2xl border border-slate-200 bg-white p-5">
-                <h3 class="text-sm font-semibold text-slate-700 mb-3">Riwayat Revisi</h3>
-                @if($revisions->isEmpty())
-                    <div class="text-sm text-slate-500">Belum ada revisi yang dikirim.</div>
-                @else
-                    <ul class="space-y-2 text-sm">
-                        @foreach($revisions as $r)
-                            <li class="border p-3 rounded">
-                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <div class="font-semibold text-slate-900">{{ $r->file?->original_name ?? 'Revision File' }} - v{{ $r->file?->version ?? $r->revision_number + 1 }}</div>
-                                    </div>
-                                    <div class="text-xs text-slate-500">{{ $r->submitted_date?->toDateString() }}</div>
+            @if($revisionFiles->isNotEmpty())
+                <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                    <h3 class="text-sm font-semibold text-slate-700 mb-3">File Revisi Terkirim</h3>
+                    <div class="space-y-3">
+                        @foreach($revisionFiles as $target)
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                    <p class="font-medium text-slate-900">{{ $target->group_name ?? $target->original_name }}</p>
+                                    <p class="text-xs text-slate-500">v{{ $target->version }} - {{ $target->getTypeLabelAttribute() }}</p>
                                 </div>
-                                @if($r->file)
-                                    <div class="mt-2 flex flex-wrap gap-2 items-center">
-                                        <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.view', ['proposal' => $proposal->id, 'file' => $r->file->id]) }}" target="_blank" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" title="Lihat dokumen revisi">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </a>
-                                        <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.download', ['proposal' => $proposal->id, 'file' => $r->file->id]) }}" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200" title="Download dokumen revisi">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 10l5 5 5-5" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15V3" />
-                                            </svg>
-                                        </a>
-                                    </div>
-                                @endif
-                            </li>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.view', ['proposal' => $proposal->id, 'file' => $target->id]) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
+                                        <span class="material-symbols-outlined text-base">visibility</span>
+                                        Lihat
+                                    </a>
+                                    <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.download', ['proposal' => $proposal->id, 'file' => $target->id]) }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
+                                        <span class="material-symbols-outlined text-base">download</span>
+                                        Download
+                                    </a>
+                                </div>
+                            </div>
                         @endforeach
-                    </ul>
-                @endif
-            </div>
+                    </div>
+                </div>
+            @elseif($revisions->isNotEmpty())
+                <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                    <h3 class="text-sm font-semibold text-slate-700 mb-3">Riwayat Revisi</h3>
+                    <div class="text-sm text-slate-500">Revisi sudah dikirim tetapi file revisi belum tersedia.</div>
+                </div>
+            @endif
 
             <div class="rounded-2xl border border-slate-200 bg-white p-5">
                 <h3 class="text-sm font-semibold text-slate-700 mb-3">Komentar Reviewer</h3>
@@ -125,19 +124,30 @@
                             ['label' => 'Autonomy', 'keys' => ['autonomy', 'autonomi', 'autonomy_feedback']],
                             ['label' => 'Beneficence', 'keys' => ['beneficence', 'benefit', 'beneficence_feedback']],
                             ['label' => 'Justice', 'keys' => ['justice', 'fairness', 'justice_feedback']],
-                            ['label' => 'Komentar Umum', 'keys' => ['general_comments', 'comments', 'general_comment', 'catatan', 'comments_general']],
+                            ['label' => 'Komentar Umum', 'keys' => ['general_comments', 'comments', 'general_comment', 'catatan', 'comments_general', 'summary']],
                         ];
 
                         $renderField = function ($parsed, $keys) {
-                            foreach ($keys as $key) {
-                                if (is_array($parsed) && array_key_exists($key, $parsed) && !empty($parsed[$key])) {
-                                    $value = $parsed[$key];
-                                    if (is_array($value)) {
-                                        return implode("\n", array_map('strval', $value));
+                            if (is_string($parsed) && trim($parsed) !== '') {
+                                return $parsed;
+                            }
+
+                            if (is_array($parsed)) {
+                                foreach ($keys as $key) {
+                                    if (array_key_exists($key, $parsed) && !empty($parsed[$key])) {
+                                        $value = $parsed[$key];
+                                        if (is_array($value)) {
+                                            return implode("\n", array_map('strval', $value));
+                                        }
+                                        return (string) $value;
                                     }
-                                    return (string) $value;
+                                }
+
+                                if (array_key_exists('summary', $parsed) && trim((string) $parsed['summary']) !== '') {
+                                    return (string) $parsed['summary'];
                                 }
                             }
+
                             return '-';
                         };
                     @endphp
@@ -176,7 +186,7 @@
                                     </div>
                                     <div class="inline-flex items-center gap-2 text-xs text-blue-600">
                                         <span class="material-symbols-outlined text-sm">schedule</span>
-                                        {{ $note->created_at->format('d M Y H:i') }}
+                                        <span class="timestamp" data-timestamp="{{ $note->created_at->toIso8601String() }}">{{ $note->created_at->format('d M Y H:i') }}</span>
                                     </div>
                                 </div>
                                 <div class="p-4">
@@ -192,3 +202,57 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    function formatRelativeTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        
+        if (seconds < 60) {
+            return 'baru saja';
+        }
+        
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) {
+            return minutes === 1 ? '1 menit yang lalu' : minutes + ' menit yang lalu';
+        }
+        
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) {
+            return hours === 1 ? '1 jam yang lalu' : hours + ' jam yang lalu';
+        }
+        
+        const days = Math.floor(hours / 24);
+        if (days < 7) {
+            return days === 1 ? '1 hari yang lalu' : days + ' hari yang lalu';
+        }
+        
+        // For older dates, show the full date format
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const day = date.getDate();
+        const month = monthNames[date.getMonth()];
+        const year = date.getFullYear();
+        const hours24 = String(date.getHours()).padStart(2, '0');
+        const mins = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${day} ${month} ${year} ${hours24}:${mins}`;
+    }
+    
+    function updateTimestamps() {
+        document.querySelectorAll('.timestamp').forEach(el => {
+            const timestamp = el.getAttribute('data-timestamp');
+            if (timestamp) {
+                el.textContent = formatRelativeTime(timestamp);
+            }
+        });
+    }
+    
+    // Update timestamps immediately on page load
+    document.addEventListener('DOMContentLoaded', updateTimestamps);
+    
+    // Update timestamps every minute
+    setInterval(updateTimestamps, 60000);
+</script>
+@endpush

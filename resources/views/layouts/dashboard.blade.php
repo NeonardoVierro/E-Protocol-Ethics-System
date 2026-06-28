@@ -539,7 +539,7 @@
             <div class="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-outline-variant cursor-pointer group">
                 <div class="text-right hidden sm:block">
                     <p class="font-semibold text-primary text-sm">{{ Auth::user()->name }}</p>
-                    <p class="text-xs text-on-surface-variant uppercase tracking-wider">{{ $roleName ?? '' }}</p>
+                    <p class="text-xs text-on-surface-variant uppercase tracking-wider">{{ Auth::user()->getRoleLabel() }}</p>
                 </div>
                 <div class="w-9 h-9 rounded-full overflow-hidden bg-surface-container border border-outline-variant flex items-center justify-center">
                     <span class="material-symbols-outlined text-on-surface-variant">account_circle</span>

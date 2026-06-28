@@ -88,7 +88,6 @@
             <tr>
                 <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-6 py-3">Nama Dokumen</th>
                 <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Versi</th>
-                <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Kategori</th>
                 <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Ukuran</th>
                 <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Tanggal Update</th>
                 <th class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-400 px-4 py-3">Status</th>
@@ -111,18 +110,6 @@
                     </div>
                 </td>
                 <td class="px-4 py-4 text-[13px] text-slate-600 font-medium">{{ $t->versi }}</td>
-                <td class="px-4 py-4">
-                    @php
-                    $katClass = match($t->kategori) {
-                        'Biomedis' => 'bg-blue-50 text-blue-600',
-                        'Sosial'   => 'bg-emerald-50 text-emerald-600',
-                        default    => 'bg-purple-50 text-purple-600',
-                    };
-                    @endphp
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase {{ $katClass }}">
-                        {{ $t->kategori }}
-                    </span>
-                </td>
                 <td class="px-4 py-4 text-[13px] text-slate-500">{{ $t->file_size_human }}</td>
                 <td class="px-4 py-4 text-[13px] text-slate-500">
                     {{ \Carbon\Carbon::parse($t->updated_at)->format('d M Y') }}
@@ -136,7 +123,8 @@
                 <td class="px-6 py-4">
                     <div class="flex items-center justify-end gap-1.5">
                         {{-- Edit --}}
-                        <button onclick="openEditModal({{ $t->id }}, '{{ addslashes($t->nama_dokumen) }}', '{{ $t->versi }}', '{{ $t->kategori }}', '{{ addslashes($t->deskripsi ?? '') }}')"
+                        <button data-id="{{ $t->id }}" data-nama="{{ $t->nama_dokumen }}" data-versi="{{ $t->versi }}" data-deskripsi="{{ $t->deskripsi ?? '' }}"
+                                onclick="openEditModal(this)"
                                 class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="Edit">
                             <i class="fas fa-pen text-xs"></i>
                         </button>
@@ -156,7 +144,8 @@
                         </form>
                         {{-- Hapus — pakai modal custom, bukan confirm() --}}
                         <button type="button"
-                                onclick="openDeleteModal({{ $t->id }}, '{{ addslashes($t->nama_dokumen) }}')"
+                                data-id="{{ $t->id }}" data-nama="{{ $t->nama_dokumen }}"
+                                onclick="openDeleteModal(this)"
                                 class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer" title="Hapus">
                             <i class="fas fa-trash text-xs"></i>
                         </button>
@@ -289,36 +278,15 @@
                     @enderror
                 </div>
 
-                {{-- Versi + Kategori --}}
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">
-                            Versi <span class="text-red-400">*</span>
-                        </label>
-                        <input type="text" name="versi" value="{{ old('versi') }}" placeholder="e.g. v2.5"
-                               class="w-full px-3.5 py-2.5 text-[13.5px] border {{ $errors->has('versi') ? 'border-red-300' : 'border-slate-200' }} rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 placeholder-slate-400">
-                        @error('versi')
-                            <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
-                        <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">
-                            Kategori <span class="text-red-400">*</span>
-                        </label>
-                        <div class="relative">
-                            <select name="kategori"
-                                    class="w-full px-3.5 py-2.5 text-[13.5px] border {{ $errors->has('kategori') ? 'border-red-300' : 'border-slate-200' }} rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 appearance-none bg-white cursor-pointer">
-                                <option value="">-- Pilih --</option>
-                                <option value="Biomedis" {{ old('kategori') === 'Biomedis' ? 'selected' : '' }}>Biomedis</option>
-                                <option value="Sosial"   {{ old('kategori') === 'Sosial'   ? 'selected' : '' }}>Sosial</option>
-                                <option value="Umum"     {{ old('kategori') === 'Umum'     ? 'selected' : '' }}>Umum</option>
-                            </select>
-                            <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-                        </div>
-                        @error('kategori')
-                            <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
+                <div>
+                    <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">
+                        Versi <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" name="versi" value="{{ old('versi') }}" placeholder="e.g. v2.5"
+                           class="w-full px-3.5 py-2.5 text-[13.5px] border {{ $errors->has('versi') ? 'border-red-300' : 'border-slate-200' }} rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 placeholder-slate-400">
+                    @error('versi')
+                        <p class="text-[11px] text-red-500 mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 {{-- File indicator --}}
@@ -387,24 +355,10 @@
                               class="w-full px-3.5 py-2.5 text-[13.5px] border border-slate-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 placeholder-slate-400 resize-none"></textarea>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">Versi <span class="text-red-400">*</span></label>
-                        <input type="text" name="versi" id="edit-versi"
-                               class="w-full px-3.5 py-2.5 text-[13.5px] border border-slate-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700">
-                    </div>
-                    <div>
-                        <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">Kategori <span class="text-red-400">*</span></label>
-                        <div class="relative">
-                            <select name="kategori" id="edit-kategori"
-                                    class="w-full appearance-none px-3.5 py-2.5 text-[13.5px] border border-slate-200 rounded-xl bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700 cursor-pointer">
-                                <option value="Biomedis">Biomedis</option>
-                                <option value="Sosial">Sosial</option>
-                                <option value="Umum">Umum</option>
-                            </select>
-                            <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-                        </div>
-                    </div>
+                <div>
+                    <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">Versi <span class="text-red-400">*</span></label>
+                    <input type="text" name="versi" id="edit-versi"
+                           class="w-full px-3.5 py-2.5 text-[13.5px] border border-slate-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-slate-700">
                 </div>
                 <div>
                     <label class="block text-[12px] font-semibold text-slate-600 mb-1.5">Ganti File <span class="text-slate-400 font-normal">(opsional)</span></label>
@@ -506,10 +460,14 @@ function clearFile() {
 }
 
 // ── Modal Edit ────────────────────────────────────────────────────
-function openEditModal(id, nama, versi, kategori, deskripsi) {
+function openEditModal(button) {
+    const id        = button.dataset.id;
+    const nama      = button.dataset.nama;
+    const versi     = button.dataset.versi;
+    const deskripsi = button.dataset.deskripsi;
+
     document.getElementById('edit-nama').value      = nama;
     document.getElementById('edit-versi').value     = versi;
-    document.getElementById('edit-kategori').value  = kategori;
     document.getElementById('edit-deskripsi').value = deskripsi;
     document.getElementById('form-edit').action     = `/admin/templates/${id}`;
 
@@ -527,9 +485,9 @@ function closeEditModal() {
 // ── Modal Hapus ───────────────────────────────────────────────────
 let _deleteId = null;
 
-function openDeleteModal(id, nama) {
-    _deleteId = id;
-    document.getElementById('delete-nama').textContent = nama;
+function openDeleteModal(button) {
+    _deleteId = button.dataset.id;
+    document.getElementById('delete-nama').textContent = button.dataset.nama;
 
     const modal = document.getElementById('modal-delete');
     modal.classList.remove('hidden');

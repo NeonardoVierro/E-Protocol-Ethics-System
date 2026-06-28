@@ -143,7 +143,20 @@ class ReviewProposalController extends Controller
             ->with('feedback')
             ->first();
 
-        if (! $review) {
+        // Determine whether we should create a new Review record (to preserve previous feedback)
+        $createNewReview = false;
+        if ($review && $review->feedback && $review->feedback->is_submitted) {
+            $latestSubmittedRevision = ProposalRevision::where('proposal_id', $proposal->id)
+                ->where('status', ProposalRevision::STATUS_SUBMITTED)
+                ->orderByDesc('submitted_date')
+                ->first();
+
+            if ($latestSubmittedRevision && $review->feedback->submitted_at && $review->feedback->submitted_at->lt($latestSubmittedRevision->submitted_date)) {
+                $createNewReview = true;
+            }
+        }
+
+        if (! $review || $createNewReview) {
             $review = Review::create([
                 'proposal_id' => $proposal->id,
                 'reviewer_id' => Auth::id(),
@@ -166,30 +179,33 @@ class ReviewProposalController extends Controller
             'general_comments' => $request->input('general_comments'),
         ], JSON_UNESCAPED_UNICODE);
 
-        $reviewFeedback = ReviewFeedback::firstOrNew([
-            'review_id' => $review->id,
-            'proposal_id' => $proposal->id,
-        ]);
+        // Always create a new feedback entry for this submission to preserve history
+        if ($isSubmit) {
+            ReviewFeedback::create([
+                'review_id' => $review->id,
+                'proposal_id' => $proposal->id,
+                'feedback_text' => $feedbackData,
+                'recommendation' => $request->input('recommendation'),
+                'is_submitted' => true,
+                'submitted_at' => now(),
+            ]);
+        } else {
+            // For drafts, keep/update the draft feedback for the current review
+            $reviewFeedback = ReviewFeedback::firstOrNew([
+                'review_id' => $review->id,
+                'proposal_id' => $proposal->id,
+            ]);
 
-        $reviewFeedback->feedback_text = $feedbackData;
-        $reviewFeedback->recommendation = $request->input('recommendation');
-        $reviewFeedback->is_submitted = $isSubmit;
-        $reviewFeedback->submitted_at = $isSubmit ? now() : null;
-        $reviewFeedback->save();
+            $reviewFeedback->feedback_text = $feedbackData;
+            $reviewFeedback->recommendation = $request->input('recommendation');
+            $reviewFeedback->is_submitted = false;
+            $reviewFeedback->submitted_at = null;
+            $reviewFeedback->save();
+        }
 
         if ($isSubmit) {
-            $statusMap = [
-                'approved' => Proposal::STATUS_APPROVED,
-                'revision' => Proposal::STATUS_REVISED,
-                'rejected' => Proposal::STATUS_REJECTED,
-            ];
-
-            if (isset($statusMap[$reviewFeedback->recommendation])) {
-                $proposal->updateStatus($statusMap[$reviewFeedback->recommendation]);
-            }
-
             return redirect()->route('reviewer.riwayat-review')
-                ->with('success', 'Review berhasil disubmit dan status proposal diupdate.');
+                ->with('success', 'Review berhasil disubmit. Proposal akan menunggu keputusan akhir sekretaris.');
         }
 
         return redirect()->route('reviewer.review-proposal.show', $proposal->id)

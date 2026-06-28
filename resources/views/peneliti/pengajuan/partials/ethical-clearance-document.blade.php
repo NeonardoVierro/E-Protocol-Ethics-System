@@ -10,183 +10,189 @@
     $issuedAt = $issuedAt ?? now()->locale('id')->isoFormat('D MMMM Y');
 @endphp
 
+<style>
+    .pdf-certificate {
+        background: #fff;
+        color: #1a1a1a;
+        font-family: "Times New Roman", Times, serif;
+        font-size: 12px;
+        line-height: 1.6;
+        min-height: 842px;
+        box-sizing: border-box;
+        padding: 28px 32px;
+        border: none;
+        position: relative;
+        max-width: 595px;
+        margin: 0 auto;
+    }
+    .pdf-certificate .paper-backdrop {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.03;
+        pointer-events: none;
+    }
+    .pdf-certificate .paper-backdrop span {
+        font-size: 280px;
+        line-height: 1;
+    }
+    .pdf-certificate .section-header {
+        margin-bottom: 14px;
+        padding-bottom: 6px;
+        text-align: center;
+    }
+    .pdf-certificate .kop-committee {
+        font-size: 16px;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: 0.6px;
+    }
+    .pdf-certificate .kop-university {
+        font-size: 20px;
+        font-weight: 900;
+        margin: 6px 0 4px;
+        letter-spacing: 0.8px;
+    }
+    .pdf-certificate .kop-address {
+        font-size: 10.5px;
+        font-style: italic;
+        margin: 0;
+        line-height: 1.15;
+    }
+    .pdf-certificate .kop-contact {
+        font-size: 10.5px;
+        margin: 0;
+        line-height: 1.15;
+    }
+    .pdf-certificate .kop-hr {
+        width: 100%;
+        height: 1.5px;
+        background: #000;
+        margin: 12px 0 0 0;
+    }
+    .pdf-certificate .section-title {
+        margin-bottom: 16px;
+        text-align: center;
+    }
+    .pdf-certificate .section-title h5 {
+        font-size: 14px;
+        text-transform: uppercase;
+        font-weight: 700;
+        text-decoration: underline;
+        margin-bottom: 6px;
+    }
+    .pdf-certificate .section-title p {
+        margin: 0;
+        font-size: 11px;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .pdf-certificate .content {
+        margin-top: 16px;
+        padding-left: 8px;
+        padding-right: 8px;
+        text-align: justify;
+    }
+    .pdf-certificate .content p.certificate-title {
+        font-weight: 700;
+        text-align: center;
+        padding: 8px 16px;
+        font-style: italic;
+        margin: 10px 0 14px 0;
+        font-size: 13px;
+    }
+    .pdf-certificate .certificate-grid {
+        display: table;
+        width: 100%;
+        margin-top: 16px;
+        border-collapse: collapse;
+    }
+    .pdf-certificate .certificate-grid .row {
+        display: table-row;
+    }
+    .pdf-certificate .certificate-grid .col-label,
+    .pdf-certificate .certificate-grid .col-value {
+        display: table-cell;
+        vertical-align: top;
+        padding: 4px 8px;
+    }
+    .pdf-certificate .certificate-grid .col-label {
+        width: 180px;
+        font-weight: 700;
+        padding-right: 12px;
+        white-space: nowrap;
+    }
+    .pdf-certificate .certificate-grid .col-value {
+        width: auto;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+    .pdf-certificate .footer-row {
+        margin-top: 28px;
+        display: table;
+        width: 100%;
+    }
+    .pdf-certificate .footer-right {
+        text-align: right;
+        display: table-cell;
+        vertical-align: top;
+        width: 50%;
+    }
+    .pdf-certificate .footer-right p {
+        margin: 0;
+    }
+    .pdf-certificate .footer-right .signature {
+        font-weight: 700;
+        text-decoration: underline;
+        margin-bottom: 0.25rem;
+    }
+    .pdf-certificate .bottom-footer {
+        margin-top: 28px;
+        display: table;
+        width: 100%;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 12px;
+        box-sizing: border-box;
+    }
+    .pdf-certificate .bottom-footer .left,
+    .pdf-certificate .bottom-footer .right {
+        display: table-cell;
+        vertical-align: middle;
+    }
+    .pdf-certificate .bottom-footer .left {
+        width: 60%;
+    }
+    .pdf-certificate .bottom-footer .right {
+        width: 40%;
+        text-align: right;
+        font-size: 10px;
+        color: #6b7280;
+    }
+    .pdf-certificate .qr-box {
+        width: 56px;
+        height: 56px;
+        border: 1px solid #e5e7eb;
+        display: inline-block;
+        vertical-align: middle;
+        text-align: center;
+        line-height: 56px;
+        color: #9ca3af;
+        margin-right: 12px;
+        background: #fff;
+    }
+    .pdf-certificate .verification-text {
+        display: inline-block;
+        vertical-align: middle;
+        font-size: 11px;
+        color: #6b7280;
+    }
+</style>
+
 @if($pdfMode ?? false)
     <style>
         @page { margin: 18mm; }
         body { margin: 0; }
-        .pdf-certificate {
-            background: #fff;
-            color: #1a1a1a;
-            font-family: "Times New Roman", Times, serif;
-            font-size: 12px;
-            line-height: 1.6;
-            min-height: 842px;
-            box-sizing: border-box;
-            padding: 28px 32px;
-            border: none;
-            position: relative;
-            max-width: 595px;
-            margin: 0 auto;
-        }
-        .pdf-certificate .paper-backdrop {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.03;
-            pointer-events: none;
-        }
-        .pdf-certificate .paper-backdrop span {
-            font-size: 280px;
-            line-height: 1;
-        }
-        .pdf-certificate .section-header {
-            margin-bottom: 14px;
-            padding-bottom: 6px;
-            text-align: center;
-        }
-        .pdf-certificate .kop-committee {
-            font-size: 16px;
-            font-weight: 800;
-            margin: 0;
-            letter-spacing: 0.6px;
-        }
-        .pdf-certificate .kop-university {
-            font-size: 20px;
-            font-weight: 900;
-            margin: 6px 0 4px;
-            letter-spacing: 0.8px;
-        }
-        .pdf-certificate .kop-address {
-            font-size: 10.5px;
-            font-style: italic;
-            margin: 0;
-            line-height: 1.15;
-        }
-        .pdf-certificate .kop-contact {
-            font-size: 10.5px;
-            margin: 0;
-            line-height: 1.15;
-        }
-        .pdf-certificate .kop-hr {
-            width: 100%;
-            height: 1.5px;
-            background: #000;
-            margin: 12px 0 0 0;
-        }
-        .pdf-certificate .section-title {
-            margin-bottom: 16px;
-            text-align: center;
-        }
-        .pdf-certificate .section-title h5 {
-            font-size: 14px;
-            text-transform: uppercase;
-            font-weight: 700;
-            text-decoration: underline;
-            margin-bottom: 6px;
-        }
-        .pdf-certificate .section-title p {
-            margin: 0;
-            font-size: 11px;
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-        .pdf-certificate .content {
-            margin-top: 16px;
-            padding-left: 8px;
-            padding-right: 8px;
-            text-align: justify;
-        }
-        .pdf-certificate .content p.certificate-title {
-            font-weight: 700;
-            text-align: center;
-            padding: 8px 16px;
-            font-style: italic;
-            margin: 10px 0 14px 0;
-            font-size: 13px;
-        }
-        .pdf-certificate .certificate-grid {
-            display: table;
-            width: 100%;
-            margin-top: 16px;
-            border-collapse: collapse;
-        }
-        .pdf-certificate .certificate-grid .row {
-            display: table-row;
-        }
-        .pdf-certificate .certificate-grid .col-label,
-        .pdf-certificate .certificate-grid .col-value {
-            display: table-cell;
-            vertical-align: top;
-            padding: 4px 8px;
-        }
-        .pdf-certificate .certificate-grid .col-label {
-            width: 200px;
-            font-weight: 700;
-            padding-right: 12px;
-        }
-        .pdf-certificate .certificate-grid .col-value {
-            width: calc(100% - 200px);
-        }
-        .pdf-certificate .footer-row {
-            margin-top: 28px;
-            display: table;
-            width: 100%;
-        }
-        .pdf-certificate .footer-right {
-            text-align: right;
-            display: table-cell;
-            vertical-align: top;
-            width: 50%;
-        }
-        .pdf-certificate .footer-right p {
-            margin: 0;
-        }
-        .pdf-certificate .footer-right .signature {
-            font-weight: 700;
-            text-decoration: underline;
-            margin-bottom: 0.25rem;
-        }
-        .pdf-certificate .bottom-footer {
-            margin-top: 28px;
-            display: table;
-            width: 100%;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 12px;
-            box-sizing: border-box;
-        }
-        .pdf-certificate .bottom-footer .left,
-        .pdf-certificate .bottom-footer .right {
-            display: table-cell;
-            vertical-align: middle;
-        }
-        .pdf-certificate .bottom-footer .left {
-            width: 60%;
-        }
-        .pdf-certificate .bottom-footer .right {
-            width: 40%;
-            text-align: right;
-            font-size: 10px;
-            color: #6b7280;
-        }
-        .pdf-certificate .qr-box {
-            width: 56px;
-            height: 56px;
-            border: 1px solid #e5e7eb;
-            display: inline-block;
-            vertical-align: middle;
-            text-align: center;
-            line-height: 56px;
-            color: #9ca3af;
-            margin-right: 12px;
-            background: #fff;
-        }
-        .pdf-certificate .verification-text {
-            display: inline-block;
-            vertical-align: middle;
-            font-size: 11px;
-            color: #6b7280;
-        }
     </style>
 @endif
 

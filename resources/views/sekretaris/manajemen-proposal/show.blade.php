@@ -317,19 +317,9 @@
                     @endif
 
                     <div class="space-y-3">
-                        <button type="button" data-review-type="{{ App\Models\Proposal::REVIEW_EXEMPTED }}" data-review-label="Exempted (Auto Approve)" class="open-review-modal w-full inline-flex items-center gap-2 justify-center rounded-lg bg-emerald-600 text-white px-4 py-3 font-semibold">
-                            <i class="fas fa-check-circle"></i>
-                            Exempted (Auto Approve)
-                        </button>
-
                         <button type="button" data-review-type="{{ App\Models\Proposal::REVIEW_EXPEDITED }}" data-review-label="Expedited Review" class="open-review-modal w-full inline-flex items-center gap-2 justify-center rounded-lg bg-sky-400 text-white px-4 py-3 font-semibold">
                             <i class="fas fa-globe"></i>
                             Expedited Review
-                        </button>
-
-                        <button type="button" data-review-type="{{ App\Models\Proposal::REVIEW_FULL_BOARD }}" data-review-label="Fullboard Review" class="open-review-modal w-full inline-flex items-center gap-2 justify-center rounded-lg bg-blue-600 text-white px-4 py-3 font-semibold">
-                            <i class="fas fa-users"></i>
-                            Fullboard Review
                         </button>
                     </div>
 
@@ -377,7 +367,7 @@
                                             <div class="text-xs text-slate-500">{{ $assignment->assignedTo->email ?? '-' }}</div>
                                         </td>
                                         <td class="px-3 py-3 align-top">
-                                            <div class="text-slate-700">{{ optional($assignment->due_date)->format('d M Y') ?? '-' }}</div>
+                                            <div class="text-slate-700">{{ $assignment->due_date ? \Carbon\Carbon::createFromFormat('Y-m-d', $assignment->due_date->toDateString())->format('d M Y') : '-' }}</div>
                                         </td>
                                         <td class="px-3 py-3 align-top">
                                             <span class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold {{ $review && $review->isCompleted() ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700' }}">
@@ -429,7 +419,7 @@
 
                 <div>
                     <label class="text-sm font-medium text-slate-700">Select Reviewers</label>
-                    <p class="text-xs text-slate-500 mt-1 mb-2">Pilih sampai 3 reviewer. Info assigned count membantu memilih reviewer yang lebih ringan.</p>
+                    <p class="text-xs text-slate-500 mt-1 mb-2">Pilih maix 3 reviewer. Info assigned count membantu memilih reviewer yang lebih ringan.</p>
                     @if(isset($previousReviewers) && $previousReviewers->isNotEmpty())
                         <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4 mb-4">
                             <div class="flex items-center justify-between gap-3">
@@ -479,7 +469,7 @@
                             @endif
                         </div>
                     </div>
-                    <p class="text-xs text-slate-400 mt-2">Klik dropdown lalu pilih reviewer. Scroll jika daftar panjang, maksimal 3 reviewer.</p>
+                    <p class="text-xs text-slate-400 mt-2">Reviewer dipilih: <span id="reviewer-selected-names" class="font-medium">-</span></p>
                 </div>
 
                 <div>
@@ -614,6 +604,12 @@ function refreshReviewerSelection() {
         placeholder.textContent = selectedLabels[0];
     } else {
         placeholder.textContent = `${selectedLabels.length} selected`;
+    }
+
+    // Also update the small helper text showing selected reviewer names
+    const selectedNamesEl = document.getElementById('reviewer-selected-names');
+    if (selectedNamesEl) {
+        selectedNamesEl.textContent = selectedLabels.length ? selectedLabels.join(', ') : '-';
     }
 }
 
@@ -761,8 +757,19 @@ function initRejectConfirmations() {
             e.preventDefault();
             Swal.fire({
                 title: 'Reject Proposal?',
-                text: 'Proposal akan ditolak dan tidak dikirim ke reviewer.',
+                text: 'Proposal akan ditolak dan tidak dikirim ke reviewer. Mohon isi alasan penolakan.',
                 icon: 'warning',
+                input: 'textarea',
+                inputPlaceholder: 'Masukkan alasan penolakan (wajib)',
+                inputAttributes: {
+                    'aria-label': 'Alasan penolakan'
+                },
+                inputValidator: (value) => {
+                    if (!value || !value.trim()) {
+                        return 'Alasan penolakan wajib diisi.';
+                    }
+                    return null;
+                },
                 showCancelButton: true,
                 confirmButtonText: 'Ya, tolak',
                 cancelButtonText: 'Batalkan',
@@ -778,6 +785,16 @@ function initRejectConfirmations() {
                 }
             }).then(result => {
                 if (result.isConfirmed) {
+                    const reason = result.value;
+                    // attach rejection_reason input to form
+                    let input = form.querySelector('input[name="rejection_reason"]');
+                    if (!input) {
+                        input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'rejection_reason';
+                        form.appendChild(input);
+                    }
+                    input.value = reason;
                     form.submit();
                 }
             });

@@ -132,12 +132,7 @@
                             · {{ $proposal->researcher->email }}
                             @endif
                         </div>
-                        @if($proposal->rejection_reason)
-                        <div class="text-[11px] text-red-400 mt-1 italic">
-                            <i class="fas fa-circle-info text-[9px]"></i>
-                            {{ Str::limit($proposal->rejection_reason, 60) }}
-                        </div>
-                        @endif
+                        {{-- Rejection reason removed from list view per UX request --}}
                     </td>
 
                     {{-- Status --}}
@@ -162,17 +157,11 @@
                         @if($sudahDiputuskan)
                             <div class="flex items-center justify-end gap-2">
                                 <span class="text-[12px] text-slate-400 italic">Sudah diputuskan</span>
-                                <a href="{{ route('sekretaris.hasil-review.show', $proposal->id) }}"
-                                   class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" title="Lihat Hasil Review">
-                                    <i class="fas fa-eye text-xs"></i>
-                                </a>
+                                
                             </div>
                         @else
                             <div class="flex items-center justify-end gap-2">
-                                <a href="{{ route('sekretaris.hasil-review.show', $proposal->id) }}"
-                                   class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" title="Lihat Hasil Review">
-                                    <i class="fas fa-eye text-xs"></i>
-                                </a>
+                                
                                 <button @click="openModal(
                                             {{ $proposal->id }},
                                             '{{ addslashes($proposal->title) }}',
