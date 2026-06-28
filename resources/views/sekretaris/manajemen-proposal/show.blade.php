@@ -281,7 +281,7 @@
                         <div class="text-sm text-yellow-800">Waiting for reviewers to complete their review.</div>
                     </div>
 
-                    <form action="{{ route('sekretaris.keputusan.update') }}" method="POST" class="mt-4">
+                    <form action="{{ route('sekretaris.keputusan.update') }}" method="POST" class="mt-4 reject-action-form">
                         @csrf
                         <input type="hidden" name="proposal_id" value="{{ $proposal->id }}">
                         <input type="hidden" name="status" value="rejected">
@@ -292,7 +292,30 @@
                     </form>
 
                 @else
-                
+
+                    @if(isset($previousReviewers) && $previousReviewers->isNotEmpty())
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4 mb-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Reviewer sebelum revisi terakhir</p>
+                                    <p class="text-xs text-slate-500">Reviewers yang memeriksa proposal ini sebelum peneliti mengirim revisi terakhir.</p>
+                                </div>
+                                <span class="text-xs text-slate-500">{{ $previousReviewers->count() }} reviewer</span>
+                            </div>
+                            <div class="mt-3 grid gap-2">
+                                @foreach($previousReviewers as $prevReviewer)
+                                    <div class="flex items-center justify-between rounded-2xl bg-white border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                                        <div>
+                                            <div class="font-semibold">{{ $prevReviewer['name'] }}</div>
+                                            <div class="text-xs text-slate-500">{{ $prevReviewer['email'] }}</div>
+                                        </div>
+                                        <div class="text-xs text-slate-500">{{ $prevReviewer['completed_at'] }}</div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     <div class="space-y-3">
                         <button type="button" data-review-type="{{ App\Models\Proposal::REVIEW_EXEMPTED }}" data-review-label="Exempted (Auto Approve)" class="open-review-modal w-full inline-flex items-center gap-2 justify-center rounded-lg bg-emerald-600 text-white px-4 py-3 font-semibold">
                             <i class="fas fa-check-circle"></i>
@@ -310,7 +333,7 @@
                         </button>
                     </div>
 
-                    <form action="{{ route('sekretaris.keputusan.update') }}" method="POST" class="mt-4">
+                    <form action="{{ route('sekretaris.keputusan.update') }}" method="POST" class="mt-4 reject-action-form">
                         @csrf
                         <input type="hidden" name="proposal_id" value="{{ $proposal->id }}">
                         <input type="hidden" name="status" value="rejected">
@@ -382,9 +405,9 @@
      </div>
 </div>
 
-<div id="processing-modal" class="fixed inset-0 hidden z-[9999] items-center justify-center p-4">
+<div id="processing-modal" class="fixed inset-0 hidden z-50 items-center justify-center p-4">
     <div id="processing-modal-overlay" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
-    <div class="relative w-full max-w-2xl overflow-hidden rounded-3xl bg-white border border-slate-200 shadow-xl">
+    <div class="relative z-10 w-full max-w-2xl overflow-hidden rounded-3xl bg-white border border-slate-200 shadow-xl">
         <div class="flex items-start justify-between gap-3 border-b border-slate-200 px-6 py-5">
             <div>
                 <h3 class="text-lg font-semibold text-slate-900">Processing Action</h3>
@@ -398,36 +421,81 @@
         <form id="processing-modal-form" action="{{ route('sekretaris.proposal.send-to-reviewer', $proposal) }}" method="POST" class="space-y-4 px-6 py-5">
             @csrf
             <input type="hidden" name="review_type" value="">
-            <div>
-                <label class="text-sm font-medium text-slate-700">Review Type</label>
-                <input type="text" name="review_label" readonly class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" />
-            </div>
+            <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Review Type</label>
+                    <input type="text" name="review_label" readonly class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" />
+                </div>
 
-            <div>
-                <label class="text-sm font-medium text-slate-700">Select Reviewer</label>
-                    <select name="reviewer_id" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                        <option value="">Choose reviewer</option>
-                        @if(!empty($reviewers) && $reviewers->count())
-                            @foreach($reviewers as $reviewer)
-                                <option value="{{ $reviewer->id }}">{{ $reviewer->name }}</option>
-                            @endforeach
-                        @endif
-                    </select>
-            </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Select Reviewers</label>
+                    <p class="text-xs text-slate-500 mt-1 mb-2">Pilih sampai 3 reviewer. Info assigned count membantu memilih reviewer yang lebih ringan.</p>
+                    @if(isset($previousReviewers) && $previousReviewers->isNotEmpty())
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50 p-4 mb-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Reviewer sebelum revisi terakhir</p>
+                                    <p class="text-xs text-slate-500">Reviewer yang sudah memeriksa proposal ini sebelum peneliti mengirim revisi.</p>
+                                </div>
+                                <span class="text-xs text-slate-500">{{ $previousReviewers->count() }} reviewer</span>
+                            </div>
+                            <div class="mt-3 grid gap-2">
+                                @foreach($previousReviewers as $prevReviewer)
+                                    <div class="flex items-center justify-between rounded-2xl bg-white border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                                        <div>
+                                            <div class="font-semibold">{{ $prevReviewer['name'] }}</div>
+                                            <div class="text-xs text-slate-500">{{ $prevReviewer['email'] }}</div>
+                                        </div>
+                                        <div class="text-xs text-slate-500">{{ $prevReviewer['completed_at'] }}</div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                    <div class="relative">
+                        <button type="button" id="reviewer-select-button" class="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm hover:border-slate-300">
+                            <span id="reviewer-select-placeholder">Choose reviewers</span>
+                            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                                <i class="fas fa-chevron-down"></i>
+                            </span>
+                        </button>
 
-            <div>
-                <label class="text-sm font-medium text-slate-700">Due Date</label>
-                <input type="date" name="due_date" min="{{ now()->addDay()->format('Y-m-d') }}" value="{{ now()->addDay()->format('Y-m-d') }}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700" />
-            </div>
+                        <div id="reviewer-select-panel" class="hidden absolute z-30 mt-2 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg max-h-72">
+                            @if(!empty($reviewers) && $reviewers->count())
+                                @foreach($reviewers as $reviewer)
+                                    <label class="reviewer-option group flex cursor-pointer items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-sm text-slate-700 transition hover:bg-slate-50">
+                                        <div>
+                                            <div class="reviewer-option-text font-medium">{{ $reviewer->name }}</div>
+                                            <div class="text-xs text-slate-500 mt-1">{{ $reviewer->review_assignments_count }} assigned</div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="reviewer-option-check hidden h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-blue-600 transition">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                            <input type="checkbox" class="hidden reviewer-checkbox" name="reviewer_id[]" value="{{ $reviewer->id }}">
+                                        </div>
+                                    </label>
+                                @endforeach
+                            @endif
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-2">Klik dropdown lalu pilih reviewer. Scroll jika daftar panjang, maksimal 3 reviewer.</p>
+                </div>
 
-            <div>
-                <label class="text-sm font-medium text-slate-700">Additional Note</label>
-                <textarea name="notes" rows="3" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700" placeholder="Optional note for reviewer or committee"></textarea>
-            </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Due Date</label>
+                    <input type="date" name="due_date" min="{{ now()->addDay()->format('Y-m-d') }}" value="{{ now()->addDay()->format('Y-m-d') }}" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700" />
+                </div>
 
-            <div>
-                <label class="text-sm font-medium text-slate-700">Comment to Review</label>
-                <textarea name="comment_to_review" rows="3" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700" placeholder="Add a comment to the review process"></textarea>
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Additional Note</label>
+                    <textarea name="notes" rows="3" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700" placeholder="Optional note for reviewer or committee"></textarea>
+                </div>
+
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Comment to Review</label>
+                    <textarea name="comment_to_review" rows="3" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700" placeholder="Add a comment to the review process"></textarea>
+                </div>
             </div>
 
             <div class="flex flex-col gap-3 pt-3 sm:flex-row">
@@ -439,6 +507,7 @@
 </div>
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 function showKonfirmasiModal(pesan, onKonfirmasi) {
     const overlay = document.createElement('div');
@@ -483,7 +552,18 @@ function openProcessingModal(reviewType, label) {
     const form = modal.querySelector('#processing-modal-form');
     form.querySelector('[name="review_type"]').value = reviewType || '';
     form.querySelector('[name="review_label"]').value = label || '';
-    form.querySelector('[name="reviewer_id"]').value = '';
+
+    const reviewerCheckboxes = Array.from(form.querySelectorAll('.reviewer-checkbox'));
+    reviewerCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        const option = checkbox.closest('.reviewer-option');
+        option?.classList.remove('bg-blue-50', 'border', 'border-blue-200');
+        const checkIcon = option?.querySelector('.reviewer-option-check');
+        checkIcon?.classList.add('hidden');
+        checkIcon?.classList.remove('inline-flex');
+    });
+
+    refreshReviewerSelection();
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -494,6 +574,88 @@ function closeProcessingModal() {
     if (!modal) return;
     modal.classList.add('hidden');
     modal.classList.remove('flex');
+}
+
+function toggleReviewerPanel(open) {
+    const panel = document.querySelector('#reviewer-select-panel');
+    if (!panel) return;
+    panel.classList.toggle('hidden', !open);
+}
+
+function refreshReviewerSelection() {
+    const form = document.querySelector('#processing-modal-form');
+    if (!form) return;
+
+    const checkboxes = Array.from(form.querySelectorAll('.reviewer-checkbox'));
+    const selectedLabels = [];
+
+    checkboxes.forEach(checkbox => {
+        const option = checkbox.closest('.reviewer-option');
+        const checkIcon = option?.querySelector('.reviewer-option-check');
+
+        if (checkbox.checked) {
+            selectedLabels.push(option?.querySelector('.reviewer-option-text')?.textContent.trim() || 'Reviewer');
+            option?.classList.add('bg-blue-50', 'border', 'border-blue-200');
+            checkIcon?.classList.remove('hidden');
+            checkIcon?.classList.add('inline-flex');
+        } else {
+            option?.classList.remove('bg-blue-50', 'border', 'border-blue-200');
+            checkIcon?.classList.add('hidden');
+            checkIcon?.classList.remove('inline-flex');
+        }
+    });
+
+    const placeholder = document.querySelector('#reviewer-select-placeholder');
+    if (!placeholder) return;
+
+    if (selectedLabels.length === 0) {
+        placeholder.textContent = 'Choose reviewers';
+    } else if (selectedLabels.length === 1) {
+        placeholder.textContent = selectedLabels[0];
+    } else {
+        placeholder.textContent = `${selectedLabels.length} selected`;
+    }
+}
+
+function initReviewerSelect() {
+    const form = document.querySelector('#processing-modal-form');
+    if (!form) return;
+
+    const button = form.querySelector('#reviewer-select-button');
+    const panel = form.querySelector('#reviewer-select-panel');
+    const checkboxes = Array.from(form.querySelectorAll('.reviewer-checkbox'));
+
+    button?.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (!panel) return;
+        panel.classList.toggle('hidden');
+    });
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            const checkedCount = form.querySelectorAll('.reviewer-checkbox:checked').length;
+            if (checkedCount > 3) {
+                this.checked = false;
+                Swal.fire({
+                    title: 'Maksimal 3 Reviewer',
+                    text: 'Anda hanya dapat memilih maksimal 3 reviewer untuk penugasan ini.',
+                    icon: 'warning',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2'
+                    }
+                });
+                return;
+            }
+            refreshReviewerSelection();
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!form.contains(e.target)) {
+            panel?.classList.add('hidden');
+        }
+    });
 }
 
 // History modal for file version details
@@ -554,18 +716,77 @@ if (processingModal) {
 const processingForm = document.getElementById('processing-modal-form');
 if (processingForm) {
     processingForm.addEventListener('submit', function (e) {
-        const asideSection = document.querySelector('aside');
-        const processingSection = asideSection?.querySelector('section');
-        if (processingSection) {
-            processingSection.innerHTML = `
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Processing Action</h3>
-                <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-left">
-                    <div class="text-sm text-yellow-800">Waiting for reviewers to complete their review.</div>
-                </div>
-            `;
-        }
+        e.preventDefault();
+
+        Swal.fire({
+            title: 'Submit Assignment?',
+            text: 'Pastikan reviewer dan tanggal sudah benar sebelum mengirim.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, kirim',
+            cancelButtonText: 'Batalkan',
+            customClass: {
+                confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+                cancelButton: 'swal2-cancel bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl px-4 py-2'
+            },
+            didOpen: function (popup) {
+                popup.parentElement.style.zIndex = '99999';
+                popup.style.zIndex = '99999';
+                const backdrop = document.querySelector('.swal2-container');
+                if (backdrop) backdrop.style.zIndex = '99999';
+            }
+        }).then(result => {
+            if (!result.isConfirmed) return;
+
+            const asideSection = document.querySelector('aside');
+            const processingSection = asideSection?.querySelector('section');
+            if (processingSection) {
+                processingSection.innerHTML = `
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Processing Action</h3>
+                    <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-left">
+                        <div class="text-sm text-yellow-800">Waiting for reviewers to complete their review.</div>
+                    </div>
+                `;
+            }
+
+            e.target.submit();
+        });
     });
 }
+
+function initRejectConfirmations() {
+    const rejectForms = document.querySelectorAll('.reject-action-form');
+    rejectForms.forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Reject Proposal?',
+                text: 'Proposal akan ditolak dan tidak dikirim ke reviewer.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, tolak',
+                cancelButtonText: 'Batalkan',
+                customClass: {
+                    confirmButton: 'swal2-confirm bg-red-600 hover:bg-red-700 text-white rounded-2xl px-4 py-2',
+                    cancelButton: 'swal2-cancel bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl px-4 py-2'
+                },
+                didOpen: function (popup) {
+                    popup.parentElement.style.zIndex = '99999';
+                    popup.style.zIndex = '99999';
+                    const backdrop = document.querySelector('.swal2-container');
+                    if (backdrop) backdrop.style.zIndex = '99999';
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+    });
+}
+
+initReviewerSelect();
+initRejectConfirmations();
 
 // Poll activity logs every 5 seconds and update the activity log container
 (function pollActivityLogs() {

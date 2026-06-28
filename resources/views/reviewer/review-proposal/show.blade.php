@@ -381,15 +381,72 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     function submitReviewForm(mode) {
         document.getElementById('save_mode').value = mode;
+        const form = document.getElementById('review-workspace-form');
 
-        if (mode === 'submit' && !confirm('Submit review sekarang?')) {
+        if (mode === 'draft') {
+            Swal.fire({
+                title: 'Simpan Draft?',
+                text: 'Perubahan Anda akan disimpan sebagai draft. Lanjutkan?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Simpan Draft',
+                cancelButtonText: 'Batal',
+                customClass: {
+                    confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+                    cancelButton: 'swal2-cancel bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl px-4 py-2'
+                },
+                didOpen(popup) {
+                    // ensure SweetAlert overlays above fixed bottom bar
+                    popup.parentElement.style.zIndex = '99999';
+                    const backdrop = document.querySelector('.swal2-container');
+                    if (backdrop) backdrop.style.zIndex = '99999';
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
             return;
         }
 
-        document.getElementById('review-workspace-form').submit();
+        if (mode === 'submit') {
+            Swal.fire({
+                title: 'Submit Review?',
+                text: 'Anda akan mengirimkan review final. Pastikan semua bidang sudah terisi.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Kirim',
+                cancelButtonText: 'Batalkan',
+                reverseButtons: true,
+                customClass: {
+                    confirmButton: 'swal2-confirm bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-4 py-2',
+                    cancelButton: 'swal2-cancel bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl px-4 py-2'
+                },
+                didOpen(popup) {
+                    popup.parentElement.style.zIndex = '99999';
+                    const backdrop = document.querySelector('.swal2-container');
+                    if (backdrop) backdrop.style.zIndex = '99999';
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    // optionally show a loading toast then submit
+                    Swal.fire({
+                        title: 'Mengirim...',
+                        allowOutsideClick: false,
+                        didOpen() { Swal.showLoading(); }
+                    });
+                    form.submit();
+                }
+            });
+            return;
+        }
+
+        // fallback
+        form.submit();
     }
 
     function selectFile(fileId, mime, name) {

@@ -138,7 +138,7 @@
      SIDEBAR
 ═══════════════════════════════════ -->
 @section('sidebar')
-<div class="w-64 min-h-screen bg-white border-r border-[#e8ecf0] fixed left-0 top-0 flex flex-col z-[100]">
+<div class="hidden lg:flex w-64 min-h-screen bg-white border-r border-[#e8ecf0] fixed left-0 top-0 flex-col z-[100]">
 
     <!-- Brand -->
     <div class="flex items-center gap-2.5 px-5 py-5 pb-[18px] border-b border-[#f0f2f5]">
@@ -205,17 +205,93 @@
     </nav>
 
 </div>
+
+<!-- Sidebar Overlay -->
+<div id="sidebarOverlay" class="fixed inset-0 bg-black/40 z-40 hidden lg:hidden" onclick="closeSidebar()"></div>
+
+<aside id="sidebarPanel" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-[#e8ecf0] transform -translate-x-full transition-transform duration-300 overflow-y-auto lg:hidden">
+    <div class="flex items-center justify-between gap-2.5 px-5 py-5 pb-[18px] border-b border-[#f0f2f5]">
+        <div class="flex items-center gap-2.5">
+            <div class="w-[38px] h-[38px] bg-[#1a3a5c] rounded-xl flex items-center justify-center shrink-0">
+                <i class="fas fa-shield-halved text-white text-[15px]"></i>
+            </div>
+            <div>
+                <span class="text-[15px] font-bold text-[#0f1e2e] leading-tight tracking-[-0.2px]">Ethics Portal</span>
+                <span class="text-[9.5px] font-semibold tracking-[0.9px] uppercase text-[#94a3b8] block">Compliance Management</span>
+            </div>
+        </div>
+        <button type="button" onclick="closeSidebar()" class="p-2 rounded-lg text-[#4b5563] hover:bg-[#f5f7fa]">
+            <i class="fas fa-xmark"></i>
+        </button>
+    </div>
+
+    <nav class="flex-1 p-4 px-3 flex flex-col gap-0.5">
+        <a href="{{ route('admin.dashboard') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.dashboard') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-table-columns text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.dashboard') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Dashboard
+        </a>
+
+        <a href="{{ route('admin.usermanagement.index') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.usermanagement.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-user-group text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.usermanagement.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            User Management
+        </a>
+
+        <a href="{{ route('admin.role&permission.index') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.role&permission.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-user-shield text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.role&permission.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Role & Permission
+        </a>
+
+        <a href="{{ route('admin.templateproposal.index') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.templateproposal.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-file-lines text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.templateproposal.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Template Proposal
+        </a>
+
+        <a href="{{ route('admin.proposal-assignment.index') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.proposal-assignment.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-clipboard-list text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.proposal-assignment.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Proposal Assignment
+        </a>
+
+        <a href="{{ route('admin.ethicalclearance.index') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.ethicalclearance.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-file-signature text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.ethicalclearance.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Ethical Clearance
+        </a>
+
+        <a href="{{ route('admin.publishing.index') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.publishing.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-globe text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.publishing.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            Publishing
+        </a>
+
+        <a href="{{ route('admin.systemmonitoring.index') }}"
+        class="group flex items-center gap-[11px] px-3 py-[9px] rounded-lg text-[13.5px] font-medium no-underline transition-all duration-150 hover:bg-[#f5f7fa] {{ request()->routeIs('admin.systemmonitoring.*') ? 'bg-[#eef3fb] text-[#1e4d8c] font-semibold border-l-[#2563eb]' : 'text-[#4b5563] border-l-transparent' }} border-l-[3px] hover:text-[#1e3a5f]">
+            <i class="fas fa-chart-line text-[15px] w-[18px] text-center shrink-0 transition-colors duration-150 {{ request()->routeIs('admin.systemmonitoring.*') ? 'text-[#2563eb]' : 'text-[#9ca3af] group-hover:text-[#4b6fa8]' }}"></i>
+            System Monitoring
+        </a>
+
+        <div class="flex-1"></div>
+    </nav>
+</aside>
+
 @show
 
 <!-- ═══════════════════════════════════
      MAIN CONTENT
 ═══════════════════════════════════ -->
-<div class="ml-64 min-h-screen bg-[#f4f6f9]">
+<div class="lg:ml-64 min-h-screen bg-[#f4f6f9]">
 
     <!-- Top Navbar -->
     <div class="bg-white border-b border-[#e8ecf0] px-7 h-[58px] flex items-center justify-between sticky top-0 z-[50]">
         <!-- Kiri: Title + Date Range -->
     <div class="flex items-center gap-3.5">
+        <button type="button" onclick="openSidebar()" class="lg:hidden p-2 rounded-full hover:bg-[#f5f7fa] text-[#4b5563] transition-colors">
+            <i class="fas fa-bars"></i>
+        </button>
         <h1 class="text-[20px] font-bold text-[#0f1e2e] tracking-[-0.4px] m-0">@yield('page-title', 'Dashboard')</h1>
         <div class="w-px h-[18px] bg-[#d1d5db]"></div>
         
@@ -236,13 +312,28 @@
                 <i class="fas fa-bell"></i>
             </button>
 
-            <div class="flex items-center gap-2.5 cursor-pointer" onclick="featureInDevelopment('Profile')">
-                <div class="text-right">
-                    <span class="text-[13.5px] font-semibold text-[#0f1e2e] block leading-tight">{{ Auth::user()->name }}</span>
-                    <span class="text-[10px] font-bold tracking-[0.6px] uppercase text-[#94a3b8] block">{{ Auth::user()->role ?? 'Admin' }}</span>
-                </div>
-                <div class="w-9 h-9 rounded-full bg-[#1a3a5c] text-white text-[12px] font-bold flex items-center justify-center border-2 border-[#e8ecf0] shrink-0">
-                    {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
+            <div class="relative" id="profile-dropdown-container">
+                <button id="profile-dropdown-toggle" type="button" class="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left transition-all duration-150 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <div class="text-right">
+                        <span class="text-[13.5px] font-semibold text-[#0f1e2e] block leading-tight">{{ Auth::user()->name }}</span>
+                        <span class="text-[10px] font-bold tracking-[0.6px] uppercase text-[#94a3b8] block">{{ Auth::user()->role ?? 'Admin' }}</span>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-[#1a3a5c] text-white text-[12px] font-bold flex items-center justify-center border-2 border-[#e8ecf0] shrink-0">
+                        {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
+                    </div>
+                    <i class="fas fa-chevron-down text-slate-400"></i>
+                </button>
+
+                <div id="profile-dropdown-menu" class="hidden absolute right-0 mt-2 w-48 rounded-2xl border border-slate-200 bg-white shadow-lg py-2 z-50">
+                    @if(auth()->user() && auth()->user()->hasRole('admin'))
+                        <a href="{{ route('admin.profile') }}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-100">Edit Profil</a>
+                    @else
+                        <a href="{{ route('profile.show') }}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-100">Edit Profil</a>
+                    @endif
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100">Logout</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -284,6 +375,54 @@ function showToast(message, type = 'info') {
         setTimeout(() => toast.remove(), 200);
     }, 3000);
 }
+
+(function () {
+    const toggle = document.getElementById('profile-dropdown-toggle');
+    const menu = document.getElementById('profile-dropdown-menu');
+
+    if (toggle && menu) {
+        toggle.addEventListener('click', function (event) {
+            event.stopPropagation();
+            menu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!menu.classList.contains('hidden') && !toggle.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+    }
+})();
+
+function openSidebar() {
+    const sidebar = document.getElementById('sidebarPanel');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (!sidebar || !overlay) return;
+
+    sidebar.classList.remove('-translate-x-full');
+    sidebar.classList.add('translate-x-0');
+    overlay.classList.remove('hidden');
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebarPanel');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (!sidebar || !overlay) return;
+
+    sidebar.classList.add('-translate-x-full');
+    sidebar.classList.remove('translate-x-0');
+    overlay.classList.add('hidden');
+}
+
+document.querySelectorAll('#sidebarPanel a').forEach(link => {
+    link.addEventListener('click', closeSidebar);
+});
+
+window.addEventListener('resize', function () {
+    if (window.innerWidth >= 1024) {
+        closeSidebar();
+    }
+});
 </script>
 @stack('scripts')
 

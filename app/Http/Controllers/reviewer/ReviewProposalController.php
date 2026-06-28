@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Proposal;
 use App\Models\ProposalAssignment;
 use App\Models\ProposalFile;
+use App\Models\ProposalRevision;
 use App\Models\Review;
 use App\Models\ReviewFeedback;
-use App\Models\Notification;
-use App\Models\User;
-use App\Models\DocumentLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -62,10 +60,10 @@ class ReviewProposalController extends Controller
                 $query->where('role', ProposalAssignment::ROLE_REVIEWER)
                       ->with('assignedBy', 'assignedTo');
             },
-            'revisions' => function ($q) {
-                $q->with('file')->orderByDesc('revision_number');
-            },
+            'revisions',
         ])->findOrFail($id);
+
+        $hasRevisions = $proposal->revisions->where('status', ProposalRevision::STATUS_SUBMITTED)->isNotEmpty();
 
         // Load existing review feedback for current user
         $draftReview = Review::where('proposal_id', $id)
@@ -77,9 +75,6 @@ class ReviewProposalController extends Controller
         if ($draftReview) {
             $draftFeedback = $draftReview->feedback;
         }
-
-        // Indicate if there are any revisions (requested or submitted) for the view
-        $hasRevisions = $proposal->revisions && $proposal->revisions->isNotEmpty();
 
         return view('reviewer.review-proposal.show', compact('proposal', 'draftReview', 'draftFeedback', 'hasRevisions'));
     }
@@ -142,19 +137,22 @@ class ReviewProposalController extends Controller
         $proposal = Proposal::findOrFail($request->proposal_id);
         $isSubmit = $request->input('save_mode') === 'submit';
 
-        // Use firstOrCreate to avoid race conditions creating duplicate reviews
-        $review = Review::firstOrCreate(
-            ['proposal_id' => $proposal->id, 'reviewer_id' => Auth::id()],
-            [
+        $review = Review::where('proposal_id', $proposal->id)
+            ->where('reviewer_id', Auth::id())
+            ->orderByDesc('created_at')
+            ->with('feedback')
+            ->first();
+
+        if (! $review) {
+            $review = Review::create([
+                'proposal_id' => $proposal->id,
+                'reviewer_id' => Auth::id(),
                 'status' => $isSubmit ? Review::STATUS_COMPLETED : Review::STATUS_IN_PROGRESS,
                 'assigned_date' => now(),
                 'due_date' => now()->addDays(7),
                 'completed_date' => $isSubmit ? now() : null,
-            ]
-        );
-
-        // Ensure status is updated for existing review
-        if ($review->wasRecentlyCreated === false) {
+            ]);
+        } else {
             $review->update([
                 'status' => $isSubmit ? Review::STATUS_COMPLETED : Review::STATUS_IN_PROGRESS,
                 'completed_date' => $isSubmit ? now() : null,
@@ -180,95 +178,21 @@ class ReviewProposalController extends Controller
         $reviewFeedback->save();
 
         if ($isSubmit) {
-            // Pastikan sekretaris mendapatkan proposal ini sebagai bahan keputusan,
-            // tetapi rekomendasi reviewer tidak langsung menjadi keputusan final sekretaris.
-            $this->assignProposalToSecretary($proposal, $reviewFeedback->recommendation);
+            $statusMap = [
+                'approved' => Proposal::STATUS_APPROVED,
+                'revision' => Proposal::STATUS_REVISED,
+                'rejected' => Proposal::STATUS_REJECTED,
+            ];
 
-            // Status proposal hanya berubah saat sekretaris memberikan keputusan, bukan saat reviewer submit review.
+            if (isset($statusMap[$reviewFeedback->recommendation])) {
+                $proposal->updateStatus($statusMap[$reviewFeedback->recommendation]);
+            }
 
             return redirect()->route('reviewer.riwayat-review')
-                ->with('success', 'Review berhasil disubmit dan proposal dikirim untuk keputusan sekretaris.');
+                ->with('success', 'Review berhasil disubmit dan status proposal diupdate.');
         }
 
         return redirect()->route('reviewer.review-proposal.show', $proposal->id)
             ->with('success', 'Draft review berhasil disimpan.');
-    }
-
-    /**
-     * Pastikan proposal approved memiliki sekretaris yang dapat melihatnya.
-     */
-    protected function assignProposalToSecretary(Proposal $proposal, string $recommendation)
-    {
-        $sekretarisId = $proposal->sekretaris_id
-            ?? $proposal->assignments()
-                ->where('role', ProposalAssignment::ROLE_SEKRETARIS)
-                ->value('assigned_to');
-
-        if (! $sekretarisId) {
-            $candidate = User::whereHas('roles', function ($q) {
-                    $q->where('name', 'sekretaris');
-                })
-                ->where('status', 'active')
-                ->orderBy('name')
-                ->first();
-
-            if ($candidate) {
-                $sekretarisId = $candidate->id;
-            }
-        }
-
-        if (! $sekretarisId) {
-            return;
-        }
-
-        if ($proposal->sekretaris_id !== $sekretarisId) {
-            $proposal->update(['sekretaris_id' => $sekretarisId]);
-        }
-
-        $assignment = ProposalAssignment::firstOrNew([
-            'proposal_id' => $proposal->id,
-            'role' => ProposalAssignment::ROLE_SEKRETARIS,
-            'assigned_to' => $sekretarisId,
-        ]);
-
-        if (! $assignment->exists) {
-            $assignment->assigned_by = Auth::id();
-            $assignment->sent_at = now();
-            $assignment->save();
-        } elseif (! $assignment->sent_at) {
-            $assignment->sent_at = now();
-            $assignment->save();
-        }
-
-        $notificationStatus = $recommendation === 'revision' ? 'revised' : 'approved';
-
-        Notification::create([
-            'user_id' => $sekretarisId,
-            'title' => $recommendation === 'revision'
-                ? 'Proposal Revisi Reviewer'
-                : 'Proposal Disetujui Reviewer',
-            'message' => $recommendation === 'revision'
-                ? 'Proposal "' . $proposal->title . '" menerima rekomendasi revisi dari reviewer dan masuk ke tab Revised.'
-                : 'Proposal "' . $proposal->title . '" telah disetujui oleh reviewer dan masuk ke tab Approved.',
-            'type' => Notification::TYPE_REVIEW_ASSIGNMENT,
-            'status' => Notification::STATUS_UNREAD,
-            'data' => json_encode([
-                'proposal_id' => $proposal->id,
-                'status' => $notificationStatus,
-            ]),
-        ]);
-
-        DocumentLog::create([
-            'proposal_id' => $proposal->id,
-            'user_id' => Auth::id(),
-            'activity' => DocumentLog::ACTIVITY_ASSIGN,
-            'description' => $recommendation === 'revision'
-                ? 'Proposal marked for revision by reviewer and assigned to secretary.'
-                : 'Proposal approved by reviewer and assigned to secretary.',
-            'metadata' => [
-                'sekretaris_id' => $sekretarisId,
-                'status' => $notificationStatus,
-            ],
-        ]);
     }
 }

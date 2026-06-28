@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Proposal;
+use App\Models\ProposalAssignment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SecretaryDashboardController extends Controller
 {
@@ -15,14 +17,23 @@ class SecretaryDashboardController extends Controller
     
     public function index()
     {
+        $assignmentConstraint = function ($query) {
+            $query->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+                  ->where('assigned_to', Auth::id())
+                  ->whereNotNull('sent_at');
+        };
+
+        $baseQuery = Proposal::with(['researcher', 'assignments' => $assignmentConstraint])
+            ->whereHas('assignments', $assignmentConstraint);
+
         $data = [
             'title' => 'Dashboard Sekretaris',
-            'total_proposal' => Proposal::count(),
-            'new_proposal' => Proposal::where('status', Proposal::STATUS_NEW)->count(),
-            'in_process' => Proposal::where('status', Proposal::STATUS_IN_PROCESS)->count(),
-            'on_review' => Proposal::where('status', Proposal::STATUS_ON_REVIEW)->count(),
-            'approved' => Proposal::where('status', Proposal::STATUS_APPROVED)->count(),
-            'rejected' => Proposal::where('status', Proposal::STATUS_REJECTED)->count(),
+            'total_proposal' => $baseQuery->count(),
+            'new_proposal' => (clone $baseQuery)->whereIn('status', [Proposal::STATUS_NEW, Proposal::STATUS_IN_PROCESS])->count(),
+            'on_review' => (clone $baseQuery)->where('status', Proposal::STATUS_ON_REVIEW)->count(),
+            'approved' => (clone $baseQuery)->where('status', Proposal::STATUS_APPROVED)->count(),
+            'rejected' => (clone $baseQuery)->where('status', Proposal::STATUS_REJECTED)->count(),
+            'recentProposals' => $baseQuery->orderByDesc('submission_date')->orderByDesc('created_at')->take(4)->get(),
         ];
         
         return view('sekretaris.dashboard', $data);

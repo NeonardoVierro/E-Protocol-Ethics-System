@@ -88,58 +88,131 @@ class RolePermissionSeeder extends Seeder
         $headRole->givePermissionTo($headPermissions);
         
         // Create test users
-        // Admin User
-        $admin = User::firstOrCreate([
+        // Admin Users
+        $admin = User::updateOrCreate([
             'email' => 'admin@ethical.com',
         ], [
-            'name' => 'Super Admin',
+            'name' => 'Admin Neo',
             'password' => bcrypt('password'),
             'status' => 'active',
         ]);
         $admin->assignRole('admin');
+
+        $admin2 = User::updateOrCreate([
+            'email' => 'admin2@ethical.com',
+        ], [
+            'name' => 'Admin Rifaldy',
+            'password' => bcrypt('password'),
+            'status' => 'active',
+        ]);
+        $admin2->assignRole('admin');
         
-        // Peneliti User
-        $researcher = User::firstOrCreate([
+        // Peneliti Users
+        $researcher = User::updateOrCreate([
             'email' => 'peneliti@ethical.com',
         ], [
-            'name' => 'Peneliti Test',
+            'name' => 'Werkudara',
             'password' => bcrypt('password'),
             'status' => 'active',
         ]);
         $researcher->assignRole('peneliti');
+
+        $researchers = [
+            ['email' => 'peneliti2@ethical.com', 'name' => 'Janoko'],
+            ['email' => 'peneliti3@ethical.com', 'name' => 'Sadewo'],
+            ['email' => 'peneliti4@ethical.com', 'name' => 'Petruk'],
+            ['email' => 'peneliti5@ethical.com', 'name' => 'Bagong'],
+            ['email' => 'peneliti6@ethical.com', 'name' => 'Semar'],
+        ];
+
+        foreach ($researchers as $data) {
+            $user = User::updateOrCreate([
+                'email' => $data['email'],
+            ], [
+                'name' => $data['name'],
+                'password' => bcrypt('password'),
+                'status' => 'active',
+            ]);
+            $user->assignRole('peneliti');
+        }
         
-        // Sekretaris User
-        $secretary = User::firstOrCreate([
+        // Sekretaris Users
+        $secretary = User::updateOrCreate([
             'email' => 'sekretaris@ethical.com',
         ], [
-            'name' => 'Sekretaris Test',
+            'name' => 'Nizma Nabila',
             'password' => bcrypt('password'),
             'status' => 'active',
         ]);
         $secretary->assignRole('sekretaris');
+
+        $secretaries = [
+            ['email' => 'sekretaris2@ethical.com', 'name' => 'Kayla Nabila'],
+            ['email' => 'sekretaris3@ethical.com', 'name' => 'Farida Nabila'],
+            ['email' => 'sekretaris4@ethical.com', 'name' => 'Putri Nabila'],
+        ];
+
+        foreach ($secretaries as $data) {
+            $user = User::updateOrCreate([
+                'email' => $data['email'],
+            ], [
+                'name' => $data['name'],
+                'password' => bcrypt('password'),
+                'status' => 'active',
+            ]);
+            $user->assignRole('sekretaris');
+        }
         
-        // Reviewer User
-        $reviewer = User::firstOrCreate([
+        // Reviewer Users
+        $reviewer = User::updateOrCreate([
             'email' => 'reviewer@ethical.com',
         ], [
-            'name' => 'Reviewer Test',
+            'name' => 'Hendra Adelia',
             'password' => bcrypt('password'),
             'status' => 'active',
         ]);
         $reviewer->assignRole('reviewer');
+
+        $reviewers = [
+            ['email' => 'reviewer2@ethical.com', 'name' => 'Widhi Nur'],
+            ['email' => 'reviewer3@ethical.com', 'name' => 'Ardika Putra'],
+            ['email' => 'reviewer4@ethical.com', 'name' => 'Rizal Fadillah'],
+            ['email' => 'reviewer5@ethical.com', 'name' => 'Rosyid Hanafi'],
+            ['email' => 'reviewer6@ethical.com', 'name' => 'Dillo Beshieto'],
+        ];
+
+        foreach ($reviewers as $data) {
+            $user = User::updateOrCreate([
+                'email' => $data['email'],
+            ], [
+                'name' => $data['name'],
+                'password' => bcrypt('password'),
+                'status' => 'active',
+            ]);
+            $user->assignRole('reviewer');
+        }
         
-        // Ketua User
-        $head = User::firstOrCreate([
+        // Ketua Users
+        $head = User::updateOrCreate([
             'email' => 'ketua@ethical.com',
         ], [
-            'name' => 'Ketua Test',
+            'name' => 'Pak Yusfia',
             'password' => bcrypt('password'),
             'status' => 'active',
         ]);
         $head->assignRole('ketua');
+
+        $head2 = User::updateOrCreate([
+            'email' => 'ketua2@ethical.com',
+        ], [
+            'name' => 'Pak Cucuk',
+            'password' => bcrypt('password'),
+            'status' => 'active',
+        ]);
+        $head2->assignRole('ketua');
         
         // User pending (belum diaktivasi)
-        $pending = User::firstOrCreate([
+        $pending = User::updateOrCreate([
             'email' => 'pending@ethical.com',
         ], [
             'name' => 'Pending User',

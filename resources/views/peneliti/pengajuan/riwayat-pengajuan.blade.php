@@ -24,6 +24,7 @@
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Judul Proposal</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tanggal Pengajuan</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-200 bg-white">
@@ -37,27 +38,31 @@
                                             $proposalStatusBadge = $proposal->status === \App\Models\Proposal::STATUS_IN_PROCESS ? 'bg-yellow-100 text-yellow-800' : $proposal->status_badge;
                                         @endphp
                                         <td class="px-4 py-4">
-                                            <div class="flex items-center gap-2">
-                                                <button type="button" data-toggle-feedback="proposal-feedback-{{ $proposal->id }}" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $proposalStatusBadge }} transition hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                                                    {{ $proposalStatusLabel }}
+                                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $proposalStatusBadge }}">
+                                                {{ $proposalStatusLabel }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <div class="inline-flex items-center gap-2">
+                                                <button type="button" data-toggle-feedback="proposal-feedback-{{ $proposal->id }}" class="inline-flex items-center justify-center w-9 h-9 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 transition" title="Lihat detail feedback">
+                                                    <span class="material-symbols-outlined text-[16px]">info</span>
                                                 </button>
                                                 @if($proposal->status === \App\Models\Proposal::STATUS_PUBLISHED && $proposal->ethicsDocument && $proposal->ethicsDocument->status === \App\Models\EthicsDocument::STATUS_PUBLISHED)
                                                     <a href="{{ route('pengajuan.riwayat-pengajuan.download-ethics-document', $proposal->id) }}"
-                                                       class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition">
-                                                        <i class="fas fa-download text-[10px]"></i>
-                                                        Download EC
+                                                       class="inline-flex items-center justify-center w-9 h-9 rounded-full border border-blue-200 text-blue-600 hover:bg-blue-50 transition" title="Download dokumen EC">
+                                                        <span class="material-symbols-outlined text-[16px]">download</span>
                                                     </a>
                                                 @endif
                                             </div>
                                         </td>
                                     </tr>
                                     <tr id="proposal-feedback-{{ $proposal->id }}" class="hidden bg-slate-50">
-                                        <td colspan="4" class="p-6">
+                                        <td colspan="5" class="p-6">
                                             <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                                                 <div class="mb-4">
                                                     <p class="text-sm font-semibold text-slate-900">Detail Feedback Reviewer</p>
                                                 </div>
-                                                @if($proposal->status === \App\Models\Proposal::STATUS_REVISED)
+                                                @if(isset($proposal->pendingRevisionRequest) && $proposal->pendingRevisionRequest)
                                                     <div class="flex gap-2 items-center mb-4">
                                                         <a href="{{ route('pengajuan.riwayat-pengajuan.revision', $proposal->id) }}" class="bg-amber-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-amber-700">Revisi</a>
                                                         <p class="text-sm text-slate-500">Klik untuk membuka halaman unggah revisi.</p>
