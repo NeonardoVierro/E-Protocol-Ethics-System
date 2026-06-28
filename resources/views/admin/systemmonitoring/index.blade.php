@@ -22,7 +22,7 @@
     </div>
 
     <div class="px-6 py-4">
-        <div class="grid grid-cols-5 gap-4 text-[13px] text-slate-700">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 text-[13px] text-slate-700">
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
                 <div class="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-2">Proposal Masuk</div>
                 <div class="text-[24px] font-bold text-slate-900">{{ number_format($incomingProposals) }}</div>
@@ -113,10 +113,10 @@
 <div class="mt-5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
         <h2 class="text-[15px] font-bold text-slate-900">Master Proposal Registry</h2>
-        <button onclick="featureInDevelopment('View All')"
-                class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#1e3a5f] hover:text-[#162d4a] transition-colors cursor-pointer">
+        <a href="{{ route('admin.systemmonitoring.index') }}"
+                class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#1e3a5f] hover:text-[#162d4a] transition-colors">
             View All <i class="fas fa-arrow-right text-xs"></i>
-        </button>
+        </a>
     </div>
 
     <div class="px-6 py-6 border-b border-slate-100 bg-slate-50">
@@ -174,10 +174,10 @@
                 @forelse($recentProposals as $proposal)
                     <tr class="hover:bg-slate-50/60 transition-colors">
                         <td class="px-6 py-3.5">
-                            <button onclick="featureInDevelopment('Detail Proposal {{ $proposal->id }}')"
-                                    class="text-[13.5px] font-bold text-[#1e3a5f] hover:underline cursor-pointer">
+                            <a href="{{ route('admin.proposal.preview', $proposal) }}"
+                                    class="text-[13.5px] font-bold text-[#1e3a5f] hover:underline">
                                 {{ $proposal->nomor_ec ?: 'P-'.$proposal->id }}
-                            </button>
+                            </a>
                         </td>
                         <td class="px-4 py-3.5 text-[13px] text-slate-600">{{ $proposal->researcher?->name ?? $proposal->nama_peneliti }}</td>
                         <td class="px-4 py-3.5">
@@ -210,13 +210,13 @@
     <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100">
         <span class="text-[12.5px] text-slate-400">Showing {{ $recentProposals->count() }} latest entries</span>
         <div class="flex items-center gap-1">
-            <button onclick="featureInDevelopment('Previous')"
-                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors cursor-pointer">
+            <button type="button"
+                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
                 <i class="fas fa-chevron-left text-xs"></i>
             </button>
 
-            <button onclick="featureInDevelopment('Next')"
-                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors cursor-pointer">
+            <button type="button"
+                    class="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
                 <i class="fas fa-chevron-right text-xs"></i>
             </button>
         </div>

@@ -95,12 +95,14 @@
             <p>Review the latest ethics applications submitted for committee evaluation.</p>
         </div>
         <div class="pm-header-actions">
-            <button class="btn-filter" onclick="featureInDevelopment('Filter Queue')">
+            <button class="btn-filter" onclick="openFilterModal()">
                 <i class="fas fa-sliders-h"></i> Filter Queue
             </button>
-            <button class="btn-export" onclick="featureInDevelopment('Export List')">
-                <i class="fas fa-download"></i> Export List
-            </button>
+            <a href="{{ route('reviewer.proposal-masuk.export') }}">
+                <button class="btn-export">
+                    <i class="fas fa-download"></i> Export List
+                </button>
+            </a>
         </div>
     </div>
 
@@ -145,11 +147,6 @@
     <div class="table-card">
         <div class="table-header">
             <span class="table-title">Active Proposals</span>
-            <div class="tab-group">
-                <button class="tab-btn active">ALL (24)</button>
-                <button class="tab-btn">NEW (8)</button>
-                <button class="tab-btn">QUEUED (16)</button>
-            </div>
         </div>
 
         <div style="overflow-x:auto">
@@ -239,17 +236,159 @@
 
         {{-- Pagination --}}
         <div class="table-footer">
-            <span class="page-info">Showing 1–{{ $proposals->count() }} of {{ $proposals->count() }} proposals</span>
+            <span class="page-info">Showing {{ $paginationData->from }}–{{ $paginationData->to }} of {{ $paginationData->total }} proposals</span>
             <div class="page-btns">
-                <button class="page-btn active">1</button>
-                @if($proposals->count() > 10)
-                    <button class="page-btn">2</button>
-                    <button class="page-btn">3</button>
+                {{-- Previous Button --}}
+                @if($paginationData->current_page > 1)
+                    <a href="{{ route('reviewer.proposal-masuk', ['page' => $paginationData->current_page - 1]) }}">
+                        <button class="page-btn">
+                            <i class="fas fa-chevron-left" style="font-size:.65rem"></i>
+                        </button>
+                    </a>
+                @else
+                    <button class="page-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+                        <i class="fas fa-chevron-left" style="font-size:.65rem"></i>
+                    </button>
+                @endif
+
+                {{-- Page Numbers --}}
+                @php
+                    $visiblePages = 5;
+                    $halfVisible = floor($visiblePages / 2);
+                    $startPage = max(1, $paginationData->current_page - $halfVisible);
+                    $endPage = min($paginationData->last_page, $startPage + $visiblePages - 1);
+                    
+                    if ($endPage - $startPage + 1 < $visiblePages) {
+                        $startPage = max(1, $endPage - $visiblePages + 1);
+                    }
+                @endphp
+
+                @if($startPage > 1)
+                    <a href="{{ route('reviewer.proposal-masuk', ['page' => 1]) }}">
+                        <button class="page-btn">1</button>
+                    </a>
+                    @if($startPage > 2)
+                        <span class="page-dots">…</span>
+                    @endif
+                @endif
+
+                @for($i = $startPage; $i <= $endPage; $i++)
+                    @if($i === $paginationData->current_page)
+                        <button class="page-btn active">{{ $i }}</button>
+                    @else
+                        <a href="{{ route('reviewer.proposal-masuk', ['page' => $i]) }}">
+                            <button class="page-btn">{{ $i }}</button>
+                        </a>
+                    @endif
+                @endfor
+
+                @if($endPage < $paginationData->last_page)
+                    @if($endPage < $paginationData->last_page - 1)
+                        <span class="page-dots">…</span>
+                    @endif
+                    <a href="{{ route('reviewer.proposal-masuk', ['page' => $paginationData->last_page]) }}">
+                        <button class="page-btn">{{ $paginationData->last_page }}</button>
+                    </a>
+                @endif
+
+                {{-- Next Button --}}
+                @if($paginationData->current_page < $paginationData->last_page)
+                    <a href="{{ route('reviewer.proposal-masuk', ['page' => $paginationData->current_page + 1]) }}">
+                        <button class="page-btn">
+                            <i class="fas fa-chevron-right" style="font-size:.65rem"></i>
+                        </button>
+                    </a>
+                @else
+                    <button class="page-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+                        <i class="fas fa-chevron-right" style="font-size:.65rem"></i>
+                    </button>
                 @endif
             </div>
         </div>
     </div>
 
 </div>{{-- /pm-wrap --}}
+
+{{-- Filter Modal --}}
+<div id="filterModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeFilterModal()"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+        <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-5">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-900">Filter Proposals</h3>
+                <p class="text-sm text-slate-500">Search and filter your review queue</p>
+            </div>
+            <button type="button" onclick="closeFilterModal()" class="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="filterForm" method="GET" action="{{ route('reviewer.proposal-masuk') }}" class="space-y-4 px-6 py-5">
+            {{-- Search --}}
+            <div>
+                <label class="text-sm font-medium text-slate-700">Search Proposal</label>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by title, researcher..." class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-900 placeholder-slate-500 focus:border-slate-500 focus:outline-none" />
+            </div>
+
+            {{-- Status Filter --}}
+            <div>
+                <label class="text-sm font-medium text-slate-700">Status</label>
+                <select name="status" class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none">
+                    <option value="">All Status</option>
+                    <option value="new_proposal" {{ request('status') === 'new_proposal' ? 'selected' : '' }}>New Proposal</option>
+                    <option value="in_process" {{ request('status') === 'in_process' ? 'selected' : '' }}>In Process</option>
+                    <option value="on_review" {{ request('status') === 'on_review' ? 'selected' : '' }}>On Review</option>
+                    <option value="revision_requested" {{ request('status') === 'revision_requested' ? 'selected' : '' }}>Revision Requested</option>
+                    <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
+                    <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
+                </select>
+            </div>
+
+            {{-- Urgency Filter --}}
+            <div>
+                <label class="text-sm font-medium text-slate-700">Urgency</label>
+                <select name="urgency" class="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none">
+                    <option value="">All Proposals</option>
+                    <option value="urgent" {{ request('urgency') === 'urgent' ? 'selected' : '' }}>Urgent (Last 24h)</option>
+                    <option value="not_urgent" {{ request('urgency') === 'not_urgent' ? 'selected' : '' }}>Not Urgent</option>
+                </select>
+            </div>
+
+            {{-- Action Buttons --}}
+            <div class="flex gap-3 pt-3">
+                <button type="button" onclick="resetFilters()" class="flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+                    Reset
+                </button>
+                <button type="submit" class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition">
+                    Apply Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openFilterModal() {
+    document.getElementById('filterModal').style.display = 'flex';
+}
+
+function closeFilterModal() {
+    document.getElementById('filterModal').style.display = 'none';
+}
+
+function resetFilters() {
+    document.getElementById('filterForm').reset();
+    window.location.href = '{{ route("reviewer.proposal-masuk") }}';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('filterModal');
+    const filterBtn = event.target.closest('.btn-filter');
+    if (modal && !modal.contains(event.target) && !filterBtn) {
+        closeFilterModal();
+    }
+});
+</script>
 
 @endsection

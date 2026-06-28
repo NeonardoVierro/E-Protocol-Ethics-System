@@ -146,6 +146,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/proposal-masuk', [ProposalMasukController::class, 'index'])
             ->name('proposal-masuk');
 
+        Route::get('/proposal-masuk/export', [ProposalMasukController::class, 'export'])
+            ->name('proposal-masuk.export');
+
         Route::redirect('/review-proposal', '/reviewer/proposal-masuk')->name('review-proposal');
         Route::get('/review-proposal/{id}', [ReviewProposalController::class, 'show'])->name('review-proposal.show');
         Route::post('/review-proposal', [ReviewProposalController::class, 'store'])->name('review-proposal.store');
@@ -172,19 +175,26 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/admin', [AdminDashboardController::class, 'index'])
         ->name('admin.dashboard');
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 // ============ ROUTE ADMIN ============
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/profile', [AdminDashboardController::class, 'profile'])->name('profile');
     Route::get('/ethical-clearance', [App\Http\Controllers\Admin\EthicalClearanceController::class, 'index'])->name('ethicalclearance.index');
     Route::get('/publishing', [App\Http\Controllers\Admin\PublishingController::class, 'index'])->name('publishing.index');
     Route::get('/role-permission', [App\Http\Controllers\Admin\RoleAndPermissionController::class, 'index'])->name('role&permission.index');
     Route::get('/system-monitoring', [App\Http\Controllers\Admin\SystemMonitoringController::class, 'index'])->name('systemmonitoring.index');
     Route::get('/template-proposal', [App\Http\Controllers\Admin\TemplateProposalController::class, 'index'])->name('templateproposal.index');
     Route::get('/user-management', [App\Http\Controllers\Admin\UserManagementController::class, 'index'])->name('usermanagement.index');
+    Route::post('/user-management', [App\Http\Controllers\Admin\UserManagementController::class, 'store'])->name('usermanagement.store');
+    Route::get('/user-management/{user}/edit', [App\Http\Controllers\Admin\UserManagementController::class, 'edit'])->name('usermanagement.edit');
+    Route::put('/user-management/{user}', [App\Http\Controllers\Admin\UserManagementController::class, 'update'])->name('usermanagement.update');
+    Route::post('/user-management/{user}/reset-password', [App\Http\Controllers\Admin\UserManagementController::class, 'resetPassword'])->name('usermanagement.reset');
+    Route::post('/user-management/{user}/toggle-status', [App\Http\Controllers\Admin\UserManagementController::class, 'toggleStatus'])->name('usermanagement.toggle');
 
     Route::post('templates', [App\Http\Controllers\Admin\TemplateProposalController::class, 'store'])->name('templates.store');
     Route::put('templates/{template}', [App\Http\Controllers\Admin\TemplateProposalController::class, 'update'])->name('templates.update');

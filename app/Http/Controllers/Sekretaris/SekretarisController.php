@@ -9,6 +9,7 @@ use App\Models\Proposal;
 use App\Models\ProposalAssignment;
 use App\Models\ProposalFile;
 use App\Models\ProposalRevision;
+use App\Models\Review;
 use App\Models\ReviewFeedback;
 use App\Models\EthicsDocument;
 use App\Models\DocumentLog;
@@ -21,12 +22,24 @@ class SekretarisController extends Controller
 {
     public function dashboard()
     {
+        $assignmentConstraint = function ($query) {
+            $query->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+                  ->where('assigned_to', Auth::id())
+                  ->whereNotNull('sent_at');
+        };
+
+        $baseQuery = Proposal::with(['researcher', 'assignments' => $assignmentConstraint])
+            ->whereHas('assignments', $assignmentConstraint);
+
         $data = [
-            'total_proposal' => 24,
-            'pending' => 7,
-            'approved' => 12,
-            'rejected' => 5,
+            'total_proposal' => $baseQuery->count(),
+            'new_proposal' => (clone $baseQuery)->whereIn('status', [Proposal::STATUS_NEW, Proposal::STATUS_IN_PROCESS])->count(),
+            'on_review' => (clone $baseQuery)->where('status', Proposal::STATUS_ON_REVIEW)->count(),
+            'approved' => (clone $baseQuery)->where('status', Proposal::STATUS_APPROVED)->count(),
+            'rejected' => (clone $baseQuery)->where('status', Proposal::STATUS_REJECTED)->count(),
+            'recentProposals' => $baseQuery->orderByDesc('submission_date')->orderByDesc('created_at')->take(4)->get(),
         ];
+
         return view('sekretaris.dashboard', $data);
     }
 
@@ -134,11 +147,45 @@ class SekretarisController extends Controller
         $proposal->sekretaris_assignment = $proposal->assignments->first();
 
         $hasSubmittedRevision = $proposal->revisions->where('status', ProposalRevision::STATUS_SUBMITTED)->isNotEmpty();
+        $latestSubmittedRevision = $proposal->revisions->where('status', ProposalRevision::STATUS_SUBMITTED)->sortByDesc('submitted_date')->first();
+        $previousReviewers = collect();
+
+        if ($latestSubmittedRevision) {
+            $previousReviewers = ProposalAssignment::where('proposal_id', $proposal->id)
+                ->where('role', ProposalAssignment::ROLE_REVIEWER)
+                ->whereNotNull('sent_at')
+                ->where('sent_at', '<', $latestSubmittedRevision->submitted_date)
+                ->with('assignedTo')
+                ->get()
+                ->map(function ($assignment) {
+                    return [
+                        'name' => optional($assignment->assignedTo)->name ?? 'Reviewer',
+                        'email' => optional($assignment->assignedTo)->email ?? '-',
+                        'assigned_at' => optional($assignment->sent_at)->format('d M Y') ?? '-',
+                        'completed_at' => optional($assignment->sent_at)->format('d M Y') ?? '-',
+                    ];
+                })
+                ->unique('email')
+                ->values();
+        }
 
         $reviewers = User::whereHas('roles', function ($q) {
                 $q->where('name', 'reviewer');
             })
             ->where('status', 'active')
+            ->withCount(['assignmentsReceived as review_assignments_count' => function ($q) {
+                $q->where('role', ProposalAssignment::ROLE_REVIEWER)
+                  ->whereNotNull('sent_at')
+                  ->whereDoesntHave('proposal.reviews', function ($q) {
+                      $q->whereColumn('reviews.reviewer_id', 'proposal_assignments.assigned_to')
+                        ->where(function ($q) {
+                            $q->where('status', \App\Models\Review::STATUS_COMPLETED)
+                              ->orWhereHas('feedback', function ($q2) {
+                                  $q2->where('is_submitted', true);
+                              });
+                        });
+                  });
+            }])
             ->orderBy('name')
             ->get();
 
@@ -151,7 +198,14 @@ class SekretarisController extends Controller
         $reviewAssignments = $proposal->assignments()
             ->where('role', ProposalAssignment::ROLE_REVIEWER)
             ->with(['assignedTo', 'assignedBy'])
-            ->get();
+            ->get()
+            ->filter(function ($assignment) use ($proposal) {
+                $review = $proposal->reviews->firstWhere('reviewer_id', $assignment->assigned_to);
+                $isCompletedReview = $review && $review->isCompleted();
+                $hasSubmittedFeedback = $review && optional($review->feedback)->is_submitted;
+
+                return ! ($isCompletedReview || $hasSubmittedFeedback);
+            });
 
         $latestReviewerAssignment = ProposalAssignment::where('proposal_id', $proposal->id)
             ->where('role', ProposalAssignment::ROLE_REVIEWER)
@@ -173,7 +227,7 @@ class SekretarisController extends Controller
 
         $logs = $proposal->documentLogs()->latest()->get();
 
-        return view('sekretaris.manajemen-proposal.show', compact('proposal', 'reviewers', 'currentReviewer', 'reviewAssignments', 'logs', 'processingActionHidden'));
+        return view('sekretaris.manajemen-proposal.show', compact('proposal', 'reviewers', 'currentReviewer', 'reviewAssignments', 'logs', 'processingActionHidden', 'previousReviewers'));
     }
 
     public function updateReviewType(Request $request, Proposal $proposal)
@@ -254,7 +308,8 @@ class SekretarisController extends Controller
                 Proposal::REVIEW_EXPEDITED,
                 Proposal::REVIEW_FULL_BOARD,
             ]),
-            'reviewer_id' => 'required|exists:users,id',
+            'reviewer_id' => 'required|array|min:1|max:3',
+            'reviewer_id.*' => 'required|distinct|exists:users,id',
             'due_date'    => 'required|date|after_or_equal:today',
             'notes'       => 'nullable|string|max:1000',
             'comment_to_review' => 'nullable|string|max:1000',
@@ -270,74 +325,78 @@ class SekretarisController extends Controller
             abort(403);
         }
 
-        $reviewer = User::whereHas('roles', function ($q) {
+        $reviewerIds = array_unique($request->input('reviewer_id', []));
+
+        $reviewers = User::whereHas('roles', function ($q) {
                 $q->where('name', 'reviewer');
             })
             ->where('status', 'active')
-            ->findOrFail($request->reviewer_id);
+            ->whereIn('id', $reviewerIds)
+            ->get();
 
         $proposal->update(['review_type' => $request->review_type]);
-
-        ProposalAssignment::create([
-            'proposal_id' => $proposal->id,
-            'assigned_by' => Auth::id(),
-            'assigned_to' => $reviewer->id,
-            'role'        => ProposalAssignment::ROLE_REVIEWER,
-            'notes'       => $request->notes,
-            'due_date'    => $request->due_date,
-            'comment_to_review' => $request->comment_to_review,
-            'sent_at'     => now(),
-        ]);
-
         $proposal->update(['status' => Proposal::STATUS_ON_REVIEW]);
 
-        $review = \App\Models\Review::where('proposal_id', $proposal->id)
-            ->where('reviewer_id', $reviewer->id)
-            ->orderByDesc('created_at')
-            ->first();
+        $assignedNames = [];
 
-        if ($review && $review->status === \App\Models\Review::STATUS_COMPLETED) {
-            $review->update([
-                'status' => \App\Models\Review::STATUS_ASSIGNED,
-                'assigned_date' => now(),
-                'due_date' => $request->due_date,
-                'completed_date' => null,
-            ]);
-        } elseif (! $review) {
-            \App\Models\Review::create([
+        foreach ($reviewers as $reviewer) {
+            ProposalAssignment::create([
                 'proposal_id' => $proposal->id,
-                'reviewer_id' => $reviewer->id,
-                'status' => \App\Models\Review::STATUS_ASSIGNED,
-                'assigned_date' => now(),
-                'due_date' => $request->due_date,
+                'assigned_by' => Auth::id(),
+                'assigned_to' => $reviewer->id,
+                'role'        => ProposalAssignment::ROLE_REVIEWER,
+                'notes'       => $request->notes,
+                'due_date'    => $request->due_date,
+                'comment_to_review' => $request->comment_to_review,
+                'sent_at'     => now(),
             ]);
-        } else {
-            $review->update([
-                'assigned_date' => now(),
-                'due_date' => $request->due_date,
+
+            $review = \App\Models\Review::where('proposal_id', $proposal->id)
+                ->where('reviewer_id', $reviewer->id)
+                ->orderByDesc('created_at')
+                ->with('feedback')
+                ->first();
+
+            if (! $review) {
+                \App\Models\Review::create([
+                    'proposal_id' => $proposal->id,
+                    'reviewer_id' => $reviewer->id,
+                    'status' => \App\Models\Review::STATUS_ASSIGNED,
+                    'assigned_date' => now(),
+                    'due_date' => $request->due_date,
+                ]);
+            } else {
+                $review->update([
+                    'status' => \App\Models\Review::STATUS_ASSIGNED,
+                    'assigned_date' => now(),
+                    'due_date' => $request->due_date,
+                    'completed_date' => null,
+                ]);
+            }
+
+            \App\Models\Notification::create([
+                'user_id' => $reviewer->id,
+                'title' => 'Penugasan Review Baru',
+                'message' => 'Anda telah ditugaskan untuk mereview proposal: ' . $proposal->title,
+                'type' => \App\Models\Notification::TYPE_REVIEW_ASSIGNMENT,
+                'status' => \App\Models\Notification::STATUS_UNREAD,
+                'data' => [
+                    'proposal_id' => $proposal->id,
+                    'review_type' => $request->review_type,
+                    'due_date' => $request->due_date,
+                ],
             ]);
+
+            $assignedNames[] = $reviewer->name;
         }
-
-        \App\Models\Notification::create([
-            'user_id' => $reviewer->id,
-            'title' => 'Penugasan Review Baru',
-            'message' => 'Anda telah ditugaskan untuk mereview proposal: ' . $proposal->title,
-            'type' => \App\Models\Notification::TYPE_REVIEW_ASSIGNMENT,
-            'status' => \App\Models\Notification::STATUS_UNREAD,
-            'data' => [
-                'proposal_id' => $proposal->id,
-                'review_type' => $request->review_type,
-                'due_date' => $request->due_date,
-            ],
-        ]);
 
         DocumentLog::create([
             'proposal_id' => $proposal->id,
             'user_id'     => Auth::id(),
             'activity'    => DocumentLog::ACTIVITY_ASSIGN,
-            'description' => 'Submission assigned to reviewer ' . $reviewer->name,
+            'description' => 'Submission assigned to reviewers: ' . implode(', ', $assignedNames),
             'metadata'    => [
-                'reviewer_id' => $reviewer->id,
+                'reviewer_ids' => $reviewers->pluck('id')->toArray(),
                 'review_type' => $request->review_type,
                 'notes'       => $request->notes ?? null,
                 'due_date'    => $request->due_date ?? null,
@@ -397,9 +456,19 @@ class SekretarisController extends Controller
 
     public function hasilReview(Request $request)
     {
-        $query = ReviewFeedback::with(['proposal.researcher', 'review.reviewer'])
-            ->where('is_submitted', true)
-            ->orderByDesc('submitted_at');
+        // Get proposal IDs yang di-assign ke sekretaris saat ini
+        $sekretarisProposalIds = ProposalAssignment::where('role', ProposalAssignment::ROLE_SEKRETARIS)
+            ->where('assigned_to', Auth::id())
+            ->pluck('proposal_id')
+            ->toArray();
+
+        // Get unique proposals dengan submitted feedbacks yang di-assign ke sekretaris ini
+        $query = ReviewFeedback::where('is_submitted', true)
+            ->whereIn('proposal_id', $sekretarisProposalIds)
+            ->select('proposal_id')
+            ->selectRaw('MAX(submitted_at) as latest_submitted_at')
+            ->groupBy('proposal_id')
+            ->orderByRaw('MAX(submitted_at) DESC');
 
         if ($request->filled('q')) {
             $q = $request->q;
@@ -407,26 +476,60 @@ class SekretarisController extends Controller
                 $w->whereHas('proposal', function ($p) use ($q) {
                     $p->where('title', 'like', "%{$q}%")
                       ->orWhere('code', 'like', "%{$q}%");
-                })->orWhereHas('review.reviewer', function ($r) use ($q) {
+                })->orWhereHas('proposal.researcher', function ($r) use ($q) {
                     $r->where('name', 'like', "%{$q}%");
                 });
             });
         }
 
-        $feedbacks = $query->paginate(12)->withQueryString();
+        $proposalIds = $query->paginate(12)->withQueryString();
 
+        // Get proposals dengan feedbacks count dan rekomendasi summary
+        $proposals = \App\Models\Proposal::with(['researcher', 'assignments' => function($q) {
+            $q->where('role', \App\Models\ProposalAssignment::ROLE_REVIEWER);
+        }])->whereIn('id', $proposalIds->pluck('proposal_id'))->get();
+
+        // Tambah data summary untuk setiap proposal
+        $proposals = $proposals->map(function($proposal) {
+            $feedbacks = ReviewFeedback::where('proposal_id', $proposal->id)
+                ->where('is_submitted', true)
+                ->get();
+            
+            $proposal->feedbacks_count = $feedbacks->count();
+            $proposal->reviewers_count = $proposal->assignments->count();
+            $proposal->latest_feedback = $feedbacks->sortByDesc('submitted_at')->first();
+            $proposal->recommendations = [
+                'approved' => $feedbacks->where('recommendation', 'approved')->count(),
+                'revision' => $feedbacks->where('recommendation', 'revision')->count(),
+                'rejected' => $feedbacks->where('recommendation', 'rejected')->count(),
+            ];
+            
+            return $proposal;
+        });
+
+        // Stats hanya untuk proposal yang di-assign ke sekretaris saat ini
         $stats = [
-            'total' => ReviewFeedback::where('is_submitted', true)->count(),
-            'approved' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_APPROVED)->count(),
-            'revision' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_REVISION)->count(),
-            'rejected' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_REJECTED)->count(),
+            'total' => ReviewFeedback::where('is_submitted', true)->whereIn('proposal_id', $sekretarisProposalIds)->count(),
+            'approved' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_APPROVED)->whereIn('proposal_id', $sekretarisProposalIds)->count(),
+            'revision' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_REVISION)->whereIn('proposal_id', $sekretarisProposalIds)->count(),
+            'rejected' => ReviewFeedback::where('is_submitted', true)->where('recommendation', ReviewFeedback::RECOMMENDATION_REJECTED)->whereIn('proposal_id', $sekretarisProposalIds)->count(),
         ];
 
-        return view('sekretaris.hasil-review.index', compact('feedbacks', 'stats'));
+        return view('sekretaris.hasil-review.index', compact('proposals', 'proposalIds', 'stats'));
     }
 
     public function hasilReviewShow(Proposal $proposal)
     {
+        // Check apakah proposal ini di-assign ke sekretaris saat ini
+        $isAuthorized = ProposalAssignment::where('role', ProposalAssignment::ROLE_SEKRETARIS)
+            ->where('proposal_id', $proposal->id)
+            ->where('assigned_to', Auth::id())
+            ->exists();
+
+        if (!$isAuthorized) {
+            abort(403, 'Anda tidak memiliki akses untuk melihat proposal ini.');
+        }
+
         $proposal->load(['researcher', 'files' => function ($q) { $q->where('is_active', true); }]);
 
         $feedbacks = ReviewFeedback::with(['review.reviewer'])

@@ -89,9 +89,9 @@
     </div>
 
     <div class="grid grid-cols-12 gap-lg h-full">
-        <!-- Left Column: Proposal List (simple list of feedbacks) -->
-        <div class="col-span-4 flex flex-col gap-md">
-            <div class="bg-white border border-outline-variant rounded-xl shadow-sm overflow-hidden flex flex-col max-h-[72vh] overflow-y-auto">
+        <!-- Left Column: Reviewer Summary -->
+        <div class="col-span-12 lg:col-span-4 flex flex-col gap-md">
+            <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
                 @php
                     use App\Models\ProposalAssignment;
                     $assignments = $proposal->assignments()->where('role', ProposalAssignment::ROLE_REVIEWER)->with('assignedTo')->get();
@@ -100,40 +100,51 @@
                     $allSubmitted = $assignedCount > 0 && $submittedCount >= $assignedCount;
                 @endphp
 
-                <div class="p-md border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
-                    <div>
-                        <span class="text-label-caps font-label-caps uppercase text-slate-500">Daftar Reviewer</span>
-                        <div class="text-body-sm text-slate-600">{{ $proposal->title }}</div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-[12px] px-2 py-1 rounded font-bold {{ $allSubmitted ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">{{ $submittedCount }} / {{ $assignedCount ?: 0 }}</span>
-                        @if($allSubmitted)
-                            <span class="material-symbols-outlined text-green-700" title="All submitted">check_circle</span>
-                        @else
-                            <span class="material-symbols-outlined text-amber-700" title="Some missing">hourglass_top</span>
-                        @endif
+                <div class="px-6 py-5 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Daftar Reviewer</p>
+                            <h3 class="mt-2 text-lg font-semibold text-slate-900">{{ $assignedCount }} Reviewer</h3>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Terkirim</div>
+                            <div class="mt-1 text-xl font-semibold {{ $allSubmitted ? 'text-emerald-600' : 'text-amber-600' }}">{{ $submittedCount }} / {{ $assignedCount ?: 0 }}</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="divide-y divide-outline-variant">
+                <div class="divide-y divide-slate-200">
                     @foreach($assignments as $assignment)
                         @php
                             $fb = $feedbacks->first(function($v) use ($assignment) {
                                 return optional($v->review->reviewer)->id == $assignment->assigned_to;
                             });
+                            $statusLabel = $fb ? $fb->getRecommendationLabelAttribute() : 'Menunggu';
+                            $statusClasses = $fb
+                                ? ($fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-red-100 text-red-700 border border-red-300'))
+                                : 'bg-slate-100 text-slate-600 border border-slate-300';
+                            $avatarBg = $fb 
+                                ? ($fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'))
+                                : 'bg-slate-100 text-slate-700';
                         @endphp
-                        <div class="p-md hover:bg-slate-50 cursor-pointer transition-colors">
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="text-xs font-bold text-slate-500">{{ optional($assignment->assignedTo)->name ?? 'Reviewer' }}</span>
-                                <span class="text-xs text-slate-500">{{ $fb ? optional($fb->submitted_at)->diffForHumans() : 'Menunggu' }}</span>
+
+                        <div class="px-6 py-4 hover:bg-blue-50 transition-all duration-200 cursor-pointer border-l-4 {{ $fb ? ($fb->recommendation === 'approved' ? 'border-l-emerald-500' : ($fb->recommendation === 'revision' ? 'border-l-amber-500' : 'border-l-red-500')) : 'border-l-slate-300' }}">
+                            <div class="flex items-center justify-between gap-4">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-11 h-11 rounded-full {{ $avatarBg }} flex items-center justify-center font-semibold shadow-sm">{{ strtoupper(substr(optional($assignment->assignedTo)->name ?? 'RV', 0, 1)) }}</div>
+                                    <div class="min-w-0">
+                                        <div class="text-sm font-semibold text-slate-900 truncate">{{ optional($assignment->assignedTo)->name ?? 'Reviewer' }}</div>
+                                        <div class="text-xs text-slate-500 truncate">{{ optional($assignment->assignedTo)->email ?? '-' }}</div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500">{{ $fb ? 'Dikirim' : 'Status' }}</div>
+                                    <div class="mt-1 text-sm font-medium {{ $fb ? 'text-emerald-600' : 'text-amber-600' }}">{{ $fb ? optional($fb->submitted_at)->diffForHumans() : 'Menunggu' }}</div>
+                                </div>
                             </div>
-                            <h4 class="text-body-md font-medium text-on-background line-clamp-2">{{ \Illuminate\Support\Str::limit(optional($assignment->assignedTo)->name . ' — ' . ($fb->recommendation ?? ($fb ? $fb->recommendation : '')), 80) }}</h4>
-                            <div class="flex gap-2 mt-md">
-                                @if($fb)
-                                    <span class="text-[10px] {{ $fb->recommendation === 'approved' ? 'bg-green-100 text-green-700' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') }} px-2 py-0.5 rounded font-bold uppercase">{{ $fb->getRecommendationLabelAttribute() }}</span>
-                                @else
-                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold uppercase">Menunggu</span>
-                                @endif
+                            <div class="mt-4 flex items-center justify-between gap-4">
+                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase {{ $statusClasses }}">{{ $statusLabel }}</span>
+                                <span class="text-xs text-slate-500">{{ $fb ? $fb->getReviewTypeLabel() : 'Belum mengirim' }}</span>
                             </div>
                         </div>
                     @endforeach
@@ -142,41 +153,63 @@
         </div>
 
         <!-- Right Column: Detail View -->
-        <div class="col-span-8 space-y-lg">
-            <div class="bg-white border border-outline-variant rounded-xl p-lg shadow-sm">
-                <div class="flex justify-between items-start mb-md gap-4">
-                    <div class="flex-1">
-                        <span class="text-label-caps font-label-caps text-primary uppercase mb-1 block">ID PROPOSAL: {{ $proposal->nomor_ec ?? ('#' . $proposal->id) }}</span>
-                        <h3 class="text-h2 font-h2 text-on-background">{{ $proposal->title }}</h3>
-                        <p class="text-sm text-slate-500 mt-1">Dikirim: {{ optional($proposal->submission_date)->format('d M Y') ?? '-' }}</p>
+        <div class="col-span-12 lg:col-span-8 space-y-lg">
+            <div class="bg-white border border-slate-200 rounded-3xl p-lg shadow-sm">
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">ID PROPOSAL: {{ $proposal->nomor_ec ?? ('#' . $proposal->id) }}</span>
+                        <h3 class="mt-3 text-2xl font-bold text-slate-900">{{ $proposal->title }}</h3>
+                        <p class="mt-2 text-sm text-slate-500">Dikirim: {{ optional($proposal->submission_date)->format('d M Y') ?? '-' }}</p>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        <div class="rounded-3xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 border border-blue-200 shadow-sm">
+                            <div class="text-xs uppercase tracking-[0.18em] text-blue-600 font-semibold">Peneliti</div>
+                            <div class="mt-3 font-semibold text-slate-900">{{ optional($proposal->researcher)->name ?? 'Peneliti' }}</div>
+                            <div class="mt-1 text-sm text-slate-600">{{ optional($proposal->researcher)->email ?? optional($proposal)->asal_instansi ?? '-' }}</div>
+                        </div>
+                        <div class="rounded-3xl bg-gradient-to-br from-purple-50 to-purple-100 p-4 border border-purple-200 shadow-sm">
+                            <div class="text-xs uppercase tracking-[0.18em] text-purple-600 font-semibold">Reviewer Ditugaskan</div>
+                            <div class="mt-3 text-lg font-semibold text-purple-900">{{ $assignedCount }}</div>
+                            <div class="mt-1 text-sm text-slate-600">Total reviewer terdaftar</div>
+                        </div>
+                        <div class="rounded-3xl bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 border border-emerald-200 shadow-sm">
+                            <div class="text-xs uppercase tracking-[0.18em] text-emerald-600 font-semibold">Progress Review</div>
+                            <div class="mt-3 text-lg font-semibold {{ $allSubmitted ? 'text-emerald-700' : 'text-amber-700' }}">{{ $submittedCount }} / {{ $assignedCount ?: 0 }}</div>
+                            <div class="mt-1 text-sm text-slate-600">Umpan balik diterima</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mt-xl pt-lg border-t border-outline-variant">
-                    <p class="text-label-caps font-label-caps text-slate-500 mb-md uppercase">Status Reviewer</p>
-                    <div class="flex gap-4 overflow-x-auto pb-2 items-stretch">
+                <div class="mt-8">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Status Reviewer</p>
+                    <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         @foreach($assignments as $assignment)
                             @php
                                 $fb = $feedbacks->first(function($v) use ($assignment) {
                                     return optional($v->review->reviewer)->id == $assignment->assigned_to;
                                 });
+                                $statusBadge = $fb ? ($fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-red-100 text-red-700 border border-red-300')) : 'bg-slate-100 text-slate-600 border border-slate-300';
+                                $statusText = $fb ? $fb->getRecommendationLabelAttribute() : 'Menunggu Review';
+                                $borderColor = $fb ? ($fb->recommendation === 'approved' ? 'border-l-emerald-500' : ($fb->recommendation === 'revision' ? 'border-l-amber-500' : 'border-l-red-500')) : 'border-l-slate-300';
+                                $hoverBg = $fb ? ($fb->recommendation === 'approved' ? 'hover:bg-emerald-50' : ($fb->recommendation === 'revision' ? 'hover:bg-amber-50' : 'hover:bg-red-50')) : 'hover:bg-slate-50';
                             @endphp
-                            <div class="min-w-[170px] bg-surface-container-low rounded-lg p-3 flex flex-col items-start gap-3 shadow-sm">
-                                <div class="flex items-center gap-3 w-full">
-                                    <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center border border-slate-200 text-slate-700 font-semibold">{{ strtoupper(substr(optional($assignment->assignedTo)->name ?? 'RV', 0, 1)) }}</div>
-                                    <div class="flex-1">
-                                        <div class="font-semibold text-sm">{{ optional($assignment->assignedTo)->name ?? 'Reviewer' }}</div>
-                                        <div class="text-xs text-slate-500">{{ optional($assignment->assignedTo)->email ?? '' }}</div>
-                                    </div>
-                                    <div>
-                                        @if($fb)
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Done</span>
-                                        @else
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">On Review</span>
-                                        @endif
+
+                            <div class="rounded-3xl bg-slate-50 border border-slate-200 border-l-4 {{ $borderColor }} p-4 shadow-sm {{ $hoverBg }} transition-all duration-200">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-12 h-12 rounded-full {{ $fb ? ($fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')) : 'bg-slate-200 text-slate-700' }} flex items-center justify-center font-semibold shadow-sm">{{ strtoupper(substr(optional($assignment->assignedTo)->name ?? 'RV', 0, 1)) }}</div>
+                                    <div class="min-w-0">
+                                        <div class="font-semibold text-slate-900 truncate">{{ optional($assignment->assignedTo)->name ?? 'Reviewer' }}</div>
+                                        <div class="mt-1 text-xs text-slate-500 truncate">{{ optional($assignment->assignedTo)->email ?? '-' }}</div>
                                     </div>
                                 </div>
-                                <div class="w-full text-sm text-slate-700">{{ $fb ? \Illuminate\Support\Str::limit($fb->getRecommendationLabelAttribute() . ' • ' . optional($fb->submitted_at)->format('d M Y'), 80) : 'Menunggu pengiriman review' }}</div>
+
+                                <div class="mt-4 flex items-center justify-between gap-3">
+                                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase {{ $statusBadge }}">{{ $statusText }}</span>
+                                    <span class="text-xs text-slate-500">{{ $fb ? optional($fb->submitted_at)->format('d M Y') : 'Menunggu' }}</span>
+                                </div>
+
+                                <p class="mt-3 text-sm text-slate-600">{{ $fb ? ($fb->recommendation === 'revision' ? 'Perlu revise' : ($fb->recommendation === 'approved' ? 'Disetujui' : 'Ditolak')) : 'Belum menyerahkan review' }}</p>
                             </div>
                         @endforeach
                     </div>
@@ -184,103 +217,100 @@
             </div>
 
             <div class="space-y-md">
-                <h4 class="text-h3 font-h3 text-on-background">Umpan Balik Reviewer</h4>
+                <h4 class="text-h3 font-h3 text-slate-900">Umpan Balik Reviewer</h4>
                 @foreach($feedbacks as $fb)
-                    <div class="bg-white border border-outline-variant rounded-xl overflow-hidden">
-                        <div class="p-lg bg-surface-container-low flex justify-between items-center border-b border-outline-variant">
+                    <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+                        <div class="p-lg bg-slate-50 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded bg-slate-200 flex items-center justify-center font-bold text-slate-600">{{ strtoupper(substr(optional($fb->review->reviewer)->name ?? 'R',0,1)) }}</div>
+                                <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">{{ strtoupper(substr(optional($fb->review->reviewer)->name ?? 'R',0,1)) }}</div>
                                 <div>
-                                    <p class="font-bold text-on-background font-body-lg">{{ optional($fb->review->reviewer)->name ?? 'Reviewer' }}</p>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        <p class="text-body-sm text-slate-500">{{ optional($fb->review->reviewer)->roles()->pluck('name')->first() ?? 'Reviewer' }} • {{ optional($fb->submitted_at)->format('d M Y') }}</p>
-                                        <span class="text-[10px] px-2 py-0.5 rounded font-bold {{ $fb->getReviewTypeBadgeClasses() }}">{{ $fb->getReviewTypeLabel() }}</span>
-                                    </div>
+                                    <p class="font-semibold text-slate-900">{{ optional($fb->review->reviewer)->name ?? 'Reviewer' }}</p>
+                                    <p class="text-sm text-slate-500">{{ optional($fb->review->reviewer)->roles()->pluck('name')->first() ?? 'Reviewer' }} • {{ optional($fb->submitted_at)->format('d M Y') }}</p>
                                 </div>
                             </div>
-                            <span class="{{ $fb->recommendation === 'approved' ? 'bg-green-100 text-green-700' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') }} px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">{{ $fb->getRecommendationLabelAttribute() }}</span>
+                            <span class="inline-flex items-center rounded-full px-4 py-1.5 text-xs font-bold uppercase {{ $fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') }}">{{ $fb->getRecommendationLabelAttribute() }}</span>
                         </div>
-                                <div class="p-lg">
-                                    @php
-                                        $pf = $fb->parsed_feedback ?? null;
-                                        $renderField = function ($pf, $candidates) {
-                                            if (! $pf) return '-';
-                                            foreach ($candidates as $key) {
-                                                if (is_array($pf) && array_key_exists($key, $pf) && !empty($pf[$key])) {
-                                                    $val = $pf[$key];
-                                                    if (is_array($val)) return implode("\n", array_map('strval', $val));
-                                                    return (string) $val;
-                                                }
-                                            }
-                                            if (is_array($pf)) {
-                                                return collect($pf)->map(function($v, $k){
-                                                    if (is_array($v)) $v = implode(', ', $v);
-                                                    return trim($k . ': ' . $v);
-                                                })->values()->implode("\n");
-                                            }
-                                            return is_string($pf) ? $pf : '-';
-                                        };
+                        <div class="p-lg">
+                            @php
+                                $pf = $fb->parsed_feedback ?? null;
+                                $renderField = function ($pf, $candidates) {
+                                    if (! $pf) return '-';
+                                    foreach ($candidates as $key) {
+                                        if (is_array($pf) && array_key_exists($key, $pf) && !empty($pf[$key])) {
+                                            $val = $pf[$key];
+                                            if (is_array($val)) return implode("\n", array_map('strval', $val));
+                                            return (string) $val;
+                                        }
+                                    }
+                                    if (is_array($pf)) {
+                                        return collect($pf)->map(function($v, $k){
+                                            if (is_array($v)) $v = implode(', ', $v);
+                                            return trim($k . ': ' . $v);
+                                        })->values()->implode("\n");
+                                    }
+                                    return is_string($pf) ? $pf : '-';
+                                };
 
-                                        $fields = [
-                                            ['label' => 'Autonomy', 'keys' => ['autonomy', 'autonomi', 'autonomy_feedback']],
-                                            ['label' => 'Beneficence', 'keys' => ['beneficence', 'benefit', 'beneficence_feedback']],
-                                            ['label' => 'Justice', 'keys' => ['justice', 'fairness', 'justice_feedback']],
-                                            ['label' => 'General Comments', 'keys' => ['general_comments', 'comments', 'general_comment', 'catatan', 'comments_general']],
-                                        ];
-                                    @endphp
+                                $fields = [
+                                    ['label' => 'Autonomy', 'keys' => ['autonomy', 'autonomi', 'autonomy_feedback']],
+                                    ['label' => 'Beneficence', 'keys' => ['beneficence', 'benefit', 'beneficence_feedback']],
+                                    ['label' => 'Justice', 'keys' => ['justice', 'fairness', 'justice_feedback']],
+                                    ['label' => 'General Comments', 'keys' => ['general_comments', 'comments', 'general_comment', 'catatan', 'comments_general']],
+                                ];
+                            @endphp
 
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
-                                        @foreach($fields as $f)
-                                            <div class="bg-surface-container-low border border-outline-variant rounded-lg p-md">
-                                                <p class="text-label-caps font-label-caps text-primary uppercase mb-2">{{ $f['label'] }}</p>
-                                                <div class="text-body-md text-on-background leading-relaxed whitespace-pre-wrap break-words">{{ $renderField($pf, $f['keys']) }}</div>
-                                            </div>
-                                        @endforeach
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                                @foreach($fields as $f)
+                                    <div class="bg-slate-50 border border-slate-200 rounded-3xl p-md">
+                                        <p class="text-label-caps font-label-caps text-slate-500 uppercase mb-2">{{ $f['label'] }}</p>
+                                        <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap break-words">{{ $renderField($pf, $f['keys']) }}</div>
                                     </div>
-                                </div>
+                                @endforeach
+                            </div>
+                        </div>
                         @if($fb->file_path)
-                        <div class="px-lg pb-lg">
-                            <p class="text-label-caps font-label-caps text-slate-400 uppercase mb-xs text-[10px]">Lampiran Reviewer</p>
-                            <div class="flex flex-col gap-sm sm:flex-row sm:items-center sm:justify-between">
-                                <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded text-sm text-slate-600">
-                                    <span class="material-symbols-outlined text-sm" data-icon="description">description</span>
-                                    {{ $fb->original_name ?? 'Lampiran' }}
-                                </div>
-                                <div class="flex flex-wrap gap-2">
-                                    <a href="{{ route('sekretaris.review-feedback.file.view', $fb) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
-                                        <span class="material-symbols-outlined text-sm" data-icon="visibility">visibility</span>
-                                        Lihat
-                                    </a>
-                                    <a href="{{ route('sekretaris.review-feedback.file.download', $fb) }}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition">
-                                        <span class="material-symbols-outlined text-sm" data-icon="download">download</span>
-                                        Download
-                                    </a>
+                            <div class="px-lg pb-lg">
+                                <p class="text-[10px] uppercase tracking-[0.18em] text-slate-400 mb-2">Lampiran Reviewer</p>
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-3xl text-sm text-slate-600">
+                                        <span class="material-symbols-outlined text-sm">description</span>
+                                        {{ $fb->original_name ?? 'Lampiran' }}
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <a href="{{ route('sekretaris.review-feedback.file.view', $fb) }}" target="_blank" class="inline-flex items-center gap-2 rounded-3xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+                                            <span class="material-symbols-outlined text-sm">visibility</span>
+                                            Lihat
+                                        </a>
+                                        <a href="{{ route('sekretaris.review-feedback.file.download', $fb) }}" class="inline-flex items-center gap-2 rounded-3xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition">
+                                            <span class="material-symbols-outlined text-sm">download</span>
+                                            Download
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
                         @endif
                     </div>
                 @endforeach
             </div>
 
-            <div class="bg-white border border-outline-variant rounded-xl p-lg shadow-sm">
-                <h4 class="text-h3 font-h3 text-on-background mb-md">Revisi Peneliti</h4>
+            <div class="bg-white border border-slate-200 rounded-3xl p-lg shadow-sm">
+                <h4 class="text-h3 font-h3 text-slate-900 mb-md">Revisi Peneliti</h4>
                 @if($proposal->revisions && $proposal->revisions->count())
                     @foreach($proposal->revisions as $rev)
-                        <div class="border-t border-outline-variant p-md flex justify-between items-start">
+                        <div class="border-t border-slate-200 p-md flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div class="flex-1">
-                                <div class="font-semibold">Revisi #{{ $rev->revision_number ?? $loop->iteration }} &middot; <span class="text-sm text-slate-500">{{ $rev->getStatusLabelAttribute() }}</span></div>
+                                <div class="font-semibold text-slate-900">Revisi #{{ $rev->revision_number ?? $loop->iteration }} <span class="text-sm text-slate-500">• {{ $rev->getStatusLabelAttribute() }}</span></div>
                                 <div class="text-sm text-slate-500">{{ optional($rev->submitted_date)->format('d M Y') ?? '-' }}</div>
                                 @if($rev->revision_note)
-                                    <div class="mt-2 text-body-md whitespace-pre-wrap">{{ $rev->revision_note }}</div>
+                                    <div class="mt-3 text-sm text-slate-700 whitespace-pre-wrap">{{ $rev->revision_note }}</div>
                                 @endif
                             </div>
                             @if($rev->file)
-                                <div class="flex flex-col items-end gap-2 ml-4">
+                                <div class="flex flex-col items-start gap-2 sm:items-end">
                                     <div class="text-sm text-slate-600">{{ $rev->file->original_name }}</div>
                                     <div class="flex gap-2">
-                                        <a href="{{ route('sekretaris.proposal-file.view', $rev->file) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">Lihat</a>
-                                        <a href="{{ route('sekretaris.proposal-file.download', $rev->file) }}" class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition">Download</a>
+                                        <a href="{{ route('sekretaris.proposal-file.view', $rev->file) }}" target="_blank" class="inline-flex items-center gap-2 rounded-3xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">Lihat</a>
+                                        <a href="{{ route('sekretaris.proposal-file.download', $rev->file) }}" class="inline-flex items-center gap-2 rounded-3xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition">Download</a>
                                     </div>
                                 </div>
                             @endif
@@ -291,34 +321,58 @@
                 @endif
             </div>
 
-            <div class="bg-blue-900 text-white rounded-xl p-xl shadow-lg mt-xl">
-                <div class="flex flex-col md:flex-row justify-between items-center gap-lg">
-                    <div class="flex items-start gap-md">
-                        <div class="bg-blue-800 p-md rounded-lg">
-                            <span class="material-symbols-outlined text-4xl" data-icon="summarize" style="font-variation-settings: 'FILL' 1;">summarize</span>
+            <div class="bg-blue-900 text-white rounded-3xl p-xl shadow-lg mt-xl">
+                <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex items-start gap-5">
+                        <div class="rounded-3xl bg-blue-800 p-4">
+                            <span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">summarize</span>
                         </div>
                         <div>
-                            <h5 class="text-h3 font-h3 mb-1">Ringkasan Reviewer</h5>
-                            <div class="flex flex-wrap gap-md mt-sm">
+                            <h5 class="text-2xl font-bold">Ringkasan Reviewer</h5>
+                            <div class="mt-4 flex flex-wrap gap-4">
                                 <div class="flex items-center gap-2">
-                                    <span class="w-3 h-3 bg-green-400 rounded-full"></span>
-                                    <span class="text-body-md">{{ $summary['approved'] }} Reviewer menyarankan <strong>APPROVE</strong></span>
+                                    <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+                                    <span class="text-sm">{{ $summary['approved'] }} Reviewer menyarankan <strong>APPROVE</strong></span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span class="w-3 h-3 bg-amber-400 rounded-full"></span>
-                                    <span class="text-body-md">{{ $summary['revision'] }} Reviewer menyarankan <strong>REVISE</strong></span>
+                                    <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                                    <span class="text-sm">{{ $summary['revision'] }} Reviewer menyarankan <strong>REVISE</strong></span>
                                 </div>
                             </div>
-                            <p class="text-body-sm text-blue-200 mt-md italic">Catatan: Gunakan ringkasan ini sebagai referensi untuk pengambilan keputusan.</p>
+                            <p class="mt-3 text-sm text-blue-200 italic">Gunakan ringkasan ini sebagai referensi untuk pengambilan keputusan.</p>
                         </div>
                     </div>
-                    <a href="{{ route('sekretaris.keputusan') }}?proposal_id={{ $proposal->id }}" class="bg-white text-blue-900 font-bold px-lg py-md rounded-lg text-button font-button hover:bg-blue-50 transition-all flex items-center gap-3 shadow-md active:scale-95">
+                    <a id="btn-lanjut-ke-keputusan" href="{{ route('sekretaris.keputusan') }}?proposal_id={{ $proposal->id }}" data-submitted-count="{{ $submittedCount }}" data-required-count="3" class="inline-flex items-center gap-3 rounded-3xl bg-white px-6 py-3 text-sm font-bold text-blue-900 shadow-lg hover:bg-slate-100 transition">
                         Lanjut ke Keputusan
-                        <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+                        <span class="material-symbols-outlined">arrow_forward</span>
                     </a>
                 </div>
             </div>
         </div>
     </div>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var button = document.getElementById('btn-lanjut-ke-keputusan');
+        if (!button) return;
+
+        var submittedCount = Number(button.dataset.submittedCount || 0);
+        var requiredCount = Number(button.dataset.requiredCount || 3);
+
+        button.addEventListener('click', function (event) {
+            if (submittedCount < requiredCount) {
+                event.preventDefault();
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Belum semua reviewer mengirim',
+                    text: 'Tunggu hingga semua 3 reviewer menyerahkan hasil review sebelum melanjutkan ke keputusan.',
+                    confirmButtonText: 'Oke',
+                    confirmButtonColor: '#2563eb'
+                });
+            }
+        });
+    });
+</script>
 @endsection

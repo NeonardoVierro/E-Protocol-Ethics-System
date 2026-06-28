@@ -30,9 +30,9 @@
 <div class="grid grid-cols-3 gap-6 mb-6">
     @php
     $stats = [
-        ['icon'=>'fas fa-circle-check',  'iconBg'=>'bg-blue-50',   'iconColor'=>'text-blue-500',   'label'=>'TOTAL READY TO PUBLISH', 'value'=>'42'],
-        ['icon'=>'fas fa-calendar-check','iconBg'=>'bg-emerald-50', 'iconColor'=>'text-emerald-500','label'=>'PUBLISHED THIS MONTH',   'value'=>'18'],
-        ['icon'=>'fas fa-hourglass-half','iconBg'=>'bg-orange-50',  'iconColor'=>'text-orange-400', 'label'=>'PENDING VERIFICATION',   'value'=>'05'],
+        ['icon'=>'fas fa-circle-check',  'iconBg'=>'bg-blue-50',   'iconColor'=>'text-blue-500',   'label'=>'TOTAL READY TO PUBLISH', 'value'=>number_format($readyToPublishCount ?? 0)],
+        ['icon'=>'fas fa-calendar-check','iconBg'=>'bg-emerald-50', 'iconColor'=>'text-emerald-500','label'=>'PUBLISHED THIS MONTH',   'value'=>number_format($publishedThisMonthCount ?? 0)],
+        ['icon'=>'fas fa-hourglass-half','iconBg'=>'bg-orange-50',  'iconColor'=>'text-orange-400', 'label'=>'PENDING VERIFICATION',   'value'=>number_format($pendingVerificationCount ?? 0)],
     ];
     @endphp
     @foreach($stats as $s)

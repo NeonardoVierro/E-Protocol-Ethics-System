@@ -84,52 +84,20 @@ class ReviewFeedback extends Model
         return $badges[$this->recommendation] ?? 'bg-gray-100 text-gray-800';
     }
 
-    // Cek apakah ini review revisi atau review awal
     public function isRevisionReview()
     {
-        if (!$this->submitted_at || !$this->proposal) {
-            return false;
-        }
-
-        // Cek apakah ada revisi yang submitted sebelum feedback ini
-        $submittedRevisions = $this->proposal->revisions()
-            ->where('status', 'submitted')
-            ->where('submitted_date', '<', $this->submitted_at)
-            ->exists();
-
-        return $submittedRevisions;
+        return $this->review && optional($this->review)->review_round > 1;
     }
 
-    // Get label untuk jenis review
     public function getReviewTypeLabel()
     {
         return $this->isRevisionReview() ? 'Review Revisi' : 'Review Awal';
     }
 
-    // Get badge color untuk jenis review
     public function getReviewTypeBadgeClasses()
     {
-        return $this->isRevisionReview() 
-            ? 'bg-purple-100 text-purple-700' 
+        return $this->isRevisionReview()
+            ? 'bg-purple-100 text-purple-700'
             : 'bg-blue-100 text-blue-700';
-    }
-
-    // Parsed feedback data helper for views
-    public function getParsedFeedbackAttribute()
-    {
-        if (is_array($this->feedback_text)) {
-            return $this->feedback_text;
-        }
-
-        if (is_string($this->feedback_text)) {
-            $decoded = json_decode($this->feedback_text, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                return $decoded;
-            }
-
-            return ['summary' => $this->feedback_text];
-        }
-
-        return ['summary' => (string) $this->feedback_text];
     }
 }

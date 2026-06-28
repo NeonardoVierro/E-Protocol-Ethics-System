@@ -202,6 +202,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     (function(){
     const generateBtn = document.getElementById('generateBtn');
@@ -283,54 +284,102 @@
     const sendToAdminUrl = "{{ route('sekretaris.draf-ethical-clearance.sendToAdmin') }}";
 
     sendAdminBtn && sendAdminBtn.addEventListener('click', function(){
-      if (!proposalIdInput || !proposalIdInput.value) return alert('Pilih proposal terlebih dahulu di antrean.');
-      if (!adminSelect || !adminSelect.value) return alert('Pilih admin yang akan menerima draft.');
+      if (!proposalIdInput || !proposalIdInput.value) {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'Pilih proposal',
+          text: 'Pilih proposal terlebih dahulu di antrean.',
+          confirmButtonText: 'OK',
+        });
+      }
 
-      if (!confirm('Yakin ingin mengirim draft ini ke admin?')) return;
+      if (!adminSelect || !adminSelect.value) {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'Pilih admin',
+          text: 'Pilih admin yang akan menerima draft.',
+          confirmButtonText: 'OK',
+        });
+      }
 
-      const token = sendForm.querySelector('input[name="_token"]')?.value || '';
-      fetch(sendToAdminUrl, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': token,
-        },
-        body: JSON.stringify({
-          proposal_id: proposalIdInput.value,
-          admin_id: adminSelect.value,
-          title: titleInput.value,
-          principal_investigator: piInput.value,
-          members: membersInput.value,
-          institution: institutionInput.value,
-          research_place: placeInput.value,
-        }),
-      }).then(async function(response) {
-        const text = await response.text();
-        let data = null;
-        try {
-          data = text ? JSON.parse(text) : null;
-        } catch (parseError) {
-          console.error('Response parse error', parseError, text);
-          throw new Error('Server response tidak valid.');
+      Swal.fire({
+        title: 'Kirim draft ke admin?',
+        text: 'Draft akan dikirim ke admin yang dipilih dan tidak dapat diubah setelah dikirim.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, kirim',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+        customClass: {
+          confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+          cancelButton: 'swal2-cancel bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl px-4 py-2',
+        }
+      }).then((result) => {
+        if (!result.isConfirmed) {
+          return;
         }
 
-        if (!response.ok) {
-          const message = data?.message || data?.error || 'Gagal mengirim draft. (' + response.status + ')';
-          throw new Error(message);
-        }
+        const token = sendForm.querySelector('input[name="_token"]')?.value || '';
+        fetch(sendToAdminUrl, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': token,
+          },
+          body: JSON.stringify({
+            proposal_id: proposalIdInput.value,
+            admin_id: adminSelect.value,
+            title: titleInput.value,
+            principal_investigator: piInput.value,
+            members: membersInput.value,
+            institution: institutionInput.value,
+            research_place: placeInput.value,
+          }),
+        }).then(async function(response) {
+          const text = await response.text();
+          let data = null;
+          try {
+            data = text ? JSON.parse(text) : null;
+          } catch (parseError) {
+            console.error('Response parse error', parseError, text);
+            throw new Error('Server response tidak valid.');
+          }
 
-        if (data && data.status === 'ok') {
-          alert(data.message || 'Draft berhasil dikirim ke admin.');
-          window.location.reload();
-        } else {
-          throw new Error(data?.message || 'Gagal mengirim draft.');
-        }
-      }).catch(err => {
-        console.error(err);
-        alert('Terjadi kesalahan saat mengirim draft: ' + (err.message || 'Unknown error'));
+          if (!response.ok) {
+            const message = data?.message || data?.error || 'Gagal mengirim draft. (' + response.status + ')';
+            throw new Error(message);
+          }
+
+          if (data && data.status === 'ok') {
+            Swal.fire({
+              icon: 'success',
+              title: 'Terkirim',
+              text: data.message || 'Draft berhasil dikirim ke admin.',
+              confirmButtonText: 'OK',
+              customClass: {
+                confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2'
+              }
+            }).then(() => {
+              window.location.reload();
+            });
+          } else {
+            throw new Error(data?.message || 'Gagal mengirim draft.');
+          }
+        }).catch(err => {
+          console.error(err);
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Terjadi kesalahan saat mengirim draft: ' + (err.message || 'Unknown error'),
+            confirmButtonText: 'OK',
+            customClass: {
+              confirmButton: 'swal2-confirm bg-red-600 hover:bg-red-700 text-white rounded-2xl px-4 py-2'
+            }
+          });
+        });
       });
     });
 

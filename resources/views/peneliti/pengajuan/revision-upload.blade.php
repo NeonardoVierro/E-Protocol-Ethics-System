@@ -15,60 +15,68 @@
             <h2 class="text-xl font-semibold text-slate-900">Unggah Revisi: {{ $proposal->title }}</h2>
         </div>
 
-        @php $canUpload = $canUploadRevision; @endphp
+        @php
+            $canUpload = $canUploadRevision;
+            $statusMessage = null;
+
+            if (isset($revisionUploadState)) {
+                if ($revisionUploadState === 'submitted') {
+                    $statusMessage = 'Revisi Anda telah dikirim dan sedang menunggu review sekretaris. Silakan tunggu pemberitahuan selanjutnya.';
+                } elseif ($revisionUploadState === 'requested') {
+                    $statusMessage = 'Sekretaris telah meminta revisi. Silakan unggah dokumen revisi Anda di bawah.';
+                } else {
+                    $statusMessage = 'Belum ada permintaan revisi dari sekretaris. Tunggu pemberitahuan jika sekretaris meminta revisi lebih lanjut.';
+                }
+            }
+        @endphp
+
         <div class="space-y-6">
-            @if(!$canUpload)
+            @if($statusMessage)
                 <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 mb-4">
                     <p class="text-sm text-amber-700">
-                        <span class="font-semibold">Menunggu review sekretaris:</span> Revisi Anda telah dikirim. Tunggu sekretaris untuk melakukan review. Jika diperlukan revisi lebih lanjut, sekretaris akan memberikan pemberitahuan.
+                        {{ $statusMessage }}
                     </p>
                 </div>
             @endif
-            <form action="{{ route('pengajuan.riwayat-pengajuan.submit-revision', $proposal->id) }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="rounded-2xl border border-slate-200 bg-white p-5">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-semibold text-slate-700">Dokumen Proposal</h3>
-                        @unless($canUpload)
-                            <span class="text-xs font-medium uppercase tracking-[0.16em] text-amber-700">Upload dinonaktifkan</span>
-                        @endunless
-                    </div>
-                    @foreach($files as $originalName => $fileGroup)
-                        @php $latest = $fileGroup->first(); @endphp
-                        <div class="mb-4 pb-4 border-b last:border-b-0">
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <p class="font-medium text-slate-900">{{ $originalName }}</p>
-                                    <p class="text-xs text-slate-500 mt-1">v{{ $latest->version }}
-                                        @if($latest->file_type === 'revision')
-                                            <span class="ml-2 inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-semibold">Revisi</span>
-                                        @else
-                                            <span class="ml-2 inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold">Original</span>
-                                        @endif
-                                    </p>
-                                </div>
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.view', ['proposal' => $proposal->id, 'file' => $latest->id]) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
-                                        <span class="material-symbols-outlined text-base">visibility</span>
-                                        Lihat
-                                    </a>
-                                    <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.download', ['proposal' => $proposal->id, 'file' => $latest->id]) }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
-                                        <span class="material-symbols-outlined text-base">download</span>
-                                        Download
-                                    </a>
-                                    @if($canUpload)
-                                        <input type="file" name="revision_files[{{ $latest->id }}]" accept="application/pdf" class="text-sm border border-slate-300 rounded px-2 py-1" />
+            @if($canUpload)
+                <form action="{{ route('pengajuan.riwayat-pengajuan.submit-revision', $proposal->id) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="font-medium text-slate-900">{{ $originalName }}</p>
+                                <p class="text-xs text-slate-500 mt-1">v{{ $latest->version }}
+                                    @if($latest->file_type === 'revision')
+                                        <span class="ml-2 inline-block px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-semibold">Revisi</span>
+                                    @else
+                                        <span class="ml-2 inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-semibold">Original</span>
                                     @endif
-                                </div>
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.view', ['proposal' => $proposal->id, 'file' => $latest->id]) }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
+                                    <span class="material-symbols-outlined text-base">visibility</span>
+                                    Lihat
+                                </a>
+                                <a href="{{ route('pengajuan.riwayat-pengajuan.revision-file.download', ['proposal' => $proposal->id, 'file' => $latest->id]) }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
+                                    <span class="material-symbols-outlined text-base">download</span>
+                                    Download
+                                </a>
+                                @if($canUpload)
+                                    <input type="file" name="revision_files[{{ $latest->id }}]" accept="application/pdf" class="text-sm border border-slate-300 rounded px-2 py-1" />
+                                @endif
                             </div>
                         </div>
-                    @endforeach
-
-                    <div class="mt-6 flex justify-end">
-                        <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-md text-sm font-medium hover:bg-amber-700 transition" @disabled(!$canUpload)>Upload Revisi</button>
                     </div>
+                    <div class="mt-6 flex justify-end">
+                        <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-md text-sm font-medium hover:bg-amber-700 transition">Upload Revisi</button>
+                    </div>
+                </form>
+            @elseif(!$statusMessage)
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-slate-600">
+                    Anda hanya dapat mengunggah revisi setelah sekretaris mengirim permintaan revisi. Silakan kembali nanti.
                 </div>
-            </form>
+            @endif
 
             <div class="rounded-2xl border border-slate-200 bg-white p-5">
                 <h3 class="text-sm font-semibold text-slate-700 mb-3">Riwayat Revisi</h3>

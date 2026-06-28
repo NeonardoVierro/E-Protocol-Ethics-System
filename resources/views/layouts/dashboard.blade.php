@@ -14,6 +14,8 @@
     
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pc6qX0NPNZRH0PudD/TnYVQgnGcOeQD7rVk8F7IhHgjHTh5d1p+Rh7wbcuK9ZVZfaYulrIqyIZH3b5qxT4YDwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     
     <script>
         tailwind.config = {
@@ -551,11 +553,11 @@
                     <p class="font-semibold text-primary">{{ Auth::user()->name }}</p>
                     <p class="text-xs text-on-surface-variant">{{ Auth::user()->email }}</p>
                 </div>
-                <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors rounded-t-xl">
+                <a href="{{ route('profile.show') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors rounded-t-xl">
                     <span class="material-symbols-outlined text-primary text-lg">person</span>
                     <span>Data Diri</span>
                 </a>
-                <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
+                <a href="{{ route('profile.show') }}" class="flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors">
                     <span class="material-symbols-outlined text-primary text-lg">edit</span>
                     <span>Edit Profil</span>
                 </a>

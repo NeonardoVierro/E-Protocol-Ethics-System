@@ -62,7 +62,8 @@
               <div class="flex flex-col gap-2">
                 <label class="text-sm text-slate-600">Upload PDF TTD</label>
                 <input type="file" accept="application/pdf" class="text-sm" id="signed-file-{{ $d->id }}">
-                <button onclick="signDocument({{ $d->id }}, '{{ $d->proposal?->title ?? 'Dokumen' }}')" class="text-left text-blue-600 hover:underline font-medium">
+                <button type="button" onclick="signDocument({{ $d->id }}, '{{ $d->proposal?->title ?? 'Dokumen' }}')"
+                        class="w-full rounded-xl bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#162d4a] transition-colors">
                   Kirim
                 </button>
               </div>
@@ -81,39 +82,77 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 function signDocument(documentId, title) {
-    if (!confirm('Apakah Anda yakin ingin mengirim dokumen "' + title + '"?')) {
-        return;
+  Swal.fire({
+    title: 'Kirim dokumen?',
+    text: 'Apakah Anda yakin ingin mengirim dokumen "' + title + '"?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, kirim',
+    cancelButtonText: 'Batal',
+    customClass: {
+      confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+      cancelButton: 'swal2-cancel bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl px-4 py-2'
+    }
+  }).then((result) => {
+    if (!result.isConfirmed) {
+      return;
     }
 
     const input = document.getElementById('signed-file-' + documentId);
     const formData = new FormData();
     formData.append('document_id', documentId);
     if (input && input.files[0]) {
-        formData.append('signed_file', input.files[0]);
+      formData.append('signed_file', input.files[0]);
     }
 
     fetch('/ketua/sign-document', {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-        },
-        body: formData,
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+      },
+      body: formData,
     })
     .then(async res => {
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.success) {
-            alert('Dokumen berhasil dikirim!');
-            location.reload();
-        } else {
-            alert(data.error || 'Gagal mengirim dokumen.');
-        }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Berhasil dikirim',
+          text: 'Dokumen berhasil dikirim.',
+          confirmButtonText: 'OK',
+          customClass: {
+            confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2'
+          }
+        });
+        location.reload();
+      } else {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Gagal mengirim dokumen',
+          text: data.error || 'Terjadi kesalahan saat mengirim dokumen.',
+          confirmButtonText: 'OK',
+          customClass: {
+            confirmButton: 'swal2-confirm bg-red-600 hover:bg-red-700 text-white rounded-2xl px-4 py-2'
+          }
+        });
+      }
     })
-    .catch(err => {
-        console.error('Error:', err);
-        alert('Terjadi kesalahan saat mengirim dokumen.');
+    .catch(async err => {
+      console.error('Error:', err);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Gagal mengirim dokumen',
+        text: 'Terjadi kesalahan saat mengirim dokumen.',
+        confirmButtonText: 'OK',
+        customClass: {
+          confirmButton: 'swal2-confirm bg-red-600 hover:bg-red-700 text-white rounded-2xl px-4 py-2'
+        }
+      });
     });
+  });
 }
 </script>
 @endpush

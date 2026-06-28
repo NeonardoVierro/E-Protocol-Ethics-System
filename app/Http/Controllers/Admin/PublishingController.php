@@ -25,7 +25,20 @@ class PublishingController extends Controller
             ->orderByDesc('published_date')
             ->paginate(10);
 
-        return view('admin.publishing.index', compact('docs', 'publishedDocs'));
+        $readyToPublishCount = \App\Models\EthicsDocument::where('status', \App\Models\EthicsDocument::STATUS_SIGNED)->count();
+        $publishedThisMonthCount = \App\Models\EthicsDocument::where('status', \App\Models\EthicsDocument::STATUS_PUBLISHED)
+            ->whereYear('published_date', now()->year)
+            ->whereMonth('published_date', now()->month)
+            ->count();
+        $pendingVerificationCount = \App\Models\EthicsDocument::where('status', \App\Models\EthicsDocument::STATUS_DRAFT)->count();
+
+        return view('admin.publishing.index', compact(
+            'docs',
+            'publishedDocs',
+            'readyToPublishCount',
+            'publishedThisMonthCount',
+            'pendingVerificationCount'
+        ));
     }
 
     public function publish(\App\Models\EthicsDocument $document)

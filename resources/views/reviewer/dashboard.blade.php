@@ -23,6 +23,7 @@
     /* ── Stat Cards row ── */
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 1rem; margin-bottom: 1.25rem; }
 
+
     .stat-card { background: #fff; border: 1px solid #e9ebee; border-radius: 14px; padding: 1.25rem 1.4rem; }
     .stat-label { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; margin-bottom: .35rem; }
     .stat-value { font-size: 2.4rem; font-weight: 700; line-height: 1; color: #111; }
@@ -130,32 +131,40 @@
         {{-- Active Reviews --}}
         <div class="stat-card">
             <div class="stat-label">Active Reviews</div>
-            <div class="stat-value">08</div>
+            <div class="stat-value">{{ str_pad($activeReviewsCount, 2, '0', STR_PAD_LEFT) }}</div>
             <div class="stat-sub">
                 <span class="dot"></span>
-                2 new assigned today
+                {{ $allReviews->where('status', App\Models\Review::STATUS_ASSIGNED)->count() }} newly assigned
             </div>
         </div>
 
         {{-- Completed Reviews --}}
         <div class="stat-card">
             <div class="stat-label">Completed Reviews</div>
-            <div class="stat-value">142</div>
+            <div class="stat-value">{{ str_pad($completedReviewsCount, 3, '0', STR_PAD_LEFT) }}</div>
             <div class="stat-sub">
                 <i class="fas fa-calendar-alt" style="color:#9ca3af; font-size:.7rem"></i>
-                Current Semester
+                All time
             </div>
         </div>
 
         {{-- Priority Action --}}
+        @if($priorityReview)
         <div class="priority-card">
             <div class="priority-badge">⚠ Priority Action</div>
-            <div class="priority-title">Bio-Ethics Ref #4290</div>
-            <div class="priority-sub">Deadline expires in 24 hours. Faculty of Medicine.</div>
-            <button class="btn-review-now" onclick="featureInDevelopment('Review Now')">
+            <div class="priority-title">{{ $priorityReview->proposal->title }}</div>
+            <div class="priority-sub">Deadline: {{ $priorityReview->due_date->format('M d, Y') }}</div>
+            <a href="{{ route('reviewer.review-proposal.show', $priorityReview->proposal->id) }}" class="btn-review-now">
                 Review Now
-            </button>
+            </a>
         </div>
+        @else
+        <div class="priority-card">
+            <div class="priority-badge">✓ All Clear</div>
+            <div class="priority-title">No Urgent Reviews</div>
+            <div class="priority-sub">All reviews are on schedule.</div>
+        </div>
+        @endif
     </div>
 
     {{-- ── Review Queue ── --}}
@@ -181,91 +190,79 @@
                 </tr>
             </thead>
             <tbody>
-                {{-- Row 1 --}}
+                @forelse($allReviews as $review)
                 <tr>
                     <td>
-                        <div class="proposal-title">Genomic Sequencing in Rural Pediatrics</div>
-                        <div class="proposal-meta">ID: EP-2023-9904 • Dr. Sarah Jenkins</div>
+                        <div class="proposal-title">{{ $review->proposal->title }}</div>
+                        <div class="proposal-meta">ID: {{ $review->proposal->id }} • {{ $review->proposal->researcher->name ?? 'N/A' }}</div>
                     </td>
                     <td>
-                        <div class="date-main">Oct 12, 2023</div>
+                        <div class="date-main">{{ $review->assigned_date?->format('M d, Y') ?? '-' }}</div>
                     </td>
                     <td>
-                        <div class="date-main">Oct 26, 2023</div>
-                        <div class="date-sub days-urgent">4 DAYS LEFT</div>
+                        <div class="date-main">{{ $review->due_date?->format('M d, Y') ?? '-' }}</div>
+                        @php
+                            $daysLeft = $review->due_date ? $review->due_date->diffInDays(now(), false) : null;
+                            $daysClass = 'days-ok';
+                            if ($daysLeft !== null) {
+                                if ($daysLeft < 0) {
+                                    $daysClass = 'days-urgent';
+                                    $daysLabel = 'EXPIRED';
+                                } elseif ($daysLeft <= 3) {
+                                    $daysClass = 'days-urgent';
+                                    $daysLabel = $daysLeft . ' DAYS LEFT';
+                                } elseif ($daysLeft <= 7) {
+                                    $daysClass = 'days-warn';
+                                    $daysLabel = $daysLeft . ' DAYS LEFT';
+                                } else {
+                                    $daysClass = 'days-ok';
+                                    $daysLabel = $daysLeft . ' DAYS LEFT';
+                                }
+                            }
+                        @endphp
+                        <div class="date-sub {{ $daysClass }}">{{ $daysLabel ?? '-' }}</div>
                     </td>
-                    <td><span class="badge badge-review">UNDER REVIEW</span></td>
                     <td>
-                        <button class="action-btn" onclick="featureInDevelopment('Review proposal')">Review</button>
+                        @php
+                            $statusBadgeClass = 'badge-queued';
+                            $statusLabel = 'QUEUED';
+                            if ($review->status === App\Models\Review::STATUS_IN_PROGRESS) {
+                                $statusBadgeClass = 'badge-review';
+                                $statusLabel = 'UNDER REVIEW';
+                            } elseif ($review->status === App\Models\Review::STATUS_ASSIGNED) {
+                                $statusBadgeClass = 'badge-new';
+                                $statusLabel = 'NEW ASSIGNMENT';
+                            } elseif ($review->status === App\Models\Review::STATUS_COMPLETED) {
+                                $statusBadgeClass = 'badge-queued';
+                                $statusLabel = 'COMPLETED';
+                            }
+                        @endphp
+                        <span class="badge {{ $statusBadgeClass }}">{{ $statusLabel }}</span>
+                    </td>
+                    <td>
+                        @if($review->status === App\Models\Review::STATUS_COMPLETED)
+                            <a href="{{ route('reviewer.riwayat-review.show', $review->id) }}" class="action-btn">
+                                View
+                            </a>
+                        @else
+                            <a href="{{ route('reviewer.review-proposal.show', $review->proposal->id) }}" class="action-btn">
+                                Review
+                            </a>
+                        @endif
                     </td>
                 </tr>
-
-                {{-- Row 2 --}}
+                @empty
                 <tr>
-                    <td>
-                        <div class="proposal-title">AI-Driven Diagnostic Bias Analysis</div>
-                        <div class="proposal-meta">ID: EP-2023-9912 • Prof. Michael Chen</div>
-                    </td>
-                    <td>
-                        <div class="date-main">Oct 15, 2023</div>
-                    </td>
-                    <td>
-                        <div class="date-main">Oct 29, 2023</div>
-                        <div class="date-sub days-warn">7 DAYS LEFT</div>
-                    </td>
-                    <td><span class="badge badge-new">NEW ASSIGNMENT</span></td>
-                    <td>
-                        <button class="action-btn" onclick="featureInDevelopment('Review proposal')">Review</button>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: #9ca3af;">
+                        No reviews assigned yet.
                     </td>
                 </tr>
-
-                {{-- Row 3 --}}
-                <tr>
-                    <td>
-                        <div class="proposal-title">Social Media Mental Health Monitoring</div>
-                        <div class="proposal-meta">ID: EP-2023-9920 • Dr. Diana Rodriguez</div>
-                    </td>
-                    <td>
-                        <div class="date-main">Oct 18, 2023</div>
-                    </td>
-                    <td>
-                        <div class="date-main">Nov 01, 2023</div>
-                        <div class="date-sub days-ok">10 DAYS LEFT</div>
-                    </td>
-                    <td><span class="badge badge-queued">QUEUED</span></td>
-                    <td>
-                        <button class="action-btn" onclick="featureInDevelopment('Review proposal')">Review</button>
-                    </td>
-                </tr>
-
-                {{-- Row 4 --}}
-                <tr>
-                    <td>
-                        <div class="proposal-title">Urban Heat Island Impact Mitigation</div>
-                        <div class="proposal-meta">ID: EP-2023-9931 • Dept. of Urban Studies</div>
-                    </td>
-                    <td>
-                        <div class="date-main">Oct 20, 2023</div>
-                    </td>
-                    <td>
-                        <div class="date-main">Nov 03, 2023</div>
-                        <div class="date-sub days-ok">12 DAYS LEFT</div>
-                    </td>
-                    <td><span class="badge badge-queued">QUEUED</span></td>
-                    <td>
-                        <button class="action-btn" onclick="featureInDevelopment('Review proposal')">Review</button>
-                    </td>
-                </tr>
+                @endforelse
             </tbody>
         </table>
 
         <div class="pagination">
-            <span class="page-info">Showing 1–4 of 9 results</span>
-            <div class="page-btns">
-                <button class="page-btn active">1</button>
-                <button class="page-btn">2</button>
-                <button class="page-btn"><i class="fas fa-chevron-right" style="font-size:.65rem"></i></button>
-            </div>
+            <span class="page-info">Showing 1–{{ count($allReviews) }} of {{ count($allReviews) }} results</span>
         </div>
     </div>
 
@@ -279,21 +276,24 @@
                 Recent Activity
             </div>
 
+            @forelse($recentActivity as $activity)
             <div class="activity-item">
-                <div class="act-icon green"><i class="fas fa-check"></i></div>
+                @php
+                    $isCompleted = $activity->status === App\Models\Review::STATUS_COMPLETED;
+                    $iconClass = $isCompleted ? 'green' : 'red';
+                    $icon = $isCompleted ? 'fa-check' : 'fa-undo';
+                @endphp
+                <div class="act-icon {{ $iconClass }}"><i class="fas {{ $icon }}"></i></div>
                 <div>
-                    <div class="act-title">Approved proposal "Human-Centered Robotics Ethics".</div>
-                    <div class="act-time">2 hours ago • Narrative review completed with minor stipulations.</div>
+                    <div class="act-title">{{ $isCompleted ? 'Completed' : 'Returned' }} proposal "{{ $activity->proposal->title }}".</div>
+                    <div class="act-time">{{ $activity->completed_date?->diffForHumans() ?? 'N/A' }} • {{ $activity->feedback?->feedback_text ? 'Feedback provided' : 'No feedback' }}.</div>
                 </div>
             </div>
-
+            @empty
             <div class="activity-item">
-                <div class="act-icon red"><i class="fas fa-undo"></i></div>
-                <div>
-                    <div class="act-title">Returned proposal "Blockchain for Public Health Data".</div>
-                    <div class="act-time">Yesterday • Clarification required on data and encryption protocols.</div>
-                </div>
+                <div style="color: #9ca3af; font-size: .82rem;">No recent activity yet.</div>
             </div>
+            @endforelse
         </div>
 
         {{-- Review Velocity --}}
@@ -309,17 +309,17 @@
             <div class="vel-row">
                 <div class="vel-row-header">
                     <span class="vel-label">Current Speed</span>
-                    <span class="vel-value">5.2 Days</span>
+                    <span class="vel-value">{{ number_format($avgReviewDays, 1) }} Days</span>
                 </div>
                 <div class="vel-bar-bg">
-                    <div class="vel-bar-fg teal" style="width: 74%"></div>
+                    <div class="vel-bar-fg teal" style="width: {{ min(($avgReviewDays / $institutionalAvg) * 100, 100) }}%"></div>
                 </div>
             </div>
 
             <div class="vel-row">
                 <div class="vel-row-header">
                     <span class="vel-label">Institutional Target</span>
-                    <span class="vel-value">7.0 Days</span>
+                    <span class="vel-value">{{ number_format($institutionalAvg, 1) }} Days</span>
                 </div>
                 <div class="vel-bar-bg">
                     <div class="vel-bar-fg gray" style="width: 100%"></div>
@@ -327,10 +327,22 @@
             </div>
 
             <div class="vel-tip">
+                @if($velocityPercentage > 0)
                 <span class="vel-tip-icon">↑</span>
                 <span class="vel-tip-text">
-                    <strong>You're 25% faster</strong> than the department average this month. Keep it up!
+                    <strong>You're {{ abs($velocityPercentage) }}% faster</strong> than the department average this month. Keep it up!
                 </span>
+                @elseif($velocityPercentage < 0)
+                <span class="vel-tip-icon">↓</span>
+                <span class="vel-tip-text">
+                    <strong>You're {{ abs($velocityPercentage) }}% slower</strong> than the department average. Try to speed up reviews to maintain quality standards.
+                </span>
+                @else
+                <span class="vel-tip-icon">→</span>
+                <span class="vel-tip-text">
+                    <strong>You're at pace</strong> with the department average. Maintain this consistent performance!
+                </span>
+                @endif
             </div>
         </div>
 

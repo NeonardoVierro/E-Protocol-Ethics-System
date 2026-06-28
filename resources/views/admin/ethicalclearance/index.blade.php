@@ -83,14 +83,22 @@
             </table>
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
-            @php
+        @php
+            $pendingCount = $docs->count();
+            $approvedTodayCount = $docs->filter(function ($d) {
+                return optional($d->proposal?->decision_date)->isToday();
+            })->count();
+            $expiringSoonCount = $docs->filter(function ($d) {
+                return $d->created_at && $d->created_at->lt(now()->subDays(30));
+            })->count();
+
             $stats = [
-                ['icon'=>'fas fa-file-circle-check','iconBg'=>'bg-teal-50',   'iconColor'=>'text-teal-500',  'label'=>'IN PROCESSING','value'=>'08'],
-                ['icon'=>'fas fa-gear',              'iconBg'=>'bg-purple-50', 'iconColor'=>'text-purple-500','label'=>'APPROVED TODAY','value'=>'14'],
-                ['icon'=>'fas fa-circle-exclamation','iconBg'=>'bg-orange-50', 'iconColor'=>'text-orange-400','label'=>'EXPIRING SOON', 'value'=>'03'],
+                ['icon'=>'fas fa-file-circle-check','iconBg'=>'bg-teal-50',   'iconColor'=>'text-teal-500',  'label'=>'IN PROCESSING','value'=>$pendingCount],
+                ['icon'=>'fas fa-gear',              'iconBg'=>'bg-purple-50', 'iconColor'=>'text-purple-500','label'=>'APPROVED TODAY','value'=>$approvedTodayCount],
+                ['icon'=>'fas fa-circle-exclamation','iconBg'=>'bg-orange-50', 'iconColor'=>'text-orange-400','label'=>'EXPIRING SOON', 'value'=>$expiringSoonCount],
             ];
-            @endphp
+        @endphp
+        <div class="grid grid-cols-3 gap-4">
             @foreach($stats as $s)
             <div class="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
                 <div class="w-11 h-11 {{ $s['iconBg'] }} rounded-xl flex items-center justify-center flex-shrink-0">
@@ -248,6 +256,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 function ethicalClearance() {
     return {
@@ -349,11 +358,27 @@ function ethicalClearance() {
                 if (data.success) {
                     this.clearanceNumber = data.nomor_ec;
                 } else {
-                    alert('Gagal generate nomor EC.');
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal membuat Nomor EC',
+                        text: 'Tidak dapat membuat nomor EC saat ini. Silakan coba lagi.',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'swal2-confirm bg-red-600 hover:bg-red-700 text-white rounded-2xl px-4 py-2'
+                        }
+                    });
                 }
             } catch (e) {
                 console.error('Failed to generate nomor EC:', e);
-                alert('Gagal generate nomor EC.');
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal membuat Nomor EC',
+                    text: 'Tidak dapat membuat nomor EC saat ini. Silakan coba lagi.',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'swal2-confirm bg-red-600 hover:bg-red-700 text-white rounded-2xl px-4 py-2'
+                    }
+                });
             } finally {
                 this.generatingNomor = false;
             }
@@ -415,9 +440,25 @@ function ethicalClearance() {
                 const row = document.querySelector(`tr[data-proposal-id="${this.activePropId}"]`);
                 if (row) row.remove();
 
-                alert('Assignment berhasil disimpan.');
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Assignment berhasil disimpan',
+                    text: 'Nomor EC dan ketua berhasil disimpan. Silakan lanjutkan proses.',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2'
+                    }
+                });
             } catch (err) {
-                alert(err.message || 'Gagal menyimpan assignment.');
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal menyimpan assignment',
+                    text: err.message || 'Gagal menyimpan assignment.',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'swal2-confirm bg-red-600 hover:bg-red-700 text-white rounded-2xl px-4 py-2'
+                    }
+                });
             }
         },
     };

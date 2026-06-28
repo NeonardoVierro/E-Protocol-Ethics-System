@@ -60,12 +60,32 @@
             background-color: #eff4ff;
         }
 
+        .notification-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            min-width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+            animation: badgePop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .notification-badge {
                 font-size: 9px;
-                min-width: 16px;
-                height: 16px;
+                min-width: 18px;
+                height: 18px;
                 padding: 0 3px;
                 top: -4px;
                 right: -4px;
@@ -91,24 +111,6 @@
                 width: 100%;
                 white-space: normal;
             }
-        }
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            min-width: 18px;
-            height: 18px;
-            background: linear-gradient(135deg, #ba1a1a, #e53935);
-            color: white;
-            border-radius: 9999px;
-            font-size: 10px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 4px;
-            border: 2px solid white;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            animation: badgePop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
         
         @keyframes bellShake {
@@ -218,18 +220,6 @@
         </a>
 
     </nav>
-
-    <!-- Bottom: Settings & Support -->
-    <div class="p-2 px-2 sm:px-3 pb-4 border-t border-[#f0f2f5] flex flex-col gap-0.5">
-        <a href="#" onclick="featureInDevelopment('Settings')" class="flex items-center gap-3 px-3 py-2 rounded-lg text-[12px] sm:text-[13.5px] font-medium text-[#4b5563] hover:text-[#2563eb] no-underline transition-all duration-150 hover:bg-[#f5f7fa]">
-            <i class="fas fa-gear text-[13px] sm:text-[14px] w-5 text-center text-[#9ca3af] shrink-0"></i>
-            <span class="truncate">Settings</span>
-        </a>
-        <a href="#" onclick="featureInDevelopment('Support')" class="flex items-center gap-3 px-3 py-2 rounded-lg text-[12px] sm:text-[13.5px] font-medium text-[#4b5563] hover:text-[#2563eb] no-underline transition-all duration-150 hover:bg-[#f5f7fa]">
-            <i class="fas fa-circle-question text-[13px] sm:text-[14px] w-5 text-center text-[#9ca3af] shrink-0"></i>
-            <span class="truncate">Support</span>
-        </a>
-    </div>
 </div>
 
 <!-- ═══════════════════════════════════
@@ -315,13 +305,24 @@
             </div>
 
             <!-- Profile -->
-            <div class="flex items-center gap-2 cursor-pointer" onclick="featureInDevelopment('Profile')">
-                <div class="text-right hidden sm:block">
-                    <span class="text-[13.5px] font-semibold text-[#0f1e2e] block leading-tight">{{ Auth::user()->name ?? 'Reviewer' }}</span>
-                    <span class="text-[10px] font-bold tracking-[0.6px] uppercase text-[#94a3b8] block">{{ Auth::user()->role ?? 'Reviewer' }}</span>
-                </div>
-                <div class="w-9 h-9 rounded-full bg-[#1a3a5c] text-white text-[12px] font-bold flex items-center justify-center border-2 border-[#e8ecf0] flex-shrink-0">
-                    {{ strtoupper(substr(Auth::user()->name ?? 'RV', 0, 2)) }}
+            <div class="relative" id="reviewer-profile-dropdown-container">
+                <button id="reviewer-profile-dropdown-toggle" type="button" class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left transition-all duration-150 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <div class="text-right hidden sm:block">
+                        <span class="text-[13.5px] font-semibold text-[#0f1e2e] block leading-tight">{{ Auth::user()->name ?? 'Reviewer' }}</span>
+                        <span class="text-[10px] font-bold tracking-[0.6px] uppercase text-[#94a3b8] block">{{ Auth::user()->role ?? 'Reviewer' }}</span>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-[#1a3a5c] text-white text-[12px] font-bold flex items-center justify-center border-2 border-[#e8ecf0] flex-shrink-0">
+                        {{ strtoupper(substr(Auth::user()->name ?? 'RV', 0, 2)) }}
+                    </div>
+                    <i class="fas fa-chevron-down text-slate-400"></i>
+                </button>
+
+                <div id="reviewer-profile-dropdown-menu" class="hidden absolute right-0 mt-2 w-48 rounded-2xl border border-slate-200 bg-white shadow-lg py-2 z-50">
+                    <a href="{{ route('profile.show') }}" class="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-100">Edit Profil</a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100">Logout</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -517,6 +518,24 @@
             notificationDropdownOpen = false;
         }
     });
+
+    (function () {
+        const toggle = document.getElementById('reviewer-profile-dropdown-toggle');
+        const menu = document.getElementById('reviewer-profile-dropdown-menu');
+
+        if (toggle && menu) {
+            toggle.addEventListener('click', function (event) {
+                event.stopPropagation();
+                menu.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!menu.classList.contains('hidden') && !toggle.contains(event.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        }
+    })();
 
     // ═══════════════════════════════════════════════════════
     // RESPONSIVE SIDEBAR FUNCTIONS

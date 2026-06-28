@@ -15,6 +15,15 @@
             <p class="text-slate-500 mt-1">Lihat komentar reviewer dan rekomendasi revisi untuk proposal Anda.</p>
         </div>
 
+        @if(isset($proposal->pendingRevisionRequest) && $proposal->pendingRevisionRequest)
+            <div class="mb-6">
+                <a href="{{ route('pengajuan.riwayat-pengajuan.revision', $proposal->id) }}" class="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition">
+                    <span class="material-symbols-outlined">edit_square</span>
+                    Revisi
+                </a>
+            </div>
+        @endif
+
         <div class="grid gap-6 lg:grid-cols-3 mb-8">
             <div class="rounded-2xl bg-surface-container-low p-6 border border-slate-200">
                 <p class="text-xs uppercase tracking-[0.16em] text-slate-500 mb-2">Judul Proposal</p>
