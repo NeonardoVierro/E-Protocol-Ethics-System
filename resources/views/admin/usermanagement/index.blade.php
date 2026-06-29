@@ -77,8 +77,13 @@
 
         <div>
             <label class="mb-2 block text-sm font-medium text-slate-700">Password</label>
-            <input type="password" name="password"
-                   class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required>
+            <div class="relative">
+                <input type="password" name="password" id="password-field"
+                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100" required>
+                <button type="button" id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fas fa-eye text-sm"></i>
+                </button>
+            </div>
         </div>
 
         <div class="lg:col-span-2 flex flex-wrap gap-3">
@@ -284,6 +289,19 @@
         toggleButton.addEventListener('click', toggleCreatePanel);
         closeButton.addEventListener('click', toggleCreatePanel);
         cancelButton.addEventListener('click', toggleCreatePanel);
+
+        // Toggle password visibility
+        const togglePasswordBtn = document.getElementById('toggle-password');
+        const passwordField = document.getElementById('password-field');
+        if (togglePasswordBtn && passwordField) {
+            togglePasswordBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordField.setAttribute('type', type);
+                togglePasswordBtn.querySelector('i').classList.toggle('fa-eye');
+                togglePasswordBtn.querySelector('i').classList.toggle('fa-eye-slash');
+            });
+        }
 
         // Intercept reset-password forms
         document.querySelectorAll('form[action*="/reset-password"]').forEach(form => {

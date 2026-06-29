@@ -221,12 +221,21 @@ class Proposal extends Model
     public function updateStatus($newStatus)
     {
         $this->status = $newStatus;
-        if (in_array($newStatus, [self::STATUS_APPROVED, self::STATUS_REJECTED])) {
-            $this->decision_date = now();
-        } elseif ($newStatus === self::STATUS_ON_REVIEW) {
+        if ($newStatus === self::STATUS_ON_REVIEW) {
             $this->review_date = now();
         }
         $this->save();
+    }
+
+    public function scopeNeedsDecision($query)
+    {
+        return $query->whereNull('proposals.decision_date')
+            ->whereIn('status', [
+                self::STATUS_ON_REVIEW,
+                self::STATUS_REVISED,
+                self::STATUS_APPROVED,
+                self::STATUS_REJECTED,
+            ]);
     }
 
     public function getStatusLabelAttribute()

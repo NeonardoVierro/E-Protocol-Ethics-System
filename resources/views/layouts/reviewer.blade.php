@@ -309,7 +309,7 @@
                 <button id="reviewer-profile-dropdown-toggle" type="button" class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left transition-all duration-150 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200">
                     <div class="text-right hidden sm:block">
                         <span class="text-[13.5px] font-semibold text-[#0f1e2e] block leading-tight">{{ Auth::user()->name ?? 'Reviewer' }}</span>
-                        <span class="text-[10px] font-bold tracking-[0.6px] uppercase text-[#94a3b8] block">{{ Auth::user()->role ?? 'Reviewer' }}</span>
+                        <span class="text-[10px] font-bold tracking-[0.6px] uppercase text-[#94a3b8] block">{{ Auth::user()->getRoleLabel() }}</span>
                     </div>
                     <div class="w-9 h-9 rounded-full bg-[#1a3a5c] text-white text-[12px] font-bold flex items-center justify-center border-2 border-[#e8ecf0] flex-shrink-0">
                         {{ strtoupper(substr(Auth::user()->name ?? 'RV', 0, 2)) }}

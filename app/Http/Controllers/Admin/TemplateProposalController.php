@@ -30,12 +30,10 @@ class TemplateProposalController extends Controller
         $request->validate([
             'nama_dokumen' => 'required|string|max:255',
             'versi'        => 'required|string|max:20',
-            'kategori'     => 'required|in:Biomedis,Sosial,Umum',
             'file'         => 'required|file|mimes:pdf,docx,doc|max:10240', // max 10MB
         ], [
             'nama_dokumen.required' => 'Nama dokumen wajib diisi.',
             'versi.required'        => 'Versi wajib diisi.',
-            'kategori.required'     => 'Kategori wajib dipilih.',
             'file.required'         => 'File wajib diunggah.',
             'file.mimes'            => 'Format file harus PDF atau DOCX.',
             'file.max'              => 'Ukuran file maksimal 10MB.',
@@ -56,7 +54,7 @@ class TemplateProposalController extends Controller
         TemplateProposal::create([
             'nama_dokumen' => $request->nama_dokumen,
             'versi'        => $request->versi,
-            'kategori'     => $request->kategori,
+            'kategori'     => 'Umum',
             'file_path'    => $filePath,
             'file_name'    => $fileName,
             'file_type'    => $fileType,
@@ -70,20 +68,18 @@ class TemplateProposalController extends Controller
             ->with('success', 'Template "' . $request->nama_dokumen . '" berhasil dibuat dan tersimpan.');
     }
 
-    // ── UPDATE: edit nama/versi/kategori template ─
+    // ── UPDATE: edit nama/versi template ─
     public function update(Request $request, TemplateProposal $template)
     {
         $request->validate([
             'nama_dokumen' => 'required|string|max:255',
             'versi'        => 'required|string|max:20',
-            'kategori'     => 'required|in:Biomedis,Sosial,Umum',
             'file'         => 'nullable|file|mimes:pdf,docx,doc|max:10240',
         ]);
 
         $data = [
             'nama_dokumen' => $request->nama_dokumen,
             'versi'        => $request->versi,
-            'kategori'     => $request->kategori,
         ];
 
         // Ganti file jika ada upload baru

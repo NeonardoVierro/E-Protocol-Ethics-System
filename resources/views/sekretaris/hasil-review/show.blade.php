@@ -96,6 +96,7 @@
                     use App\Models\ProposalAssignment;
                     $assignments = $proposal->assignments()->where('role', ProposalAssignment::ROLE_REVIEWER)->with('assignedTo')->get();
                     $assignedCount = $assignments->count();
+                    // Count all submitted feedback entries (including multiple rounds)
                     $submittedCount = $feedbacks->count();
                     $allSubmitted = $assignedCount > 0 && $submittedCount >= $assignedCount;
                 @endphp
@@ -113,38 +114,36 @@
                     </div>
                 </div>
 
-                <div class="divide-y divide-slate-200">
-                    @foreach($assignments as $assignment)
+                    <div class="divide-y divide-slate-200">
+                    @foreach($feedbacks as $fbItem)
                         @php
-                            $fb = $feedbacks->first(function($v) use ($assignment) {
-                                return optional($v->review->reviewer)->id == $assignment->assigned_to;
-                            });
-                            $statusLabel = $fb ? $fb->getRecommendationLabelAttribute() : 'Menunggu';
-                            $statusClasses = $fb
-                                ? ($fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-red-100 text-red-700 border border-red-300'))
+                            $reviewer = optional($fbItem->review->reviewer);
+                            $statusLabel = $fbItem ? $fbItem->getRecommendationLabelAttribute() : 'Menunggu';
+                            $statusClasses = $fbItem
+                                ? ($fbItem->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : ($fbItem->recommendation === 'revision' ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-red-100 text-red-700 border border-red-300'))
                                 : 'bg-slate-100 text-slate-600 border border-slate-300';
-                            $avatarBg = $fb 
-                                ? ($fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'))
+                            $avatarBg = $fbItem 
+                                ? ($fbItem->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($fbItem->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'))
                                 : 'bg-slate-100 text-slate-700';
                         @endphp
 
-                        <div class="px-6 py-4 hover:bg-blue-50 transition-all duration-200 cursor-pointer border-l-4 {{ $fb ? ($fb->recommendation === 'approved' ? 'border-l-emerald-500' : ($fb->recommendation === 'revision' ? 'border-l-amber-500' : 'border-l-red-500')) : 'border-l-slate-300' }}">
+                        <div class="px-6 py-4 hover:bg-blue-50 transition-all duration-200 cursor-pointer border-l-4 {{ $fbItem ? ($fbItem->recommendation === 'approved' ? 'border-l-emerald-500' : ($fbItem->recommendation === 'revision' ? 'border-l-amber-500' : 'border-l-red-500')) : 'border-l-slate-300' }}">
                             <div class="flex items-center justify-between gap-4">
                                 <div class="flex items-center gap-3 min-w-0">
-                                    <div class="w-11 h-11 rounded-full {{ $avatarBg }} flex items-center justify-center font-semibold shadow-sm">{{ strtoupper(substr(optional($assignment->assignedTo)->name ?? 'RV', 0, 1)) }}</div>
+                                    <div class="w-11 h-11 rounded-full {{ $avatarBg }} flex items-center justify-center font-semibold shadow-sm">{{ strtoupper(substr($reviewer->name ?? 'RV', 0, 1)) }}</div>
                                     <div class="min-w-0">
-                                        <div class="text-sm font-semibold text-slate-900 truncate">{{ optional($assignment->assignedTo)->name ?? 'Reviewer' }}</div>
-                                        <div class="text-xs text-slate-500 truncate">{{ optional($assignment->assignedTo)->email ?? '-' }}</div>
+                                        <div class="text-sm font-semibold text-slate-900 truncate">{{ $reviewer->name ?? 'Reviewer' }}</div>
+                                        <div class="text-xs text-slate-500 truncate">{{ $reviewer->email ?? '-' }}</div>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500">{{ $fb ? 'Dikirim' : 'Status' }}</div>
-                                    <div class="mt-1 text-sm font-medium {{ $fb ? 'text-emerald-600' : 'text-amber-600' }}">{{ $fb ? optional($fb->submitted_at)->diffForHumans() : 'Menunggu' }}</div>
+                                    <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Dikirim</div>
+                                    <div class="mt-1 text-sm font-medium text-emerald-600">{{ optional($fbItem->submitted_at)->diffForHumans() }}</div>
                                 </div>
                             </div>
                             <div class="mt-4 flex items-center justify-between gap-4">
                                 <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase {{ $statusClasses }}">{{ $statusLabel }}</span>
-                                <span class="text-xs text-slate-500">{{ $fb ? $fb->getReviewTypeLabel() : 'Belum mengirim' }}</span>
+                                <span class="text-xs text-slate-500">{{ $fbItem->getReviewTypeLabel() ?? 'Tidak diketahui' }}</span>
                             </div>
                         </div>
                     @endforeach
@@ -184,32 +183,30 @@
                 <div class="mt-8">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Status Reviewer</p>
                     <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        @foreach($assignments as $assignment)
+                        @foreach($feedbacks as $fbItem)
                             @php
-                                $fb = $feedbacks->first(function($v) use ($assignment) {
-                                    return optional($v->review->reviewer)->id == $assignment->assigned_to;
-                                });
-                                $statusBadge = $fb ? ($fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-red-100 text-red-700 border border-red-300')) : 'bg-slate-100 text-slate-600 border border-slate-300';
-                                $statusText = $fb ? $fb->getRecommendationLabelAttribute() : 'Menunggu Review';
-                                $borderColor = $fb ? ($fb->recommendation === 'approved' ? 'border-l-emerald-500' : ($fb->recommendation === 'revision' ? 'border-l-amber-500' : 'border-l-red-500')) : 'border-l-slate-300';
-                                $hoverBg = $fb ? ($fb->recommendation === 'approved' ? 'hover:bg-emerald-50' : ($fb->recommendation === 'revision' ? 'hover:bg-amber-50' : 'hover:bg-red-50')) : 'hover:bg-slate-50';
+                                $reviewer = optional($fbItem->review->reviewer);
+                                $statusBadge = $fbItem ? ($fbItem->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : ($fbItem->recommendation === 'revision' ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-red-100 text-red-700 border border-red-300')) : 'bg-slate-100 text-slate-600 border border-slate-300';
+                                $statusText = $fbItem ? $fbItem->getRecommendationLabelAttribute() : 'Menunggu Review';
+                                $borderColor = $fbItem ? ($fbItem->recommendation === 'approved' ? 'border-l-emerald-500' : ($fbItem->recommendation === 'revision' ? 'border-l-amber-500' : 'border-l-red-500')) : 'border-l-slate-300';
+                                $hoverBg = $fbItem ? ($fbItem->recommendation === 'approved' ? 'hover:bg-emerald-50' : ($fbItem->recommendation === 'revision' ? 'hover:bg-amber-50' : 'hover:bg-red-50')) : 'hover:bg-slate-50';
                             @endphp
 
                             <div class="rounded-3xl bg-slate-50 border border-slate-200 border-l-4 {{ $borderColor }} p-4 shadow-sm {{ $hoverBg }} transition-all duration-200">
                                 <div class="flex items-start gap-3">
-                                    <div class="w-12 h-12 rounded-full {{ $fb ? ($fb->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($fb->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')) : 'bg-slate-200 text-slate-700' }} flex items-center justify-center font-semibold shadow-sm">{{ strtoupper(substr(optional($assignment->assignedTo)->name ?? 'RV', 0, 1)) }}</div>
+                                    <div class="w-12 h-12 rounded-full {{ $fbItem ? ($fbItem->recommendation === 'approved' ? 'bg-emerald-100 text-emerald-700' : ($fbItem->recommendation === 'revision' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700')) : 'bg-slate-200 text-slate-700' }} flex items-center justify-center font-semibold shadow-sm">{{ strtoupper(substr($reviewer->name ?? 'RV', 0, 1)) }}</div>
                                     <div class="min-w-0">
-                                        <div class="font-semibold text-slate-900 truncate">{{ optional($assignment->assignedTo)->name ?? 'Reviewer' }}</div>
-                                        <div class="mt-1 text-xs text-slate-500 truncate">{{ optional($assignment->assignedTo)->email ?? '-' }}</div>
+                                        <div class="font-semibold text-slate-900 truncate">{{ $reviewer->name ?? 'Reviewer' }}</div>
+                                        <div class="mt-1 text-xs text-slate-500 truncate">{{ $reviewer->email ?? '-' }}</div>
                                     </div>
                                 </div>
 
                                 <div class="mt-4 flex items-center justify-between gap-3">
                                     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase {{ $statusBadge }}">{{ $statusText }}</span>
-                                    <span class="text-xs text-slate-500">{{ $fb ? optional($fb->submitted_at)->format('d M Y') : 'Menunggu' }}</span>
+                                    <span class="timestamp" data-timestamp="{{ $fbItem->submitted_at->toIso8601String() }}">{{ optional($fbItem->submitted_at)->format('d M Y') }}</span>
                                 </div>
 
-                                <p class="mt-3 text-sm text-slate-600">{{ $fb ? ($fb->recommendation === 'revision' ? 'Perlu revise' : ($fb->recommendation === 'approved' ? 'Disetujui' : 'Ditolak')) : 'Belum menyerahkan review' }}</p>
+                                <p class="mt-3 text-sm text-slate-600">{{ $fbItem->review_type_label ?? 'Reviewer Awal' }}</p>
                             </div>
                         @endforeach
                     </div>
@@ -374,5 +371,54 @@
             }
         });
     });
+
+    // Real-time timestamp update for STATUS REVIEWER section
+    function formatRelativeTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        
+        if (seconds < 60) {
+            return 'baru saja';
+        }
+        
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) {
+            return minutes === 1 ? '1 menit yang lalu' : minutes + ' menit yang lalu';
+        }
+        
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) {
+            return hours === 1 ? '1 jam yang lalu' : hours + ' jam yang lalu';
+        }
+        
+        const days = Math.floor(hours / 24);
+        if (days < 7) {
+            return days === 1 ? '1 hari yang lalu' : days + ' hari yang lalu';
+        }
+        
+        // For older dates, show the full date format
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const day = date.getDate();
+        const month = monthNames[date.getMonth()];
+        const year = date.getFullYear();
+        
+        return `${day} ${month} ${year}`;
+    }
+    
+    function updateTimestamps() {
+        document.querySelectorAll('.timestamp').forEach(el => {
+            const timestamp = el.getAttribute('data-timestamp');
+            if (timestamp) {
+                el.textContent = formatRelativeTime(timestamp);
+            }
+        });
+    }
+    
+    // Update timestamps immediately on page load
+    document.addEventListener('DOMContentLoaded', updateTimestamps);
+    
+    // Update timestamps every minute
+    setInterval(updateTimestamps, 60000);
 </script>
 @endsection

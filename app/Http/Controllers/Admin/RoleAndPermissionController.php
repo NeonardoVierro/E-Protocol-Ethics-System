@@ -8,6 +8,6 @@ class RoleAndPermissionController extends Controller
 {
     public function index()
     {
-        return view('admin.role&permission.index');
+        abort(404);
     }
 }

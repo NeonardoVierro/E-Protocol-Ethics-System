@@ -129,23 +129,16 @@ class PengajuanController extends Controller
         }
 
         // User aktif - tampilkan konten sebenarnya
-        $proposals = Proposal::with([
-            'reviewFeedbacks' => function ($query) {
-                $query->where('is_submitted', true)
-                    ->with(['review.reviewer']);
-            },
-            'revisions' => function ($query) {
-                $query->where('status', \App\Models\ProposalRevision::STATUS_REQUESTED)
-                    ->orderByDesc('revision_number');
-            },
-        ])
+        $proposals = Proposal::with(['reviewFeedbacks' => function ($query) {
+            $query->where('is_submitted', true)
+                ->with(['review.reviewer']);
+        }])
             ->where('user_id', Auth::id())
             ->orderByDesc('submission_date')
             ->orderByDesc('created_at')
             ->get();
 
         $proposals->each(function ($proposal) {
-            $proposal->pendingRevisionRequest = $proposal->revisions->isNotEmpty();
             $proposal->reviewFeedbacks->transform(function ($fb) {
                 if (is_array($fb->feedback_text)) {
                     $parsed = $fb->feedback_text;
@@ -256,8 +249,6 @@ class PengajuanController extends Controller
             return $fb;
         });
 
-        $proposal->pendingRevisionRequest = $proposal->revisions()->where('status', \App\Models\ProposalRevision::STATUS_REQUESTED)->exists();
-
         return view('peneliti.pengajuan.riwayat-pengajuan-show', compact('proposal', 'feedbacks', 'secretaryNotes', 'summary'));
     }
 
@@ -281,40 +272,65 @@ class PengajuanController extends Controller
 
         // Load ALL proposal document versions (including all revisions submitted so far)
         // This allows researcher to see previous revision versions when uploading new revisions
-        $files = \App\Models\ProposalFile::where('proposal_id', $proposal->id)
+        $allFiles = \App\Models\ProposalFile::where('proposal_id', $proposal->id)
             ->orderByDesc('version')
-            ->get()
+            ->get();
+
+        $originalFiles = $allFiles
+            ->filter(function ($file) {
+                return in_array($file->file_type, [\App\Models\ProposalFile::TYPE_PROPOSAL, \App\Models\ProposalFile::TYPE_SUPPORTING]);
+            })
             ->groupBy(function ($f) {
-                // Prefer group_name if exists (new revisions), fallback to original_name
-                return $f->group_name ?? $f->original_name; // group by persistent identity
+                return $f->group_name ?? $f->original_name;
+            })
+            ->map(function ($group) {
+                return $group->first();
+            });
+
+        $revisionFiles = $allFiles
+            ->filter(function ($file) {
+                return $file->file_type === \App\Models\ProposalFile::TYPE_REVISION;
+            })
+            ->groupBy(function ($f) {
+                return $f->group_name ?? $f->original_name;
+            })
+            ->map(function ($group) {
+                return $group->first();
             });
 
         $revisions = $proposal->revisions()->with('file')->orderByDesc('submitted_date')->get();
 
-        // Determine the latest proposal file metadata for the revision form
-        $latestFile = $files->flatten()->sortByDesc('version')->first();
-        $originalName = $latestFile ? ($latestFile->group_name ?? $latestFile->original_name) : null;
-        $latest = $latestFile;
-
-        // Determine current revision upload state
-        $pendingRevision = $proposal->revisions()
+        // Check if there's a pending revision request (researcher can upload if status is 'requested')
+        $canUploadRevision = $proposal->revisions()
             ->where('status', \App\Models\ProposalRevision::STATUS_REQUESTED)
-            ->latest('revision_number')
-            ->first();
+            ->exists();
 
-        $submittedRevision = $proposal->revisions()
-            ->where('status', \App\Models\ProposalRevision::STATUS_SUBMITTED)
-            ->latest('submitted_date')
-            ->first();
-
-        $canUploadRevision = $pendingRevision !== null;
-        $revisionUploadState = $canUploadRevision ? 'requested' : ($submittedRevision ? 'submitted' : 'none');
+        $revisionUploadState = $proposal->revisions()->where('status', \App\Models\ProposalRevision::STATUS_SUBMITTED)->exists()
+            ? 'submitted'
+            : ($canUploadRevision ? 'requested' : 'none');
 
         $feedbacks = ReviewFeedback::with(['review.reviewer'])
             ->where('proposal_id', $proposal->id)
             ->where('is_submitted', true)
             ->orderByDesc('submitted_at')
-            ->get();
+            ->get()
+            ->transform(function ($fb) {
+                if (is_array($fb->feedback_text)) {
+                    $parsed = $fb->feedback_text;
+                } elseif (is_string($fb->feedback_text)) {
+                    $decoded = json_decode($fb->feedback_text, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $parsed = $decoded;
+                    } else {
+                        $parsed = ['summary' => $fb->feedback_text];
+                    }
+                } else {
+                    $parsed = ['summary' => (string) $fb->feedback_text];
+                }
+
+                $fb->parsed_feedback = $parsed;
+                return $fb;
+            });
 
         // Get secretary revision notes
         $secretaryRevisionNotes = \App\Models\ProposalNote::with('user')
@@ -323,7 +339,16 @@ class PengajuanController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        return view('peneliti.pengajuan.revision-upload', compact('proposal', 'files', 'revisions', 'feedbacks', 'canUploadRevision', 'secretaryRevisionNotes', 'revisionUploadState', 'originalName', 'latest'));
+        return view('peneliti.pengajuan.revision-upload', compact(
+            'proposal',
+            'originalFiles',
+            'revisionFiles',
+            'revisions',
+            'feedbacks',
+            'canUploadRevision',
+            'revisionUploadState',
+            'secretaryRevisionNotes'
+        ));
     }
 
     /**
@@ -357,8 +382,7 @@ class PengajuanController extends Controller
             ->first();
 
         if (!$pendingRevision) {
-            return redirect()->route('pengajuan.riwayat-pengajuan')
-                ->with('error', 'Belum ada permintaan revisi dari sekretaris. Anda tidak dapat mengunggah revisi saat ini.');
+            return redirect()->back()->with('error', 'Tidak ada permintaan revisi yang pending. Tunggu sekretaris untuk meminta revisi lebih lanjut.');
         }
 
         // Filter out null files (files that weren't uploaded)

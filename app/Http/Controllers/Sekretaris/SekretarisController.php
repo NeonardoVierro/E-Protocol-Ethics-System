@@ -337,6 +337,16 @@ class SekretarisController extends Controller
         $proposal->update(['review_type' => $request->review_type]);
         $proposal->update(['status' => Proposal::STATUS_ON_REVIEW]);
 
+        // Normalize due_date to Y-m-d to avoid timezone/format inconsistencies
+        $dueDate = null;
+        if ($request->filled('due_date')) {
+            try {
+                $dueDate = \Carbon\Carbon::parse($request->due_date)->toDateString();
+            } catch (\Exception $e) {
+                $dueDate = $request->due_date;
+            }
+        }
+
         $assignedNames = [];
 
         foreach ($reviewers as $reviewer) {
@@ -346,7 +356,7 @@ class SekretarisController extends Controller
                 'assigned_to' => $reviewer->id,
                 'role'        => ProposalAssignment::ROLE_REVIEWER,
                 'notes'       => $request->notes,
-                'due_date'    => $request->due_date,
+                'due_date'    => $dueDate,
                 'comment_to_review' => $request->comment_to_review,
                 'sent_at'     => now(),
             ]);
@@ -363,13 +373,13 @@ class SekretarisController extends Controller
                     'reviewer_id' => $reviewer->id,
                     'status' => \App\Models\Review::STATUS_ASSIGNED,
                     'assigned_date' => now(),
-                    'due_date' => $request->due_date,
+                    'due_date' => $dueDate,
                 ]);
             } else {
                 $review->update([
                     'status' => \App\Models\Review::STATUS_ASSIGNED,
                     'assigned_date' => now(),
-                    'due_date' => $request->due_date,
+                    'due_date' => $dueDate,
                     'completed_date' => null,
                 ]);
             }
@@ -538,6 +548,11 @@ class SekretarisController extends Controller
             ->orderByDesc('submitted_at')
             ->get();
 
+        // Get all submitted revisions for this proposal
+        $submittedRevisions = ProposalRevision::where('proposal_id', $proposal->id)
+            ->where('status', ProposalRevision::STATUS_SUBMITTED)
+            ->get();
+
         $summary = [
             'approved' => $feedbacks->where('recommendation', ReviewFeedback::RECOMMENDATION_APPROVED)->count(),
             'revision' => $feedbacks->where('recommendation', ReviewFeedback::RECOMMENDATION_REVISION)->count(),
@@ -545,7 +560,7 @@ class SekretarisController extends Controller
             'total_reviewers' => $feedbacks->count(),
         ];
 
-        $feedbacks->transform(function ($fb) {
+        $feedbacks->transform(function ($fb) use ($submittedRevisions) {
             $parsed = null;
             if (is_array($fb->feedback_text)) {
                 $parsed = $fb->feedback_text;
@@ -561,6 +576,21 @@ class SekretarisController extends Controller
             }
 
             $fb->parsed_feedback = $parsed;
+
+            // Determine if this feedback is for initial review or revision review
+            $isRevisionReview = false;
+            if ($submittedRevisions->isNotEmpty()) {
+                // Check if there's any submitted revision before this feedback was submitted
+                $revisionBeforeFeedback = $submittedRevisions->filter(function ($revision) use ($fb) {
+                    return $revision->submitted_date && $fb->submitted_at && 
+                           $revision->submitted_date <= $fb->submitted_at->toDateString();
+                })->isNotEmpty();
+                $isRevisionReview = $revisionBeforeFeedback;
+            }
+
+            $fb->is_revision_review = $isRevisionReview;
+            $fb->review_type_label = $isRevisionReview ? 'Review Revisi' : 'Reviewer Awal';
+
             return $fb;
         });
 
@@ -581,12 +611,17 @@ class SekretarisController extends Controller
             ->whereHas('reviewFeedbacks', function ($query) {
                 $query->where('is_submitted', true);
             })
-            ->whereNull('decision_date')
-            ->whereIn('status', [
-                Proposal::STATUS_ON_REVIEW,
-                Proposal::STATUS_REVISED,
-            ])
-            ->orderByRaw("FIELD(status, 'on_review', 'revised', 'approved', 'waiting_for_publish', 'published', 'rejected')")
+            // Include proposals that already have a decision as well so they remain
+            // visible on the Keputusan page (action replaced by "Sudah diputuskan").
+            ->orderByRaw("CASE status
+                WHEN 'on_review' THEN 1
+                WHEN 'revised' THEN 2
+                WHEN 'approved' THEN 3
+                WHEN 'rejected' THEN 4
+                WHEN 'waiting_for_publish' THEN 5
+                WHEN 'published' THEN 6
+                ELSE 7
+            END")
             ->orderByDesc('submission_date')
             ->get();
 
@@ -705,6 +740,12 @@ class SekretarisController extends Controller
                     'status'      => $request->status,
                 ]),
             ]);
+        }
+
+        // If sekretaris rejected the proposal, return to management list instead
+        if ($request->status === 'rejected') {
+            return redirect()->route('sekretaris.manajemen-proposal')
+                ->with('success', 'Proposal "' . $proposal->title . '" berhasil ditolak.');
         }
 
         return redirect()->route('sekretaris.keputusan')

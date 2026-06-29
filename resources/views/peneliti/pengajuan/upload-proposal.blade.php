@@ -184,14 +184,14 @@
 
                             <div class="mt-6 pt-6 border-t border-slate-200">
                                 <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                                    <p class="text-xs font-semibold text-blue-900 mb-2">⏱️ Waktu Pemrosesan</p>
+                                    <p class="text-xs font-semibold text-blue-900 mb-2"> Waktu Pemrosesan</p>
                                     <p class="text-xs text-blue-800">Proposalmu akan diproses dalam 2-3 hari kerja setelah submit.</p>
                                 </div>
                             </div>
 
                             <div class="mt-4">
                                 <button class="w-full px-4 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors">
-                                    📖 Lihat Panduan Lengkap
+                                     Lihat Panduan Lengkap
                                 </button>
                             </div>
                         </div>

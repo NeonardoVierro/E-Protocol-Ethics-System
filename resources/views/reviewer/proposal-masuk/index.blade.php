@@ -180,7 +180,16 @@
                                 </div>
                             </td>
                             <td><span class="date-main">{{ optional($proposal->submission_date)->format('M d, Y') ?? 'N/A' }}</span></td>
-                            <td><span class="date-deadline">{{ optional($proposal->submission_date)->addDays(14)->format('M d, Y') ?? 'N/A' }}</span></td>
+                            @php
+                                $deadline = null;
+                                if(isset($proposal->assignments)) {
+                                    $deadline = $proposal->assignments->where('role', \App\Models\ProposalAssignment::ROLE_REVIEWER)->pluck('due_date')->filter()->min();
+                                }
+                                if(!$deadline) {
+                                    $deadline = optional($proposal->review_deadline) ? optional($proposal->review_deadline)->toDateString() : null;
+                                }
+                            @endphp
+                            <td><span class="date-deadline">{{ $deadline ? \Carbon\Carbon::createFromFormat('Y-m-d', \Carbon\Carbon::parse($deadline)->toDateString())->format('M d, Y') : 'N/A' }}</span></td>
                             <td>
                                 @if($proposal->status === 'new_proposal')
                                     <span class="badge badge-new">NEW</span>
