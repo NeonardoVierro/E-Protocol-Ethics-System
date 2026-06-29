@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Proposal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PublishingController extends Controller
 {
@@ -112,5 +113,60 @@ class PublishingController extends Controller
         }
 
         return response()->json(['success' => true, 'updated' => $updated]);
+    }
+
+    /**
+     * Preview the ethics document
+     */
+    public function preview(\App\Models\EthicsDocument $document)
+    {
+        // If a generated file exists, return it directly
+        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
+            return response()->file(Storage::disk('public')->path($document->file_path));
+        }
+
+        // Fallback: render an HTML preview populated from the draft notes
+        $notes = [];
+        if ($document->notes) {
+            try {
+                $decoded = json_decode($document->notes ?: '{}', true);
+                if (is_array($decoded)) {
+                    $notes = $decoded;
+                } else {
+                    $notes = ['notes' => (string) $document->notes];
+                }
+            } catch (\Throwable $e) {
+                $notes = ['notes' => (string) $document->notes];
+            }
+        }
+
+        $proposal = $document->proposal;
+        $data = [
+            'document_number' => $document->document_number ?? $proposal->nomor_ec ?? '',
+            'title' => $proposal->title ?? ($notes['title'] ?? ($document->original_name ?? '')),
+            'principal_investigator' => $notes['principal_investigator'] ?? $proposal->researcher?->name ?? $proposal->nama_peneliti ?? '-',
+            'members' => $notes['members'] ?? '-',
+            'institution' => $notes['institution'] ?? $proposal->institution ?? '-',
+            'research_place' => $notes['research_place'] ?? '-',
+            'previewDate' => now()->format('d F Y'),
+        ];
+
+        return view('admin.publishing.preview', compact('document', 'proposal', 'data'));
+    }
+
+    /**
+     * Download the ethics document
+     */
+    public function download(\App\Models\EthicsDocument $document)
+    {
+        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
+            return response()->download(
+                Storage::disk('public')->path($document->file_path),
+                $document->original_name ?: 'ethical-clearance.pdf'
+            );
+        }
+
+        // If no file exists, abort with 404
+        abort(404, 'Dokumen tidak ditemukan.');
     }
 }

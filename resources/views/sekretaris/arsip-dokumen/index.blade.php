@@ -13,44 +13,30 @@
         </div>
 
         <!-- Filter & Search Section -->
-        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="md:col-span-1">
+        <form method="GET" action="{{ route('sekretaris.arsip-dokumen') }}" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                     <label class="block font-label-caps text-label-caps text-slate-500 mb-2 uppercase">Cari Dokumen</label>
                     <div class="relative">
-                        <input class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="ID, Judul, Peneliti..." type="text"/>
+                        <input name="search" value="{{ request('search') }}" class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="ID, Judul, Peneliti..." type="text"/>
                         <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="search">search</span>
                     </div>
                 </div>
                 <div>
-                    <label class="block font-label-caps text-label-caps text-slate-500 mb-2 uppercase">Tahun</label>
-                    <select class="w-full py-2 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary">
-                        <option>Semua Tahun</option>
-                        <option>2024</option>
-                        <option>2023</option>
-                        <option>2022</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block font-label-caps text-label-caps text-slate-500 mb-2 uppercase">Kategori Penelitian</label>
-                    <select class="w-full py-2 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary">
-                        <option>Semua Kategori</option>
-                        <option>Kesehatan Masyarakat</option>
-                        <option>Uji Klinis</option>
-                        <option>Ilmu Sosial</option>
-                        <option>Genetika</option>
-                    </select>
-                </div>
-                <div>
                     <label class="block font-label-caps text-label-caps text-slate-500 mb-2 uppercase">Status</label>
-                    <select class="w-full py-2 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary">
-                        <option>Semua Status</option>
-                        <option>APPROVED</option>
-                        <option>REJECTED</option>
+                    <select name="status" class="w-full py-2 px-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary">
+                        <option value="">Semua Status</option>
+                        <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
+                        <option value="signed" {{ request('status') === 'signed' ? 'selected' : '' }}>Signed</option>
+                        <option value="published" {{ request('status') === 'published' ? 'selected' : '' }}>Published</option>
+                        <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>Archived</option>
                     </select>
                 </div>
             </div>
-        </div>
+            <div class="flex justify-end">
+                <button type="submit" class="inline-flex items-center justify-center rounded-2xl bg-[#1e3a5f] px-5 py-3 text-sm font-semibold text-white hover:bg-[#162d4a] transition">Run</button>
+            </div>
+        </form>
 
         <!-- Documents Table Card -->
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -87,12 +73,21 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="#" class="p-2 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded transition-all" title="Download Sertifikat">
+                                    <a href="{{ route('sekretaris.arsip-dokumen.download-certificate', $d) }}" class="p-2 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded transition-all" title="Download Sertifikat">
                                         <span class="material-symbols-outlined" data-icon="verified">verified</span>
                                     </a>
-                                    <a href="#" class="p-2 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded transition-all" title="Download Proposal">
+                                    @php
+                                        $proposalFile = $d->proposal?->files->where('is_active', true)->first();
+                                    @endphp
+                                    @if($proposalFile)
+                                    <a href="{{ route('sekretaris.proposal-file.download', $proposalFile) }}" class="p-2 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded transition-all" title="Download Proposal">
                                         <span class="material-symbols-outlined" data-icon="download">download</span>
                                     </a>
+                                    @else
+                                    <span class="p-2 text-slate-300 rounded transition-all" title="Tidak ada file proposal">
+                                        <span class="material-symbols-outlined" data-icon="download">download</span>
+                                    </span>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

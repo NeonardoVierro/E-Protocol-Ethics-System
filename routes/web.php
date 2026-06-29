@@ -238,6 +238,7 @@ Route::middleware(['auth', 'role:sekretaris|ketua'])->prefix('sekretaris')->name
     Route::get('/proposal/{proposal}/activity-logs', [SekretarisController::class, 'activityLogs'])->name('proposal.activity-logs');
     Route::get('/proposal-file/{file}/view', [SekretarisController::class, 'viewProposalFile'])->name('proposal-file.view');
     Route::get('/proposal-file/{file}/download', [SekretarisController::class, 'downloadProposalFile'])->name('proposal-file.download');
+    Route::get('/arsip-dokumen/{document}/download-certificate', [SekretarisController::class, 'downloadCertificate'])->name('arsip-dokumen.download-certificate');
     Route::get('/hasil-review', [SekretarisController::class, 'hasilReview'])->name('hasil-review');
     Route::get('/hasil-review/{proposal}', [SekretarisController::class, 'hasilReviewShow'])->name('hasil-review.show');
     Route::get('/keputusan', [SekretarisController::class, 'keputusan'])->name('keputusan');

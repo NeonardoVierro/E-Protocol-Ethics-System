@@ -1265,17 +1265,13 @@ class PengajuanController extends Controller
             abort(404, 'Dokumen Ethical Clearance belum tersedia.');
         }
 
-        // Generate styled PDF directly to ensure proper formatting
-        $fileName = 'Ethical-Clearance-' . $proposal->nomor_ec . '-' . now()->format('YmdHis') . '.pdf';
-        $pdfContent = $this->generateStyledEthicsDocumentPdf($ethicsDocument, $proposal);
+        if ($ethicsDocument->file_path && Storage::disk('public')->exists($ethicsDocument->file_path)) {
+            return response()->download(
+                Storage::disk('public')->path($ethicsDocument->file_path),
+                $ethicsDocument->original_name ?: 'ethical-clearance.pdf'
+            );
+        }
 
-        return response()->streamDownload(
-            fn() => print($pdfContent),
-            $fileName,
-            [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $fileName . '"'
-            ]
-        );
+        abort(404, 'File dokumen tidak ditemukan.');
     }
 }

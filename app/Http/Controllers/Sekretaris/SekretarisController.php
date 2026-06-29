@@ -464,6 +464,28 @@ class SekretarisController extends Controller
         return response()->download(Storage::disk('public')->path($file->file_path), $file->original_name);
     }
 
+    public function downloadCertificate(EthicsDocument $document)
+    {
+        $assigned = $document->proposal->assignments()
+            ->where('role', ProposalAssignment::ROLE_SEKRETARIS)
+            ->where('assigned_to', Auth::id())
+            ->whereNotNull('sent_at')
+            ->exists();
+
+        if (! $assigned) {
+            abort(403);
+        }
+
+        if (! $document->file_path || !Storage::disk('public')->exists($document->file_path)) {
+            abort(404);
+        }
+
+        return response()->download(
+            Storage::disk('public')->path($document->file_path),
+            $document->original_name ?: 'ethical-clearance.pdf'
+        );
+    }
+
     public function hasilReview(Request $request)
     {
         // Get proposal IDs yang di-assign ke sekretaris saat ini
@@ -927,9 +949,14 @@ class SekretarisController extends Controller
         return response()->json(['status' => 'ok', 'message' => 'Draft berhasil dikirim ke admin.']);
     }
 
-    public function arsipDokumen()
+    public function arsipDokumen(Request $request)
     {
-        $documents = EthicsDocument::with('proposal', 'ketua')
+        $search = $request->query('search');
+        $status = $request->query('status');
+
+        $documents = EthicsDocument::with(['proposal.files' => function ($query) {
+                $query->where('is_active', true);
+            }, 'ketua'])
             ->where(function ($q) {
                 $q->whereRaw("JSON_VALID(notes) = 1 AND JSON_EXTRACT(notes, '$.assigned_admin_id') IS NOT NULL")
                   ->orWhereExists(function ($sub) {
@@ -938,6 +965,21 @@ class SekretarisController extends Controller
                           ->whereColumn('document_logs.ethics_document_id', 'ethics_documents.id')
                           ->where('document_logs.activity', DocumentLog::ACTIVITY_ASSIGN);
                   });
+            })
+            ->when($search, function ($q, $search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('document_number', 'like', "%{$search}%")
+                        ->orWhereHas('proposal', function ($proposalQuery) use ($search) {
+                            $proposalQuery->where('title', 'like', "%{$search}%")
+                                ->orWhere('nama_peneliti', 'like', "%{$search}%")
+                                ->orWhereHas('researcher', function ($researcherQuery) use ($search) {
+                                    $researcherQuery->where('name', 'like', "%{$search}%");
+                                });
+                        });
+                });
+            })
+            ->when($status, function ($q, $status) {
+                $q->where('status', $status);
             })
             ->orderByDesc('created_at')
             ->paginate(10)
@@ -948,7 +990,9 @@ class SekretarisController extends Controller
 
     public function arsip()
     {
-        $documents = EthicsDocument::with('proposal', 'ketua')
+        $documents = EthicsDocument::with(['proposal.files' => function ($query) {
+                $query->where('is_active', true);
+            }, 'ketua'])
             ->where(function ($q) {
                 $q->whereRaw("JSON_VALID(notes) = 1 AND JSON_EXTRACT(notes, '$.assigned_admin_id') IS NOT NULL")
                   ->orWhereExists(function ($sub) {
