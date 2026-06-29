@@ -155,10 +155,6 @@
                             <i class="fas fa-eye text-xs"></i>
                         </button>
                         @endif
-                        <button onclick="featureInDevelopment('Export')"
-                                class="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer" title="Export">
-                            <i class="fas fa-arrow-up-right-from-square text-xs"></i>
-                        </button>
                         <button onclick="publishDocument({{ $doc->id }}, this)"
                                 class="inline-flex items-center gap-1.5 bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-[12px] font-semibold px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer">
                             Publish
@@ -315,6 +311,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 function bulkSelect() {
     return {
@@ -328,21 +325,57 @@ function bulkSelect() {
 
 // ── Publish Proposal ───────────────────────────────────────────────
 async function publishDocument(documentId, btn) {
-    if (!confirm('Dokumen ini akan dipublish ke publik. Tindakan ini tidak dapat dibatalkan.')) return;
+    const result = await Swal.fire({
+        title: 'Publish dokumen?',
+        text: 'Dokumen ini akan dipublish ke publik. Tindakan ini tidak dapat dibatalkan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, publish',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+        customClass: {
+            confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+            cancelButton: 'swal2-cancel bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl px-4 py-2',
+        },
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[9px]"></i> Publishing...';
+
     try {
         const res = await fetch(`/admin/publishing/${documentId}/publish`, {
             method: 'POST',
             headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content },
         });
         if (!res.ok) throw new Error();
+
+        await Swal.fire({
+            title: 'Berhasil!',
+            text: 'Dokumen berhasil dipublish.',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            customClass: {
+                confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+            },
+        });
+
         location.reload();
     } catch {
         btn.disabled = false;
         btn.innerHTML = 'Publish';
-        alert('Gagal mempublish dokumen.');
+        await Swal.fire({
+            title: 'Gagal',
+            text: 'Gagal mempublish dokumen.',
+            icon: 'error',
+            confirmButtonText: 'Tutup',
+            customClass: {
+                confirmButton: 'swal2-confirm bg-slate-900 hover:bg-slate-800 text-white rounded-2xl px-4 py-2',
+            },
+        });
     }
 }
 
@@ -352,11 +385,35 @@ async function publishSelected() {
     const selectedIds = Object.keys(bulkData.checked).filter(k => bulkData.checked[k]);
 
     if (selectedIds.length === 0) {
-        alert('Pilih minimal satu dokumen untuk dipublish.');
+        await Swal.fire({
+            title: 'Pilih dokumen',
+            text: 'Pilih minimal satu dokumen untuk dipublish.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            customClass: {
+                confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+            },
+        });
         return;
     }
 
-    if (!confirm(`Anda akan mempublish ${selectedIds.length} dokumen. Tindakan ini tidak dapat dibatalkan.`)) return;
+    const result = await Swal.fire({
+        title: 'Publish dokumen terpilih?',
+        text: `Anda akan mempublish ${selectedIds.length} dokumen. Tindakan ini tidak dapat dibatalkan.`, 
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, publish',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+        customClass: {
+            confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+            cancelButton: 'swal2-cancel bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl px-4 py-2',
+        },
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
 
     try {
         const res = await fetch('/admin/publishing/bulk-publish', {
@@ -368,9 +425,28 @@ async function publishSelected() {
             body: JSON.stringify({ document_ids: selectedIds }),
         });
         if (!res.ok) throw new Error();
+
+        await Swal.fire({
+            title: 'Berhasil!',
+            text: 'Dokumen terpilih berhasil dipublish.',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            customClass: {
+                confirmButton: 'swal2-confirm bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl px-4 py-2',
+            },
+        });
+
         location.reload();
     } catch {
-        alert('Gagal mempublish dokumen terpilih.');
+        await Swal.fire({
+            title: 'Gagal',
+            text: 'Gagal mempublish dokumen terpilih.',
+            icon: 'error',
+            confirmButtonText: 'Tutup',
+            customClass: {
+                confirmButton: 'swal2-confirm bg-slate-900 hover:bg-slate-800 text-white rounded-2xl px-4 py-2',
+            },
+        });
     }
 }
 </script>
